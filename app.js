@@ -881,17 +881,44 @@ async function initExplorePage() {
   if (urlTld)     { currentTld     = urlTld;     const b = qs(`[data-tld="${urlTld}"]`);     if (b) b.classList.add('active'); }
   if (urlSpecial) { currentSpecial = urlSpecial; const b = qs(`[data-special="${urlSpecial}"]`); if (b) b.classList.add('active'); }
 
-  // Populate listings with seed immediately (respecting any URL filters), then replace with live data
-  renderListings(getFilteredNames());
-  if (UNISAT_API_KEY) {
-    fetchListings().then(result => {
+  // Build API fetch params from URL filters
+  const apiParams = {};
+  if (urlTld)  apiParams.domainType = urlTld.replace('.', ''); // e.g. '.btc' -> 'btc'
+  if (urlLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
+  if (urlLen === '3')   { apiParams.minLength = 3; apiParams.maxLength = 3; }
+  if (urlLen === '4')   { apiParams.minLength = 4; apiParams.maxLength = 4; }
+  if (urlLen === '5')   { apiParams.minLength = 5; apiParams.maxLength = 5; }
+
+  // Show skeleton or seed immediately, then replace with live data
+  const hasUrlFilter = urlLen || urlTld || urlSpecial;
+  if (UNISAT_API_KEY && hasUrlFilter) {
+    // Show loading skeletons while we fetch filtered results
+    const el = qs('#listingsGrid');
+    if (el) {
+      el.innerHTML = Array(8).fill(0).map(() =>
+        `<div class="name-card skeleton" style="height:96px;border-radius:var(--radius-lg);"></div>`
+      ).join('');
+    }
+    fetchListings(apiParams).then(result => {
       if (result && result.list && result.list.length > 0) {
         LIVE_LISTINGS = result.list.map(unisatListingToCard);
-        renderListings(getFilteredNames());
-        const countEl = qs('#listingCount');
-        if (countEl && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
       }
+      renderListings(getFilteredNames());
+      const countEl = qs('#listingCount');
+      if (countEl && result && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
     });
+  } else {
+    renderListings(getFilteredNames());
+    if (UNISAT_API_KEY) {
+      fetchListings(apiParams).then(result => {
+        if (result && result.list && result.list.length > 0) {
+          LIVE_LISTINGS = result.list.map(unisatListingToCard);
+          renderListings(getFilteredNames());
+          const countEl = qs('#listingCount');
+          if (countEl && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
+        }
+      });
+    }
   }
 
   // Populate market indexes
