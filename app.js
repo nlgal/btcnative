@@ -1563,6 +1563,25 @@ function switchProfileTab(tab, btn) {
   });
 }
 
+function buildSparkline(prices) {
+  if (!prices || prices.length < 2) return '';
+  const W = 280, H = 48, pad = 4;
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const range = max - min || 1;
+  const pts = prices.map((p, i) => {
+    const x = pad + (i / (prices.length - 1)) * (W - pad * 2);
+    const y = H - pad - ((p - min) / range) * (H - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const last = pts[pts.length - 1].split(',');
+  const trend = prices[prices.length - 1] >= prices[0] ? '#22c55e' : '#ef4444';
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="display:block;">
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${trend}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${last[0]}" cy="${last[1]}" r="3" fill="${trend}"/>
+  </svg>`;
+}
+
 // ── Sale history fetch + render ───────────────────────────────────────────────
 async function fetchAndRenderSaleHistory(name) {
   const el = document.getElementById('saleHistoryTimeline');
@@ -1580,6 +1599,26 @@ async function fetchAndRenderSaleHistory(name) {
       limit: 10,
     });
     if (data && data.list) events = data.list;
+  }
+
+  // Render sparkline if we have sale history
+  if (events.length >= 2) {
+    const wrap = document.getElementById('saleHistoryWrap');
+    if (wrap) {
+      const prices = events.map(e => e.price || 0).filter(p => p > 0).reverse(); // oldest first
+      const sparkHtml = buildSparkline(prices);
+      const sparkDiv = document.createElement('div');
+      sparkDiv.style.cssText = 'margin-bottom:var(--space-4); padding:var(--space-3); background:var(--color-surface-offset); border-radius:var(--radius-md); border:1px solid var(--color-border);';
+      sparkDiv.innerHTML = `
+        <div style="font-size:var(--text-xs); color:var(--color-text-faint); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:var(--space-2);">Sale price history</div>
+        ${sparkHtml}
+        <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--color-text-faint); font-family:var(--font-mono); margin-top:var(--space-1);">
+          <span>${formatSats(prices[0])}</span>
+          <span>${formatSats(prices[prices.length-1])}</span>
+        </div>
+      `;
+      wrap.insertBefore(sparkDiv, wrap.firstChild);
+    }
   }
 
   el.innerHTML = '';
@@ -2180,7 +2219,31 @@ function renderMinimalProfile(name, data) {
   }
 
   // Buy button + listing status — native modal via market worker
+  const sellBtnMin = qs('#sellBtn');
+  if (sellBtnMin) sellBtnMin.href = `./sell.html?name=${encodeURIComponent(name)}`;
   initBuyBtn(name, inscId);
+
+  // Check if connected wallet owns this name
+  checkWalletOwnership(name, inscId, addr).then(isOwner => {
+    if (!isOwner) return;
+    const buyBtn = qs('#buyBtn');
+    const sellBtn = qs('#sellBtn');
+    const watchBtn = qs('#watchBtn');
+    if (buyBtn) {
+      buyBtn.textContent = 'You own this';
+      buyBtn.disabled = true;
+      buyBtn.style.background = 'var(--color-surface-offset)';
+      buyBtn.style.color = 'var(--color-text-faint)';
+      buyBtn.style.cursor = 'default';
+      buyBtn.onclick = null;
+    }
+    if (sellBtn) {
+      sellBtn.className = 'btn btn--primary btn--full';
+      sellBtn.innerHTML = 'List for sale';
+      sellBtn.href = `./sell.html?name=${encodeURIComponent(name)}`;
+    }
+    if (watchBtn) watchBtn.style.display = 'none';
+  });
 
   // Activity
   const actEl = qs('#activityFeed');
@@ -2204,6 +2267,25 @@ function renderMinimalProfile(name, data) {
         <div class="score-bar-track"><div class="score-bar-fill" style="width:${c.pct}%"></div></div>
       </div>`).join('');
   }
+}
+
+// ── Wallet ownership check ────────────────────────────────────────────────────
+async function checkWalletOwnership(name, inscId, ownerAddress) {
+  // Only check if wallet is available
+  const wallet = window.unisat || window.XverseProviders?.BitcoinProvider || window.btc;
+  if (!wallet) return false;
+
+  try {
+    let connectedAddr;
+    if (window.unisat) {
+      const accounts = await window.unisat.getAccounts();
+      connectedAddr = accounts && accounts[0];
+    } else {
+      return false; // Xverse requires a request, skip passive check
+    }
+    if (!connectedAddr || !ownerAddress) return false;
+    return connectedAddr.toLowerCase() === ownerAddress.toLowerCase();
+  } catch { return false; }
 }
 
 // ── New profile init: original + tabs ────────────────────────────────────────
@@ -2346,7 +2428,33 @@ async function initProfilePageMVP() {
   }
 
   // Buy button + listing status — native modal via market worker
+  const sellBtn = qs('#sellBtn');
+  if (sellBtn) sellBtn.href = `./sell.html?name=${encodeURIComponent(name)}`;
   initBuyBtn(name, inscId);
+
+  // Check if connected wallet owns this name
+  checkWalletOwnership(name, inscId, addr).then(isOwner => {
+    if (!isOwner) return;
+    const buyBtn = qs('#buyBtn');
+    const sellBtn = qs('#sellBtn');
+    const watchBtn = qs('#watchBtn');
+    if (buyBtn) {
+      buyBtn.textContent = 'You own this';
+      buyBtn.disabled = true;
+      buyBtn.style.background = 'var(--color-surface-offset)';
+      buyBtn.style.color = 'var(--color-text-faint)';
+      buyBtn.style.cursor = 'default';
+      buyBtn.onclick = null;
+    }
+    if (sellBtn) {
+      sellBtn.className = 'btn btn--primary btn--full';
+      sellBtn.innerHTML = 'List for sale';
+      sellBtn.href = `./sell.html?name=${encodeURIComponent(name)}`;
+    }
+    if (watchBtn) watchBtn.style.display = 'none';
+    // Show BNRP editor tab
+    showBnrpEditorForOwner(records);
+  });
 
   // Activity (overview tab)
   const actEl = qs('#activityFeed');
@@ -2526,6 +2634,61 @@ async function loadMore() {
   }
 }
 
+// ── Nav wallet button ────────────────────────────────────────────────────
+async function initNavWallet() {
+  const btn = document.getElementById('navWalletBtn');
+  if (!btn) return;
+
+  // Already connected — navigate to portfolio
+  if (btn.dataset.addr) {
+    location.href = `./portfolio.html?address=${encodeURIComponent(btn.dataset.addr)}`;
+    return;
+  }
+
+  // Try to connect UniSat
+  try {
+    btn.textContent = 'Connecting...';
+    if (window.unisat) {
+      const accounts = await window.unisat.requestAccounts();
+      if (accounts && accounts[0]) {
+        setNavWalletConnected(accounts[0]);
+        return;
+      }
+    }
+    // No wallet
+    btn.textContent = 'No wallet';
+    setTimeout(() => { btn.textContent = 'Connect'; }, 2000);
+  } catch {
+    btn.textContent = 'Connect';
+  }
+}
+
+function setNavWalletConnected(address) {
+  const btn = document.getElementById('navWalletBtn');
+  if (!btn) return;
+  btn.dataset.addr = address;
+  btn.textContent = address.slice(0, 6) + '...' + address.slice(-4);
+  btn.classList.add('nav__wallet-btn--connected');
+  btn.title = address;
+}
+
+// Show wallet button if wallet extension is installed
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const btn = document.getElementById('navWalletBtn');
+    if (!btn) return;
+    if (window.unisat || window.XverseProviders?.BitcoinProvider || window.btc) {
+      btn.style.display = '';
+      // Auto-read if already connected (getAccounts is passive — no popup)
+      if (window.unisat) {
+        window.unisat.getAccounts().then(accounts => {
+          if (accounts && accounts[0]) setNavWalletConnected(accounts[0]);
+        }).catch(() => {});
+      }
+    }
+  }, 300);
+});
+
 // ── Main boot (replaces original DOMContentLoaded) ───────────────────────────
 // The original DOMContentLoaded is still registered above and will fire,
 // but we re-route here with a second listener that runs the MVP versions.
@@ -2568,3 +2731,77 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+// ── BNRP Record Editor ────────────────────────────────────────────────────────
+
+function showBnrpEditorForOwner(records) {
+  // Reveal the Edit tab
+  const editTab = document.getElementById('editTab');
+  if (editTab) editTab.style.display = '';
+
+  // Pre-fill form with existing records
+  const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+  set('bnrpDisplay', records.display);
+  set('bnrpDesc',    records.description);
+  set('bnrpUrl',     records.url);
+  set('bnrpTwitter', records['com.twitter']);
+  set('bnrpBtc',     records['btc'] || records['bitcoin']);
+  // Avatar: strip 'ord:' prefix for display
+  if (records.avatar) {
+    const avatarEl = document.getElementById('bnrpAvatar');
+    if (avatarEl) avatarEl.value = records.avatar.replace('ord:', '');
+  }
+}
+
+function saveBnrpRecords() {
+  const get = id => (document.getElementById(id)?.value || '').trim();
+
+  const display  = get('bnrpDisplay');
+  const desc     = get('bnrpDesc');
+  const avatarRaw = get('bnrpAvatar');
+  const url      = get('bnrpUrl');
+  const twitter  = get('bnrpTwitter').replace('@', '');
+  const btc      = get('bnrpBtc');
+
+  // Build BNRP records object (only include non-empty fields)
+  const records = {};
+  if (display)    records.display     = display;
+  if (desc)       records.description = desc;
+  if (avatarRaw)  records.avatar      = avatarRaw.includes(':') ? avatarRaw : `ord:${avatarRaw}`;
+  if (url)        records.url         = url.startsWith('http') ? url : `https://${url}`;
+  if (twitter)    records['com.twitter'] = twitter;
+  if (btc)        records.btc         = btc;
+
+  if (Object.keys(records).length === 0) {
+    const s = document.getElementById('bnrpStatus');
+    if (s) { s.style.color = '#ef4444'; s.textContent = 'Fill in at least one field.'; }
+    return;
+  }
+
+  // Get the current name from URL
+  const name = new URLSearchParams(location.search).get('name') || '';
+
+  // Build the BNRP JSON payload
+  const payload = { name, records };
+  const jsonStr = JSON.stringify(payload, null, 2);
+
+  // Show preview
+  const previewWrap = document.getElementById('bnrpPreviewWrap');
+  const previewJson = document.getElementById('bnrpPreviewJson');
+  if (previewWrap) previewWrap.style.display = 'block';
+  if (previewJson) previewJson.textContent = jsonStr;
+
+  const s = document.getElementById('bnrpStatus');
+  if (s) {
+    s.style.color = 'var(--color-text-faint)';
+    s.textContent = 'Preview ready. Inscribe this JSON on Bitcoin to publish your identity.';
+  }
+
+  // Copy to clipboard for convenience
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(jsonStr).catch(() => {});
+  }
+
+  const btn = document.getElementById('bnrpSaveBtn');
+  if (btn) btn.textContent = 'Copied to clipboard';
+}

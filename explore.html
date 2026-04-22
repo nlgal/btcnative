@@ -37,6 +37,9 @@
             style="height:36px; font-size:var(--text-sm); padding-left:36px; border-radius:var(--radius-lg);" />
           <div class="search-results" id="navResults" style="display:none;"></div>
         </div>
+        <button class="nav__wallet-btn" id="navWalletBtn" onclick="initNavWallet()" style="display:none;">
+          Connect
+        </button>
         <button class="nav__theme-btn" data-theme-toggle aria-label="Toggle theme">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
@@ -163,6 +166,11 @@
 
         <!-- Results -->
         <div>
+          <!-- Floor ticker -->
+          <div id="floorTicker" style="display:flex; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-4);">
+            <!-- populated by JS -->
+          </div>
+
           <div class="sort-bar">
             <span class="sort-bar__count" id="listingCount">— names</span>
             <button class="btn btn--outline btn--sm" onclick="toggleGridDensity(this)" id="densityBtn">
@@ -193,6 +201,39 @@
   </div>
 </main>
 
+<!-- Floor alerts subscribe -->
+<section style="padding:var(--space-10) 0 var(--space-6); border-top:1px solid var(--color-divider);">
+  <div class="container">
+    <div style="max-width:520px; margin:0 auto; text-align:center;">
+      <div style="font-size:var(--text-sm); font-weight:700; color:var(--color-text); margin-bottom:var(--space-2);">Floor price alerts</div>
+      <p style="font-size:var(--text-xs); color:var(--color-text-muted); margin-bottom:var(--space-4);">Get an email when the floor moves more than your threshold.</p>
+      <div style="display:flex; gap:var(--space-2); flex-wrap:wrap; justify-content:center; margin-bottom:var(--space-3);">
+        <input id="alertEmail" type="email" placeholder="you@example.com"
+          style="flex:1; min-width:180px; max-width:240px; height:40px; padding:0 var(--space-3); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); color:var(--color-text); font-size:var(--text-sm); outline:none;" />
+        <select id="alertTld"
+          style="height:40px; padding:0 var(--space-3); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); color:var(--color-text); font-size:var(--text-sm); outline:none;">
+          <option value="btc">.btc</option>
+          <option value="sats">.sats</option>
+          <option value="x">.x</option>
+          <option value="ord">.ord</option>
+          <option value="xbt">.xbt</option>
+        </select>
+        <select id="alertThreshold"
+          style="height:40px; padding:0 var(--space-3); background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); color:var(--color-text); font-size:var(--text-sm); outline:none;">
+          <option value="5">±5%</option>
+          <option value="10">±10%</option>
+          <option value="20">±20%</option>
+        </select>
+        <button id="alertSubmitBtn" onclick="subscribeFloorAlert()"
+          style="height:40px; padding:0 var(--space-4); background:var(--color-primary); color:#000; border:none; border-radius:var(--radius-md); font-weight:700; font-size:var(--text-sm); cursor:pointer; white-space:nowrap;">
+          Notify me
+        </button>
+      </div>
+      <div id="alertStatus" style="font-size:var(--text-xs); min-height:18px;"></div>
+    </div>
+  </div>
+</section>
+
 <footer class="footer">
   <div class="container">
     <div class="footer__inner">
@@ -207,5 +248,108 @@
 </footer>
 
 <script src="./app.js"></script>
+
+<script>
+(function initFloorTicker() {
+  const UNISAT_API_KEY = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
+  const TLDS = ['btc', 'sats', 'x', 'ord', 'xbt'];
+
+  async function fetchFloor(tld) {
+    try {
+      const res = await fetch(`https://open-api.unisat.io/v3/market/btcname/auction/actions?domainType=${tld}&size=1&start=0&sortBy=price_asc&status=listed`, {
+        headers: { 'Authorization': `Bearer ${UNISAT_API_KEY}` },
+        signal: AbortSignal.timeout(6000),
+      });
+      const data = await res.json();
+      if (data.code !== 0) return null;
+      const items = data.data?.list || [];
+      return items[0]?.price || items[0]?.initPrice || null;
+    } catch { return null; }
+  }
+
+  function fmtBtc(sats) {
+    if (!sats) return '\u2014';
+    const btc = sats / 1e8;
+    if (btc >= 1) return btc.toFixed(4).replace(/\.?0+$/, '') + ' BTC';
+    if (btc >= 0.01) return btc.toFixed(4).replace(/0+$/, '') + ' BTC';
+    return btc.toFixed(8).replace(/0+$/, '') + ' BTC';
+  }
+
+  async function render() {
+    const el = document.getElementById('floorTicker');
+    if (!el) return;
+
+    // Show skeleton chips
+    el.innerHTML = TLDS.map(t => `
+      <div style="display:flex; align-items:center; gap:6px; padding:4px 12px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:99px; font-size:11px; font-family:var(--font-mono);">
+        <span style="color:var(--color-text-faint);">.${t}</span>
+        <span style="color:var(--color-text-faint); width:56px; height:10px;" class="skeleton" id="floor-${t}">...</span>
+      </div>`).join('');
+
+    // Fetch all floors in parallel
+    await Promise.allSettled(TLDS.map(async tld => {
+      const floor = await fetchFloor(tld);
+      const chip = document.getElementById(`floor-${tld}`);
+      if (!chip) return;
+      chip.classList.remove('skeleton');
+      chip.style.width = '';
+      chip.style.height = '';
+      chip.style.color = 'var(--color-text)';
+      chip.style.fontWeight = '700';
+      chip.textContent = fmtBtc(floor);
+    }));
+  }
+
+  // Run after page loads
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', render);
+  } else {
+    render();
+  }
+})();
+</script>
+
+<script>
+async function subscribeFloorAlert() {
+  const email = document.getElementById('alertEmail')?.value?.trim();
+  const tld   = document.getElementById('alertTld')?.value;
+  const threshold = parseInt(document.getElementById('alertThreshold')?.value || '5');
+  const statusEl = document.getElementById('alertStatus');
+  const btn = document.getElementById('alertSubmitBtn');
+
+  if (!email || !email.includes('@')) {
+    statusEl.style.color = '#ef4444';
+    statusEl.textContent = 'Enter a valid email.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Subscribing...';
+  statusEl.textContent = '';
+
+  try {
+    const res = await fetch('https://btcnative-floor-alerts.galanin.workers.dev/api/alerts/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, tld, thresholdPct: threshold }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      statusEl.style.color = '#22c55e';
+      statusEl.textContent = `Subscribed. You will get an email when .${tld} floor moves \u00b1${threshold}%.`;
+      document.getElementById('alertEmail').value = '';
+    } else {
+      statusEl.style.color = '#ef4444';
+      statusEl.textContent = data.error || 'Subscription failed.';
+    }
+  } catch {
+    statusEl.style.color = '#ef4444';
+    statusEl.textContent = 'Could not reach alerts server.';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Notify me';
+}
+</script>
 </body>
 </html>

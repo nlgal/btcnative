@@ -364,6 +364,9 @@
             style="height:36px; font-size:var(--text-sm); padding-left:36px; border-radius:var(--radius-lg);" />
           <div class="search-results" id="navResults" style="display:none;"></div>
         </div>
+        <button class="nav__wallet-btn" id="navWalletBtn" onclick="initNavWallet()" style="display:none;">
+          Connect
+        </button>
         <button class="nav__theme-btn" data-theme-toggle aria-label="Toggle theme">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
@@ -382,7 +385,7 @@
     <!-- Address input -->
     <div class="port-search-row">
       <input class="port-addr-input" id="addrInput" type="text"
-        placeholder="bc1p... or bc1q... Bitcoin address" spellcheck="false" autocomplete="off" />
+        placeholder="bc1p... address or trump.btc name" spellcheck="false" autocomplete="off" />
       <button class="port-search-btn" id="lookupBtn">Look up</button>
     </div>
 
@@ -532,8 +535,38 @@ document.getElementById('addrInput').addEventListener('keydown', e => {
 })();
 
 async function startLookup() {
-  const addr = document.getElementById('addrInput').value.trim();
+  let addr = document.getElementById('addrInput').value.trim();
   if (!addr) return;
+
+  // If input looks like a name (contains a dot, no spaces, not starting with bc1/1/3)
+  const looksLikeName = addr.includes('.') && !addr.startsWith('bc1') && !addr.startsWith('1') && !addr.startsWith('3') && !addr.includes('@');
+  if (looksLikeName) {
+    const btn = document.getElementById('lookupBtn');
+    btn.disabled = true;
+    btn.textContent = 'Resolving...';
+    try {
+      const res = await fetch(`https://bnrp.name/api/resolve?domain=${encodeURIComponent(addr)}`);
+      const data = await res.json();
+      const owner = data?.address || data?.data?.address || data?.owner;
+      if (owner) {
+        document.getElementById('addrInput').value = owner;
+        addr = owner;
+      } else {
+        document.getElementById('errorPanel').style.display = 'block';
+        document.getElementById('errorMsg').textContent = `Could not resolve ${addr} to an address.`;
+        btn.disabled = false;
+        btn.textContent = 'Look up';
+        return;
+      }
+    } catch {
+      document.getElementById('errorPanel').style.display = 'block';
+      document.getElementById('errorMsg').textContent = 'Resolution failed. Try entering the address directly.';
+      btn.disabled = false;
+      btn.textContent = 'Look up';
+      return;
+    }
+  }
+
   if (addr.length < 26) {
     document.getElementById('errorPanel').style.display = 'block';
     document.getElementById('errorMsg').textContent = 'Enter a valid Bitcoin address (bc1p..., bc1q..., or 1...).';

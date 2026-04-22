@@ -49,6 +49,9 @@
             style="height:36px; font-size:var(--text-sm); padding-left:36px; border-radius:var(--radius-lg);" />
           <div class="search-results" id="navResults" style="display:none;"></div>
         </div>
+        <button class="nav__wallet-btn" id="navWalletBtn" onclick="initNavWallet()" style="display:none;">
+          Connect
+        </button>
         <button class="nav__theme-btn" data-theme-toggle aria-label="Toggle theme">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
@@ -147,6 +150,9 @@
           <div class="profile-card__divider"></div>
           <div class="profile-card__actions">
             <button class="btn btn--primary btn--full" id="buyBtn">Buy</button>
+            <a class="btn btn--outline btn--sm" id="sellBtn" href="./sell.html" title="List for sale">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </a>
             <button class="btn btn--outline btn--sm" id="shareBtn" onclick="shareProfile()" title="Share on X" aria-label="Share on X">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
             </button>
@@ -193,6 +199,7 @@
             <button class="profile-tab" data-ptab="history" onclick="switchProfileTab('history', this)">History</button>
             <button class="profile-tab" data-ptab="comps" onclick="switchProfileTab('comps', this)">Comps</button>
             <button class="profile-tab" data-ptab="metadata" onclick="switchProfileTab('metadata', this)">Metadata</button>
+            <button class="profile-tab" data-ptab="edit" id="editTab" onclick="switchProfileTab('edit', this)" style="display:none;">Edit</button>
           </div>
 
           <!-- Overview -->
@@ -229,6 +236,62 @@
             <table class="meta-table" id="metaTable">
               <tbody id="metaTableBody"></tbody>
             </table>
+          </div>
+
+          <!-- BNRP Record Editor (visible only to owner) -->
+          <div class="tab-content" id="ptab-edit">
+            <div id="bnrpEditorWrap">
+              <p style="font-size:var(--text-xs); color:var(--color-text-faint); margin-bottom:var(--space-5);">Set on-chain identity records for this name. Each update requires a Bitcoin transaction signed by your wallet.</p>
+
+              <div class="bnrp-field">
+                <label class="bnrp-field__label">Display name</label>
+                <input class="bnrp-field__input" id="bnrpDisplay" type="text" placeholder="Your display name" maxlength="64" />
+              </div>
+
+              <div class="bnrp-field">
+                <label class="bnrp-field__label">Description</label>
+                <textarea class="bnrp-field__input bnrp-field__textarea" id="bnrpDesc" placeholder="Short bio (120 chars max)" maxlength="120" rows="2"></textarea>
+              </div>
+
+              <div class="bnrp-field">
+                <label class="bnrp-field__label">Avatar (Ordinals inscription ID)</label>
+                <input class="bnrp-field__input" id="bnrpAvatar" type="text" placeholder="abc123...i0" spellcheck="false" />
+                <span class="bnrp-field__hint">Enter the inscription ID of an Ordinal you own. It will be displayed as your avatar.</span>
+              </div>
+
+              <div class="bnrp-field">
+                <label class="bnrp-field__label">Website URL</label>
+                <input class="bnrp-field__input" id="bnrpUrl" type="url" placeholder="https://example.com" />
+              </div>
+
+              <div class="bnrp-field">
+                <label class="bnrp-field__label">X / Twitter handle</label>
+                <div style="position:relative;">
+                  <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--color-text-faint); font-size:var(--text-sm);">@</span>
+                  <input class="bnrp-field__input" id="bnrpTwitter" type="text" placeholder="handle" style="padding-left:28px;" maxlength="50" />
+                </div>
+              </div>
+
+              <div class="bnrp-field">
+                <label class="bnrp-field__label">BTC payment address</label>
+                <input class="bnrp-field__input" id="bnrpBtc" type="text" placeholder="bc1p..." spellcheck="false" />
+                <span class="bnrp-field__hint">Optional. The address to receive payments at this name.</span>
+              </div>
+
+              <button class="bnrp-save-btn" id="bnrpSaveBtn" onclick="saveBnrpRecords()">
+                Preview inscription
+              </button>
+              <div class="bnrp-status" id="bnrpStatus"></div>
+
+              <!-- Preview JSON -->
+              <div id="bnrpPreviewWrap" style="display:none; margin-top:var(--space-4);">
+                <div style="font-size:var(--text-xs); color:var(--color-text-faint); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:var(--space-2);">Inscription content (JSON)</div>
+                <pre class="bnrp-preview-json" id="bnrpPreviewJson"></pre>
+                <div style="font-size:var(--text-xs); color:var(--color-text-faint); margin-top:var(--space-3); line-height:1.6;">
+                  Copy this JSON and inscribe it on Bitcoin using <a href="https://unisat.io/inscribe" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">UniSat Inscribe</a> or <a href="https://ordinals.com" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">ord</a>. Set the content type to <code style="font-family:var(--font-mono); background:var(--color-surface-offset); padding:1px 4px; border-radius:3px;">application/json</code>. Once confirmed on-chain, BNRP resolvers will pick it up automatically.
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>
