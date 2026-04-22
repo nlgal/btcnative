@@ -7,7 +7,7 @@
 // ── Config ────────────────────────────────────────────────────────────────────
 const BNRP_API        = 'https://bnrp.name/api';
 const UNISAT_API      = 'https://open-api.unisat.io';
-const UNISAT_API_KEY  = '';  // ← paste your key from unisat.io/open-api
+const UNISAT_API_KEY  = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
 const SUPPORTED_TLDS  = ['.btc', '.sats', '.x', '.ord', '.gm', '.xbt', '.sat', '.unisat', '.fb'];
 
 // TLD enum values as UniSat expects them
@@ -300,28 +300,142 @@ function computeBadges(data) {
   return badges.slice(0, 4);
 }
 
-// ── Category definitions ──────────────────────────────────────────────────────
+// ── Category definitions ──────────────────────────────────────────────────────────────────
+// Categories mirror ENS culture: specific numeric ranges, letter counts, patterns.
 const CATEGORIES = {
-  rarity: [
-    { slug: '3l',       name: '3L Club',       icon: '🔤', desc: 'Three-character names', color: '#f7931a', colorDim: 'rgba(247,147,26,0.12)', count: '~26K', floorLabel: '.btc floor', floor: null },
-    { slug: '4l',       name: '4L Club',       icon: '✦',  desc: 'Four-character names',  color: '#e8902a', colorDim: 'rgba(232,144,42,0.12)', count: '~676K', floorLabel: '.btc floor', floor: null },
-    { slug: 'number3',  name: '3-Digit',       icon: '💯', desc: '000-999 numeric names', color: '#60a5fa', colorDim: 'rgba(96,165,250,0.12)', count: '3,000', floorLabel: 'floor', floor: null },
-    { slug: 'number4',  name: '4-Digit',       icon: '🔢', desc: '0000-9999 numeric',     color: '#818cf8', colorDim: 'rgba(129,140,248,0.12)', count: '30K', floorLabel: 'floor', floor: null },
-    { slug: 'palindrome', name: 'Palindromes', icon: '🔁', desc: 'Same forwards & back',  color: '#a78bfa', colorDim: 'rgba(167,139,250,0.12)', count: 'Rare', floorLabel: 'floor', floor: null },
-    { slug: 'cultural', name: 'Cultural',      icon: '🌐', desc: 'First names, OG culture', color: '#34d399', colorDim: 'rgba(52,211,153,0.12)', count: 'Various', floorLabel: 'floor', floor: null },
+  numeric: [
+    {
+      slug: '100club', name: '100 Club',
+      desc: '0–99 — the rarest pure numbers',
+      subdesc: '100 names total. Highest individual floor.',
+      color: '#f7931a', colorDim: 'rgba(247,147,26,0.16)',
+      count: '100', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: '1kclub', name: '1K Club',
+      desc: '0–999 — three-digit numbers',
+      subdesc: '3,000 names total across all TLDs.',
+      color: '#f7931a', colorDim: 'rgba(247,147,26,0.12)',
+      count: '3,000', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: '10kclub', name: '10K Club',
+      desc: '0–9999 — four-digit numbers',
+      subdesc: '30,000 names. Liquid, collectible tier.',
+      color: '#e8902a', colorDim: 'rgba(232,144,42,0.12)',
+      count: '30K', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: '999club', name: '999 Club',
+      desc: 'Repeating nines — 9, 99, 999, 9999',
+      subdesc: 'Lucky number culture. Chinese collector demand.',
+      color: '#fbbf24', colorDim: 'rgba(251,191,36,0.12)',
+      count: 'Rare', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: 'allsame', name: 'All Same Digit',
+      desc: '111, 222, 333 — repeating single digit',
+      subdesc: 'Aesthetic rarity. Easy to recognize.',
+      color: '#60a5fa', colorDim: 'rgba(96,165,250,0.12)',
+      count: 'Rare', floorLabel: 'floor', floor: null,
+    },
   ],
-  provenance: [
-    { slug: 'sub1k',    name: 'Sub-1K',        icon: '⚡', desc: 'First 1,000 inscriptions', color: '#fbbf24', colorDim: 'rgba(251,191,36,0.12)', count: '1,000', floorLabel: 'floor', floor: null },
-    { slug: 'sub10k',   name: 'Sub-10K',       icon: '🌟', desc: 'First 10,000 inscriptions', color: '#f59e0b', colorDim: 'rgba(245,158,11,0.12)', count: '10K', floorLabel: 'floor', floor: null },
-    { slug: 'tld-btc',  name: '.btc',          icon: '₿',  desc: 'BNS names on UniSat',   color: '#f7931a', colorDim: 'rgba(247,147,26,0.12)', count: 'Largest', floorLabel: 'floor', floor: null },
-    { slug: 'tld-sats', name: '.sats',         icon: '⚡', desc: 'Sats Names protocol',   color: '#60a5fa', colorDim: 'rgba(96,165,250,0.12)', count: 'Large', floorLabel: 'floor', floor: null },
-    { slug: 'tld-x',    name: '.x',            icon: '✗',  desc: 'Cross-chain identity',  color: '#a78bfa', colorDim: 'rgba(167,139,250,0.12)', count: 'Growing', floorLabel: 'floor', floor: null },
-    { slug: 'tld-ord',  name: '.ord',          icon: '📜', desc: 'Ordinals-native',        color: '#34d399', colorDim: 'rgba(52,211,153,0.12)', count: 'Niche', floorLabel: 'floor', floor: null },
+  letters: [
+    {
+      slug: '1l', name: '1L Club',
+      desc: 'Single letters — a.btc through z.btc',
+      subdesc: '26 names per TLD. Rarest of all letter names.',
+      color: '#f7931a', colorDim: 'rgba(247,147,26,0.16)',
+      count: '26', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: '3l', name: '3L Club',
+      desc: 'Three-letter names',
+      subdesc: '~17,576 per TLD. Premium collectible tier.',
+      color: '#f7931a', colorDim: 'rgba(247,147,26,0.12)',
+      count: '~26K', floorLabel: '.btc floor', floor: null,
+    },
+    {
+      slug: '4l', name: '4L Club',
+      desc: 'Four-letter names',
+      subdesc: '~456K per TLD. High demand, lower floor.',
+      color: '#e8902a', colorDim: 'rgba(232,144,42,0.12)',
+      count: '~456K', floorLabel: '.btc floor', floor: null,
+    },
+    {
+      slug: 'palindrome', name: 'Palindromes',
+      desc: 'Same forwards and backwards',
+      subdesc: 'aba, abba, racecar — rare across all lengths.',
+      color: '#a78bfa', colorDim: 'rgba(167,139,250,0.12)',
+      count: 'Rare', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: 'dictionary', name: 'Dictionary Words',
+      desc: 'Common English words',
+      subdesc: 'Brand-grade names with real-world meaning.',
+      color: '#34d399', colorDim: 'rgba(52,211,153,0.12)',
+      count: 'Various', floorLabel: 'floor', floor: null,
+    },
+  ],
+  tld: [
+    {
+      slug: 'tld-btc', name: '.btc',
+      desc: 'BNS names on UniSat',
+      subdesc: 'Largest supply and most liquid market.',
+      color: '#f7931a', colorDim: 'rgba(247,147,26,0.12)',
+      count: 'Largest', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: 'tld-sats', name: '.sats',
+      desc: 'Sats Names protocol',
+      subdesc: 'Second largest by volume and community.',
+      color: '#60a5fa', colorDim: 'rgba(96,165,250,0.12)',
+      count: 'Large', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: 'tld-x', name: '.x',
+      desc: 'Cross-chain identity layer',
+      subdesc: 'Growing collector base, identity-forward.',
+      color: '#818cf8', colorDim: 'rgba(129,140,248,0.12)',
+      count: 'Growing', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: 'tld-ord', name: '.ord',
+      desc: 'Ordinals-native TLD',
+      subdesc: 'Provenance-focused, Ordinals-first community.',
+      color: '#34d399', colorDim: 'rgba(52,211,153,0.12)',
+      count: 'Niche', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: 'tld-unisat', name: '.unisat',
+      desc: 'UniSat platform TLD',
+      subdesc: 'Wallet-native identity, loyal user base.',
+      color: '#fbbf24', colorDim: 'rgba(251,191,36,0.12)',
+      count: 'Medium', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: 'tld-xbt', name: '.xbt',
+      desc: 'Alternative Bitcoin ticker',
+      subdesc: 'Trader and maxi community.',
+      color: '#f59e0b', colorDim: 'rgba(245,158,11,0.12)',
+      count: 'Small', floorLabel: 'floor', floor: null,
+    },
   ],
   signal: [
-    { slug: 'bnrp',     name: 'BNRP Verified', icon: '✓',  desc: 'Active BNRP identity records', color: '#4ade80', colorDim: 'rgba(74,222,128,0.12)', count: 'Live', floorLabel: 'floor', floor: null },
-    { slug: 'listed',   name: 'Listed Now',    icon: '🏷',  desc: 'Currently for sale',    color: '#60a5fa', colorDim: 'rgba(96,165,250,0.12)', count: 'Live', floorLabel: 'lowest ask', floor: null },
-    { slug: 'dictionary', name: 'Dictionary', icon: '📖',  desc: 'Common English words',  color: '#f59e0b', colorDim: 'rgba(245,158,11,0.12)', count: 'Various', floorLabel: 'floor', floor: null },
+    {
+      slug: 'bnrp', name: 'BNRP Verified',
+      desc: 'Active on-chain identity records',
+      subdesc: 'Avatar, display name, Twitter, URL set via BNRP.',
+      color: '#4ade80', colorDim: 'rgba(74,222,128,0.12)',
+      count: 'Live', floorLabel: 'floor', floor: null,
+    },
+    {
+      slug: 'listed', name: 'Listed Now',
+      desc: 'Currently for sale on UniSat',
+      subdesc: 'Live ask prices, refreshed in real time.',
+      color: '#60a5fa', colorDim: 'rgba(96,165,250,0.12)',
+      count: 'Live', floorLabel: 'lowest ask', floor: null,
+    },
   ],
 };
 
@@ -332,14 +446,17 @@ function buildCategoryCard(cat) {
   card.style.setProperty('--card-accent', cat.color);
   card.style.setProperty('--card-accent-dim', cat.colorDim);
   card.innerHTML = `
-    <div class="category-card__icon">${cat.icon}</div>
-    <div>
+    <div class="category-card__top">
       <div class="category-card__name">${cat.name}</div>
-      <div class="category-card__count">${cat.count} names</div>
+      <div class="category-card__floor">
+        <span class="category-card__floor-price" data-floor-slug="${cat.slug}">—</span>
+        <span class="category-card__floor-label">${cat.floorLabel}</span>
+      </div>
     </div>
-    <div class="category-card__floor">
-      <span class="category-card__floor-price" data-floor-slug="${cat.slug}">—</span>
-      <span class="category-card__floor-label">${cat.floorLabel}</span>
+    <div class="category-card__desc">${cat.desc}</div>
+    <div class="category-card__meta">
+      <span class="category-card__count">${cat.count} names</span>
+      ${cat.subdesc ? `<span class="category-card__subdesc">${cat.subdesc}</span>` : ''}
     </div>
   `;
   return card;
@@ -362,7 +479,13 @@ async function initIndex() {
   // Render category grid immediately with seed data
   const catGrid = qs('#categoryGrid');
   if (catGrid) {
-    const all = [...CATEGORIES.rarity, ...CATEGORIES.provenance.slice(0,2), ...CATEGORIES.signal.slice(0,2)];
+    // Homepage grid: 3 number clubs, 2 letter clubs, 2 TLDs, 1 signal
+    const all = [
+      CATEGORIES.numeric[0], CATEGORIES.numeric[1], CATEGORIES.numeric[2],
+      CATEGORIES.letters[1], CATEGORIES.letters[2],
+      CATEGORIES.tld[0], CATEGORIES.tld[1],
+      CATEGORIES.signal[0],
+    ];
     all.forEach(cat => catGrid.appendChild(buildCategoryCard(cat)));
   }
 
@@ -694,8 +817,10 @@ async function initExplorePage() {
   const rarityEl     = qs('#rarityCategories');
   const provenanceEl = qs('#provenanceCategories');
   const signalEl     = qs('#signalCategories');
-  if (rarityEl)     CATEGORIES.rarity.forEach(c => rarityEl.appendChild(buildCategoryCard(c)));
-  if (provenanceEl) CATEGORIES.provenance.forEach(c => provenanceEl.appendChild(buildCategoryCard(c)));
+  const tldEl       = qs('#tldCategories');
+  if (rarityEl)     CATEGORIES.numeric.forEach(c => rarityEl.appendChild(buildCategoryCard(c)));
+  if (provenanceEl) CATEGORIES.letters.forEach(c => provenanceEl.appendChild(buildCategoryCard(c)));
+  if (tldEl)        CATEGORIES.tld.forEach(c => tldEl.appendChild(buildCategoryCard(c)));
   if (signalEl)     CATEGORIES.signal.forEach(c => signalEl.appendChild(buildCategoryCard(c)));
 
   // Populate listings with seed immediately, then replace with live data
