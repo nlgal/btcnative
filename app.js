@@ -590,6 +590,25 @@ async function updateStats() {
 }
 
 // ── Name profile page ─────────────────────────────────────────────────────────
+// Maps a badge label to an explore listings URL with the right filter params
+function badgeToExploreUrl(label, name) {
+  const base = './explore.html?tab=listings';
+  // Length clubs
+  if (label === '1L' || label === '2L')     return `${base}&len=1-2`;
+  if (label === '3L')                        return `${base}&len=3`;
+  if (label === '4L')                        return `${base}&len=4`;
+  if (label === '1-Digit' || label === '2-Digit') return `${base}&len=1-2`;
+  if (label === '3-Digit')                   return `${base}&len=3`;
+  if (label === '4-Digit')                   return `${base}&len=4`;
+  // TLDs
+  if (label.startsWith('.'))                 return `${base}&tld=${encodeURIComponent(label)}`;
+  // Special
+  if (label === 'BNRP')                      return `${base}&special=bnrp`;
+  if (label === 'Palindrome')                return `${base}&special=palindrome`;
+  // chars — no useful filter mapping yet
+  return null;
+}
+
 async function initProfilePage() {
   const params = new URLSearchParams(location.search);
   const name = params.get('name');
@@ -713,10 +732,12 @@ async function initProfilePage() {
     // extra attrs
     if (getBase(name).length <= 5) badges.push({ label: `${getBase(name).length} chars`, color: 'muted', size: 'lg' });
     badges.forEach(b => {
-      const span = document.createElement('span');
-      span.className = `badge-lg badge-lg--${b.color}`;
-      span.textContent = b.label;
-      attrEl.appendChild(span);
+      const href = badgeToExploreUrl(b.label, name);
+      const el = href ? document.createElement('a') : document.createElement('span');
+      el.className = `badge-lg badge-lg--${b.color}`;
+      if (href) { el.href = href; el.style.cursor = 'pointer'; el.style.textDecoration = 'none'; }
+      el.textContent = b.label;
+      attrEl.appendChild(el);
     });
   }
 
@@ -823,8 +844,16 @@ async function initExplorePage() {
   if (tldEl)        CATEGORIES.tld.forEach(c => tldEl.appendChild(buildCategoryCard(c)));
   if (signalEl)     CATEGORIES.signal.forEach(c => signalEl.appendChild(buildCategoryCard(c)));
 
-  // Populate listings with seed immediately, then replace with live data
-  renderListings(SEED_NAMES);
+  // Apply URL filters on load (e.g. coming from a badge click)
+  const urlLen     = params.get('len');
+  const urlTld     = params.get('tld');
+  const urlSpecial = params.get('special');
+  if (urlLen)     { currentLen     = urlLen;     const b = qs(`[data-len="${urlLen}"]`);     if (b) b.classList.add('active'); }
+  if (urlTld)     { currentTld     = urlTld;     const b = qs(`[data-tld="${urlTld}"]`);     if (b) b.classList.add('active'); }
+  if (urlSpecial) { currentSpecial = urlSpecial; const b = qs(`[data-special="${urlSpecial}"]`); if (b) b.classList.add('active'); }
+
+  // Populate listings with seed immediately (respecting any URL filters), then replace with live data
+  renderListings(getFilteredNames());
   if (UNISAT_API_KEY) {
     fetchListings().then(result => {
       if (result && result.list && result.list.length > 0) {
@@ -879,18 +908,6 @@ function sortNames(key, btn) {
   btn.classList.add('active');
   renderListings(getFilteredNames());
 }
-function getFilteredNames() {
-  return SEED_NAMES.filter(n => {
-    if (currentTld !== 'all' && getTld(n.name) !== currentTld) return false;
-    const base = getBase(n.name);
-    if (currentLen === '1-2' && base.length > 2) return false;
-    if (currentLen === '3'   && base.length !== 3) return false;
-    if (currentLen === '4'   && base.length !== 4) return false;
-    if (currentLen === '5'   && base.length !== 5) return false;
-    if (currentSpecial === 'bnrp' && !n.bnrp) return false;
-    return true;
-  });
-}
 // Live listings state
 let LIVE_LISTINGS = null;  // populated from UniSat if API key present
 
@@ -932,6 +949,7 @@ function getFilteredNames() {
     if (currentLen === '4'   && base.length !== 4) return false;
     if (currentLen === '5'   && base.length !== 5) return false;
     if (currentSpecial === 'bnrp' && !n.bnrp) return false;
+    if (currentSpecial === 'palindrome') { const b = getBase(n.name); if (b !== b.split('').reverse().join('') || b.length < 2) return false; }
     return true;
   });
 }
