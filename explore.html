@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Explore — BTC Native</title>
+  <meta name="description" content="Browse and filter Bitcoin names by category, TLD, length, rarity, and BNRP status." />
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link rel="stylesheet" href="./base.css" />
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container">
+    <div class="nav__inner">
+      <a href="./index.html" class="nav__logo">
+        <svg class="nav__logo-mark" viewBox="0 0 28 28" fill="none" aria-label="BTC Native logo">
+          <rect width="28" height="28" rx="6" fill="#f7931a"/>
+          <path d="M8 7h7.5c2.5 0 4 1.2 4 3.2 0 1.4-.8 2.4-2 2.8v.1c1.6.3 2.7 1.4 2.7 3 0 2.3-1.7 3.9-4.5 3.9H8V7zm3 5h4c1 0 1.6-.5 1.6-1.4 0-.8-.6-1.3-1.6-1.3H11v2.7zm0 5.2h4.3c1.1 0 1.8-.6 1.8-1.5 0-.9-.7-1.5-1.8-1.5H11v3z" fill="#000"/>
+        </svg>
+        BTC Native
+      </a>
+      <ul class="nav__links" role="list">
+        <li><a href="./index.html" class="nav__link">Discover</a></li>
+        <li><a href="./explore.html" class="nav__link active">Explore</a></li>
+        <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
+      </ul>
+      <div class="nav__actions">
+        <div class="search-wrap" style="width:240px; position:relative;">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="left:var(--space-3);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="search-input" id="navSearch" type="text" placeholder="Search names..." autocomplete="off"
+            style="height:36px; font-size:var(--text-sm); padding-left:var(--space-10); border-radius:var(--radius-lg);" />
+          <div class="search-results" id="navResults" style="display:none;"></div>
+        </div>
+        <button class="nav__theme-btn" data-theme-toggle aria-label="Toggle theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="container container--wide">
+
+    <!-- Page header -->
+    <div style="padding-block:var(--space-8) var(--space-6); border-bottom:1px solid var(--color-divider);">
+      <h1 style="font-family:var(--font-display); font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--color-text);">Explore</h1>
+      <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-top:var(--space-2);">Browse Bitcoin names by category, TLD, and rarity. Floor prices updated every 10 minutes.</p>
+    </div>
+
+    <!-- Tab bar -->
+    <div style="display:flex; gap:var(--space-1); padding-block:var(--space-4); border-bottom:1px solid var(--color-divider); margin-bottom:var(--space-2);">
+      <button class="filter-chip active" data-tab="categories" onclick="switchTab('categories')">Categories</button>
+      <button class="filter-chip" data-tab="listings" onclick="switchTab('listings')">All Listings</button>
+      <button class="filter-chip" data-tab="market" onclick="switchTab('market')">Market</button>
+    </div>
+
+    <!-- CATEGORIES TAB -->
+    <div id="tabCategories" class="tab-panel">
+      <div style="padding-block:var(--space-6);">
+        <h2 style="font-family:var(--font-display); font-size:var(--text-lg); font-weight:700; margin-bottom:var(--space-2); color:var(--color-text);">Rarity Tiers</h2>
+        <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-6);">Names organized by collectible value. Each category has a fixed or well-defined supply.</p>
+        <div class="category-grid" id="rarityCategories"></div>
+      </div>
+      <div style="padding-block:var(--space-6); border-top:1px solid var(--color-divider);">
+        <h2 style="font-family:var(--font-display); font-size:var(--text-lg); font-weight:700; margin-bottom:var(--space-2); color:var(--color-text);">Provenance Tiers</h2>
+        <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-6);">Names grouped by on-chain history and TLD.</p>
+        <div class="category-grid" id="provenanceCategories"></div>
+      </div>
+      <div style="padding-block:var(--space-6); border-top:1px solid var(--color-divider);">
+        <h2 style="font-family:var(--font-display); font-size:var(--text-lg); font-weight:700; margin-bottom:var(--space-2); color:var(--color-text);">Signal Tiers</h2>
+        <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-6);">Names with active use signals — BNRP records, recent transfers, watchlist activity.</p>
+        <div class="category-grid" id="signalCategories"></div>
+      </div>
+    </div>
+
+    <!-- LISTINGS TAB -->
+    <div id="tabListings" class="tab-panel" style="display:none;">
+      <div class="filter-bar" style="padding-top:var(--space-6);">
+        <span style="font-size:var(--text-xs); color:var(--color-text-faint); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-right:var(--space-2);">TLD</span>
+        <button class="filter-chip active" data-tld="all" onclick="filterTld('all', this)">All</button>
+        <button class="filter-chip" data-tld=".btc" onclick="filterTld('.btc', this)">.btc</button>
+        <button class="filter-chip" data-tld=".sats" onclick="filterTld('.sats', this)">.sats</button>
+        <button class="filter-chip" data-tld=".x" onclick="filterTld('.x', this)">.x</button>
+        <button class="filter-chip" data-tld=".ord" onclick="filterTld('.ord', this)">.ord</button>
+        <button class="filter-chip" data-tld=".gm" onclick="filterTld('.gm', this)">.gm</button>
+        <span style="width:1px; height:20px; background:var(--color-border); margin-inline:var(--space-2);"></span>
+        <span style="font-size:var(--text-xs); color:var(--color-text-faint); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-right:var(--space-2);">Length</span>
+        <button class="filter-chip" data-len="1-2" onclick="filterLen('1-2', this)">1-2L</button>
+        <button class="filter-chip" data-len="3" onclick="filterLen('3', this)">3L</button>
+        <button class="filter-chip" data-len="4" onclick="filterLen('4', this)">4L</button>
+        <button class="filter-chip" data-len="5" onclick="filterLen('5', this)">5L</button>
+        <span style="width:1px; height:20px; background:var(--color-border); margin-inline:var(--space-2);"></span>
+        <button class="filter-chip" data-special="bnrp" onclick="filterSpecial('bnrp', this)">BNRP only</button>
+        <button class="filter-chip" data-special="listed" onclick="filterSpecial('listed', this)">Listed</button>
+        <span style="margin-left:auto; font-size:var(--text-xs); color:var(--color-text-faint); font-family:var(--font-mono);" id="listingCount">— names</span>
+      </div>
+      <!-- Sort -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-4);">
+        <span style="font-size:var(--text-xs); color:var(--color-text-faint);">Sort by</span>
+        <div style="display:flex; gap:var(--space-2);">
+          <button class="filter-chip active" onclick="sortNames('score', this)">Score</button>
+          <button class="filter-chip" onclick="sortNames('price', this)">Price</button>
+          <button class="filter-chip" onclick="sortNames('age', this)">Inscription age</button>
+          <button class="filter-chip" onclick="sortNames('recent', this)">Recent</button>
+        </div>
+      </div>
+      <div class="name-grid" id="listingsGrid" style="grid-template-columns:repeat(auto-fill, minmax(180px,1fr));"></div>
+      <div style="text-align:center; padding:var(--space-8);">
+        <button class="btn btn--outline" id="loadMoreBtn" onclick="loadMore()">Load more</button>
+      </div>
+    </div>
+
+    <!-- MARKET TAB -->
+    <div id="tabMarket" class="tab-panel" style="display:none;">
+      <div style="padding-block:var(--space-8);">
+        <h2 style="font-family:var(--font-display); font-size:var(--text-lg); font-weight:700; margin-bottom:var(--space-6); color:var(--color-text);">Market Indexes</h2>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:var(--space-4);" id="indexCards"></div>
+        <div style="border-top:1px solid var(--color-divider); padding-top:var(--space-8); margin-top:var(--space-8);">
+          <h2 style="font-family:var(--font-display); font-size:var(--text-lg); font-weight:700; margin-bottom:var(--space-6); color:var(--color-text);">Recent Sales</h2>
+          <div id="salesTable"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer__inner">
+      <span class="footer__copy">© 2026 BTC Native · Built on <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" style="color:var(--color-text-faint);">BNRP</a></span>
+      <ul class="footer__links" role="list">
+        <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Protocol</a></li>
+        <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script src="./app.js"></script>
+</body>
+</html>

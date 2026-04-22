@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTC Native — Bitcoin Name Explorer</title>
+  <meta name="description" content="Discover, track, and trade Bitcoin-native names across .btc, .sats, .x, .ord and more. Powered by BNRP open resolution." />
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link rel="stylesheet" href="./base.css" />
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="container">
+    <div class="nav__inner">
+      <a href="./index.html" class="nav__logo">
+        <svg class="nav__logo-mark" viewBox="0 0 28 28" fill="none" aria-label="BTC Native logo">
+          <rect width="28" height="28" rx="6" fill="#f7931a"/>
+          <path d="M8 7h7.5c2.5 0 4 1.2 4 3.2 0 1.4-.8 2.4-2 2.8v.1c1.6.3 2.7 1.4 2.7 3 0 2.3-1.7 3.9-4.5 3.9H8V7zm3 5h4c1 0 1.6-.5 1.6-1.4 0-.8-.6-1.3-1.6-1.3H11v2.7zm0 5.2h4.3c1.1 0 1.8-.6 1.8-1.5 0-.9-.7-1.5-1.8-1.5H11v3z" fill="#000"/>
+        </svg>
+        BTC Native
+      </a>
+      <ul class="nav__links" role="list">
+        <li><a href="./index.html" class="nav__link active">Discover</a></li>
+        <li><a href="./explore.html" class="nav__link">Explore</a></li>
+        <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
+      </ul>
+      <div class="nav__actions">
+        <button class="nav__theme-btn" data-theme-toggle aria-label="Toggle theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ──────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container container--narrow">
+    <div class="hero__eyebrow">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+      Bitcoin-native name resolution
+    </div>
+    <h1 class="hero__title">The home for<br><span>Bitcoin names</span></h1>
+    <p class="hero__subtitle">Discover, resolve, and track .btc, .sats, .x, .ord names. Collector scores, category floors, BNRP identity cards.</p>
+    <div class="hero__search-wrap">
+      <div class="search-wrap" id="heroSearchWrap">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" id="heroSearch" type="text" placeholder="Search any name — trump.btc, 1.sats, ord.x..." autocomplete="off" spellcheck="false" />
+        <button class="search-btn" id="heroSearchBtn">Resolve</button>
+        <div class="search-results" id="heroResults" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="hero__hints">
+      <span>Try:</span>
+      <button class="hero__hint" onclick="setSearch('trump.btc')">trump.btc</button>
+      <button class="hero__hint" onclick="setSearch('satoshi.sats')">satoshi.sats</button>
+      <button class="hero__hint" onclick="setSearch('1.btc')">1.btc</button>
+      <button class="hero__hint" onclick="setSearch('bitcoin.x')">bitcoin.x</button>
+      <button class="hero__hint" onclick="setSearch('ord.ord')">ord.ord</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS BAR ──────────────────────────────────────────────────── -->
+<div class="stats-bar">
+  <div class="container">
+    <div class="stats-bar__inner">
+      <div class="stat-item">
+        <span class="stat-item__label">Names indexed</span>
+        <span class="stat-item__value" id="statTotal">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__label">.btc floor</span>
+        <span class="stat-item__value" id="statBtcFloor">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__label">.sats floor</span>
+        <span class="stat-item__value" id="statSatsFloor">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__label">3L club floor</span>
+        <span class="stat-item__value" id="stat3LFloor">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__label">BNRP records</span>
+        <span class="stat-item__value" id="statBnrp">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__label">24h volume</span>
+        <span class="stat-item__value" id="statVol">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CATEGORIES ──────────────────────────────────────────────────── -->
+<main>
+  <div class="container">
+
+    <section class="section">
+      <div class="section__header">
+        <h2 class="section__title">Categories</h2>
+        <a href="./explore.html" class="section__link">View all →</a>
+      </div>
+      <div class="category-grid" id="categoryGrid">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <section class="section">
+      <div class="section__header">
+        <h2 class="section__title">Recent Sales</h2>
+        <a href="./explore.html?tab=market" class="section__link">Full market →</a>
+      </div>
+      <div class="name-grid" id="recentSales">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <section class="section">
+      <div class="section__header">
+        <h2 class="section__title">BNRP Verified</h2>
+        <a href="./explore.html?filter=bnrp" class="section__link">View all →</a>
+      </div>
+      <p style="color:var(--color-text-muted); font-size:var(--text-sm); margin-bottom:var(--space-6); max-width:60ch;">Names with active <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">BNRP</a> identity records — avatar, display name, and linked addresses set on-chain.</p>
+      <div class="name-grid" id="bnrpNames">
+        <!-- populated by JS -->
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- ── FOOTER ──────────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer__inner">
+      <span class="footer__copy">© 2026 BTC Native · Built on <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" style="color:var(--color-text-faint);">BNRP</a></span>
+      <ul class="footer__links" role="list">
+        <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Protocol</a></li>
+        <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
+        <li><a href="./explore.html">Explore</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script src="./app.js"></script>
+</body>
+</html>
