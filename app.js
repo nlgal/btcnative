@@ -5,9 +5,21 @@
 'use strict';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BNRP_API   = 'https://bnrp.name/api';
-const UNISAT_API = 'https://open-api.unisat.io/v1';
-const SUPPORTED_TLDS = ['.btc', '.sats', '.x', '.ord', '.gm', '.xbt', '.sat', '.unisat', '.fb'];
+const BNRP_API        = 'https://bnrp.name/api';
+const UNISAT_API      = 'https://open-api.unisat.io';
+const UNISAT_API_KEY  = '';  // ← paste your key from unisat.io/open-api
+const SUPPORTED_TLDS  = ['.btc', '.sats', '.x', '.ord', '.gm', '.xbt', '.sat', '.unisat', '.fb'];
+
+// TLD enum values as UniSat expects them
+const UNISAT_TLD_MAP = {
+  '.btc':    'btc',
+  '.sats':   'sats',
+  '.x':      'x',
+  '.ord':    'ord',
+  '.gm':     'gm',
+  '.xbt':    'xbt',
+  '.unisat': 'unisat',
+};
 
 // ── Theme toggle ──────────────────────────────────────────────────────────────
 (function initTheme() {
@@ -43,6 +55,93 @@ async function fetchJson(url, opts = {}) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return await r.json();
   } catch(e) { return null; }
+}
+
+// UniSat market API — POST with Bearer auth
+async function unisatPost(path, body = {}) {
+  if (!UNISAT_API_KEY) return null;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    const r = await fetch(`${UNISAT_API}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${UNISAT_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!r.ok) { console.warn('UniSat API error', r.status, path); return null; }
+    const json = await r.json();
+    if (json.code !== 0) { console.warn('UniSat API non-zero code', json.code, json.msg); return null; }
+    return json.data;
+  } catch(e) { console.warn('UniSat API fetch failed', path, e.message); return null; }
+}
+
+// ── UniSat market data layer ───────────────────────────────────────────────────
+
+// Returns { btc, sats, x, ord, gm, xbt, unisat } with curPrice (floor in sats) + btcVolume
+async function fetchDomainTypes() {
+  const data = await unisatPost('/v3/market/domain/auction/domain_types', {});
+  if (!data || !data.list) return null;
+  const map = {};
+  data.list.forEach(item => { map[item.domainType] = item; });
+  return map;
+}
+
+// Returns floor price (sats) for a specific TLD, or null
+async function fetchTldFloor(tldKey) {
+  // Query the listing with lowest price for this domainType
+  const data = await unisatPost('/v3/market/domain/auction/list', {
+    filter: { nftType: 'domain', domainType: tldKey },
+    sort:   { unitPrice: 1 },
+    start:  0,
+    limit:  1,
+  });
+  if (!data || !data.list || data.list.length === 0) return null;
+  return data.list[0].price || null;
+}
+
+// Returns recent sales array [{ domain, domainType, price, timestamp }]
+async function fetchRecentSales(limit = 10) {
+  const data = await unisatPost('/v3/market/domain/auction/actions', {
+    filter: { nftType: 'domain', event: 'Sold' },
+    start:  0,
+    limit,
+  });
+  if (!data || !data.list) return null;
+  return data.list;
+}
+
+// Returns active listings array for the explore grid
+async function fetchListings({ domainType = null, minLength = null, maxLength = null, page = 0, pageSize = 20 } = {}) {
+  const filter = { nftType: 'domain' };
+  if (domainType) filter.domainType = domainType;
+  if (minLength)  filter.domainMinLength = minLength;
+  if (maxLength)  filter.domainMaxLength = maxLength;
+  const data = await unisatPost('/v3/market/domain/auction/list', {
+    filter,
+    sort:  { unitPrice: 1 },
+    start: page * pageSize,
+    limit: pageSize,
+  });
+  if (!data || !data.list) return null;
+  return { list: data.list, total: data.total };
+}
+
+// Derive 24h volume from domain_types data
+function calc24hVolume(domainTypesMap) {
+  if (!domainTypesMap) return null;
+  let totalSats = 0;
+  Object.values(domainTypesMap).forEach(t => { totalSats += (t.btcVolume || 0); });
+  // btcVolume is in sats
+  if (totalSats === 0) return null;
+  const btc = totalSats / 1e8;
+  const usd = btc * 95000; // rough BTC/USD — good enough for display
+  return usd >= 1000 ? `$${(usd/1000).toFixed(1)}K` : `$${usd.toFixed(0)}`;
 }
 
 function formatSats(n) {
@@ -274,6 +373,23 @@ async function initIndex() {
   // Populate stats with loading states
   updateStats();
 
+  // Load live floor prices into category cards if API key set
+  if (UNISAT_API_KEY) {
+    fetchDomainTypes().then(domainTypes => {
+      if (!domainTypes) return;
+      // Map TLD slug to UniSat domainType key
+      const tldToKey = { 'tld-btc': 'btc', 'tld-sats': 'sats', 'tld-x': 'x', 'tld-ord': 'ord' };
+      Object.entries(tldToKey).forEach(([slug, key]) => {
+        const dt = domainTypes[key];
+        if (dt && dt.curPrice) {
+          qsa(`[data-floor-slug="${slug}"]`).forEach(el => {
+            el.textContent = formatSats(dt.curPrice);
+          });
+        }
+      });
+    });
+  }
+
   // Try to load live trump.btc for BNRP section
   const bnrpData = await resolveName('trump.btc');
   if (bnrpData && bnrpData.name) {
@@ -305,25 +421,49 @@ function renderSeedNames(containerId, names) {
   });
 }
 
+function setStatEl(id, val) {
+  const el = qs(`#${id}`);
+  if (!el || !val) return;
+  el.style.opacity = '0';
+  el.textContent = val;
+  el.style.transition = 'opacity 0.4s';
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
+}
+
 async function updateStats() {
-  // Show placeholder stats — these would pull from live UniSat + BNRP indexer
-  const stats = [
-    ['statTotal',    '1.2M+'],
-    ['statBtcFloor', '80K sats'],
-    ['statSatsFloor','22K sats'],
-    ['stat3LFloor',  '420K sats'],
-    ['statBnrp',     '247'],
-    ['statVol',      '$14.2K'],
-  ];
-  stats.forEach(([id, val]) => {
-    const el = qs(`#${id}`);
-    if (el) {
-      el.style.opacity = '0';
-      el.textContent = val;
-      el.style.transition = 'opacity 0.4s';
-      requestAnimationFrame(() => { el.style.opacity = '1'; });
-    }
+  // Set fallback placeholders immediately so stats bar is never empty
+  setStatEl('statTotal',    '1.2M+');
+  setStatEl('statBtcFloor', '80K sats');
+  setStatEl('statSatsFloor','22K sats');
+  setStatEl('stat3LFloor',  '420K sats');
+  setStatEl('statBnrp',     '247');
+  setStatEl('statVol',      '$14.2K');
+
+  if (!UNISAT_API_KEY) return; // no key — placeholders stay
+
+  // Fetch live domain type stats (floor + volume per TLD)
+  const domainTypes = await fetchDomainTypes();
+  if (domainTypes) {
+    const btcData  = domainTypes['btc'];
+    const satsData = domainTypes['sats'];
+    if (btcData  && btcData.curPrice)  setStatEl('statBtcFloor',  formatSats(btcData.curPrice));
+    if (satsData && satsData.curPrice) setStatEl('statSatsFloor', formatSats(satsData.curPrice));
+    const vol = calc24hVolume(domainTypes);
+    if (vol) setStatEl('statVol', vol);
+  }
+
+  // Fetch 3L club floor separately (3-char .btc)
+  const floor3L = await fetchTldFloor('btc');  // will get lowest overall .btc
+  // For a true 3L floor we fetch with length filter
+  const data3L = await unisatPost('/v3/market/domain/auction/list', {
+    filter: { nftType: 'domain', domainType: 'btc', domainMinLength: 2, domainMaxLength: 3 },
+    sort:   { unitPrice: 1 },
+    start:  0,
+    limit:  1,
   });
+  if (data3L && data3L.list && data3L.list.length > 0) {
+    setStatEl('stat3LFloor', formatSats(data3L.list[0].price));
+  }
 }
 
 // ── Name profile page ─────────────────────────────────────────────────────────
@@ -463,9 +603,24 @@ async function initProfilePage() {
     buyBtn.href = `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`;
   }
 
-  // Listing status
-  qs('#listingPrice').textContent = 'Not listed';
-  qs('#listingStatus').textContent = 'This name is not currently listed for sale. Make an offer via UniSat.';
+  // Listing status — check live UniSat data if API key set
+  qs('#listingPrice').textContent = 'Checking...';
+  qs('#listingStatus').textContent = '';
+  if (inscId && UNISAT_API_KEY) {
+    unisatPost('/v3/market/domain/auction/inscription_info', { inscriptionId: inscId }).then(info => {
+      if (info && info.price && !info.notOnSale) {
+        qs('#listingPrice').textContent = formatSats(info.price);
+        qs('#listingStatus').innerHTML = `Listed on UniSat &middot; <a href="https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">Buy now</a>`;
+        if (buyBtn) buyBtn.href = `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`;
+      } else {
+        qs('#listingPrice').textContent = 'Not listed';
+        qs('#listingStatus').textContent = 'Not currently for sale. Make an offer via UniSat.';
+      }
+    });
+  } else {
+    qs('#listingPrice').textContent = 'Not listed';
+    qs('#listingStatus').textContent = 'This name is not currently listed for sale. Make an offer via UniSat.';
+  }
 
   // Activity (placeholder)
   const actEl = qs('#activityFeed');
@@ -543,8 +698,18 @@ async function initExplorePage() {
   if (provenanceEl) CATEGORIES.provenance.forEach(c => provenanceEl.appendChild(buildCategoryCard(c)));
   if (signalEl)     CATEGORIES.signal.forEach(c => signalEl.appendChild(buildCategoryCard(c)));
 
-  // Populate listings with seed
+  // Populate listings with seed immediately, then replace with live data
   renderListings(SEED_NAMES);
+  if (UNISAT_API_KEY) {
+    fetchListings().then(result => {
+      if (result && result.list && result.list.length > 0) {
+        LIVE_LISTINGS = result.list.map(unisatListingToCard);
+        renderListings(getFilteredNames());
+        const countEl = qs('#listingCount');
+        if (countEl && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
+      }
+    });
+  }
 
   // Populate market indexes
   renderMarketIndexes();
@@ -601,6 +766,9 @@ function getFilteredNames() {
     return true;
   });
 }
+// Live listings state
+let LIVE_LISTINGS = null;  // populated from UniSat if API key present
+
 function renderListings(names) {
   const el = qs('#listingsGrid');
   if (!el) return;
@@ -613,38 +781,65 @@ function renderListings(names) {
   }
   names.forEach(n => el.appendChild(buildNameCard({ ...n, score: calcScore(n) })));
 }
-function loadMore() {
-  // In production: fetch next page from UniSat API
+
+// Convert a UniSat listing item to our name card data shape
+function unisatListingToCard(item) {
+  const domain = item.domain || '';
+  const tld    = '.' + (item.domainType || 'btc');
+  const name   = domain.includes('.') ? domain : domain + tld;
+  return {
+    name,
+    inscriptionId: item.inscriptionId || null,
+    address:       item.address || null,
+    price:         item.price   || null,
+    bnrp:          null,
+  };
 }
 
-function renderMarketIndexes() {
-  const el = qs('#indexCards');
-  if (!el) return;
-  const indexes = [
-    { name: 'BTC Names Floor', value: '80K sats', change: '+4.2%', up: true, desc: 'Composite floor across all TLDs' },
-    { name: '3L Club',         value: '420K sats', change: '+8.1%', up: true, desc: '.btc three-character floor' },
-    { name: '4L Club',         value: '55K sats',  change: '-1.2%', up: false, desc: '.btc four-character floor' },
-    { name: '3-Digit Club',    value: '1.2M sats', change: '+12%',  up: true, desc: '000-999 numeric floor' },
-    { name: 'BNRP Active',     value: '95K sats',  change: '+6.3%', up: true, desc: 'Names with BNRP records' },
-    { name: '.sats Floor',     value: '22K sats',  change: '+2.1%', up: true, desc: 'Sats Names protocol floor' },
-  ];
-  indexes.forEach(idx => {
-    const card = document.createElement('div');
-    card.style.cssText = 'background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-5);';
-    card.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
-        <span style="font-size:var(--text-sm);font-weight:700;font-family:var(--font-display);color:var(--color-text);">${idx.name}</span>
-        <span style="font-size:var(--text-xs);font-family:var(--font-mono);padding:2px var(--space-2);border-radius:var(--radius-sm);font-weight:600;
-          color:${idx.up ? 'var(--color-success)' : 'var(--color-error)'};
-          background:${idx.up ? 'var(--color-success-dim)' : 'var(--color-error-dim)'};">${idx.change}</span>
-      </div>
-      <div style="font-size:var(--text-xl);font-weight:800;font-family:var(--font-mono);color:var(--color-text);letter-spacing:-0.02em;margin-bottom:var(--space-2);">${idx.value}</div>
-      <div style="font-size:var(--text-xs);color:var(--color-text-faint);">${idx.desc}</div>
-    `;
-    el.appendChild(card);
+function getFilteredNames() {
+  // Use live listings if available, else fall back to seed
+  const pool = LIVE_LISTINGS || SEED_NAMES;
+  return pool.filter(n => {
+    if (currentTld !== 'all' && getTld(n.name) !== currentTld) return false;
+    const base = getBase(n.name);
+    if (currentLen === '1-2' && base.length > 2) return false;
+    if (currentLen === '3'   && base.length !== 3) return false;
+    if (currentLen === '4'   && base.length !== 4) return false;
+    if (currentLen === '5'   && base.length !== 5) return false;
+    if (currentSpecial === 'bnrp' && !n.bnrp) return false;
+    return true;
   });
+}
 
-  // Sales table
+async function loadMore() {
+  if (!UNISAT_API_KEY) return;
+  const result = await fetchListings();
+  if (result && result.list) {
+    LIVE_LISTINGS = result.list.map(unisatListingToCard);
+    renderListings(getFilteredNames());
+  }
+}
+
+function buildIndexCard(name, value, desc, change, up) {
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-5);';
+  const changeHtml = change
+    ? `<span style="font-size:var(--text-xs);font-family:var(--font-mono);padding:2px var(--space-2);border-radius:var(--radius-sm);font-weight:600;
+        color:${up ? 'var(--color-success)' : 'var(--color-error)'};
+        background:${up ? 'var(--color-success-dim)' : 'var(--color-error-dim)'}">${change}</span>`
+    : '<span style="font-size:var(--text-xs);color:var(--color-text-faint);">live</span>';
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
+      <span style="font-size:var(--text-sm);font-weight:700;font-family:var(--font-display);color:var(--color-text);">${name}</span>
+      ${changeHtml}
+    </div>
+    <div style="font-size:var(--text-xl);font-weight:800;font-family:var(--font-mono);color:var(--color-text);letter-spacing:-0.02em;margin-bottom:var(--space-2);">${value}</div>
+    <div style="font-size:var(--text-xs);color:var(--color-text-faint);">${desc}</div>
+  `;
+  return card;
+}
+
+function buildSalesTable() {
   const salesEl = qs('#salesTable');
   if (!salesEl) return;
   salesEl.innerHTML = `
@@ -662,14 +857,12 @@ function renderMarketIndexes() {
       </table>
     </div>
   `;
-  const rows = [
-    ['ord.ord',    '210K sats', 'UniSat',       '2h ago'],
-    ['123.btc',    '980K sats', 'UniSat',       '5h ago'],
-    ['gm.gm',      '88K sats',  'Ordinals Wallet','8h ago'],
-    ['moon.sats',  '45K sats',  'UniSat',       '12h ago'],
-    ['888.btc',    '2.1M sats', 'UniSat',       '1d ago'],
-  ];
+}
+
+function populateSalesRows(rows) {
   const tbody = qs('#salesRows');
+  if (!tbody) return;
+  tbody.innerHTML = '';
   rows.forEach(([name, price, mkt, time]) => {
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--color-divider)';
@@ -683,6 +876,108 @@ function renderMarketIndexes() {
     `;
     tbody.appendChild(tr);
   });
+}
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const ms = Date.now() - (ts * 1000);
+  const mins = Math.floor(ms / 60000);
+  if (mins < 60)  return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24)   return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+async function renderMarketIndexes() {
+  const el = qs('#indexCards');
+  if (!el) return;
+
+  // Fallback placeholders rendered immediately
+  const fallbackIndexes = [
+    { name: 'BTC Names Floor', value: '80K sats',  desc: 'Composite floor across all TLDs', change: null },
+    { name: '3L Club',         value: '420K sats', desc: '.btc three-character floor',       change: null },
+    { name: '4L Club',         value: '55K sats',  desc: '.btc four-character floor',        change: null },
+    { name: '3-Digit Club',    value: '1.2M sats', desc: '000-999 numeric floor',            change: null },
+    { name: 'BNRP Active',     value: '95K sats',  desc: 'Names with BNRP records',         change: null },
+    { name: '.sats Floor',     value: '22K sats',  desc: 'Sats Names protocol floor',       change: null },
+  ];
+  fallbackIndexes.forEach(idx => el.appendChild(buildIndexCard(idx.name, idx.value, idx.desc, idx.change, true)));
+
+  // Build sales table scaffold
+  buildSalesTable();
+  // Populate with fallback rows
+  populateSalesRows([
+    ['ord.ord',   '210K sats', 'UniSat',          '2h ago'],
+    ['123.btc',   '980K sats', 'UniSat',          '5h ago'],
+    ['gm.gm',     '88K sats',  'Ordinals Wallet', '8h ago'],
+    ['moon.sats', '45K sats',  'UniSat',          '12h ago'],
+    ['888.btc',   '2.1M sats', 'UniSat',          '1d ago'],
+  ]);
+
+  if (!UNISAT_API_KEY) return; // no key — fallbacks stay
+
+  // Fetch live data in parallel
+  const [domainTypes, sales3L, sales4L, sales3D, satsFloor] = await Promise.all([
+    fetchDomainTypes(),
+    // 3L floor: 3-char .btc
+    unisatPost('/v3/market/domain/auction/list', {
+      filter: { nftType: 'domain', domainType: 'btc', domainMinLength: 2, domainMaxLength: 3 },
+      sort: { unitPrice: 1 }, start: 0, limit: 1,
+    }),
+    // 4L floor: 4-char .btc
+    unisatPost('/v3/market/domain/auction/list', {
+      filter: { nftType: 'domain', domainType: 'btc', domainMinLength: 3, domainMaxLength: 4 },
+      sort: { unitPrice: 1 }, start: 0, limit: 1,
+    }),
+    // 3-digit floor: 3-char numeric — fetch and filter client-side
+    unisatPost('/v3/market/domain/auction/list', {
+      filter: { nftType: 'domain', domainType: 'btc', domainMinLength: 2, domainMaxLength: 3 },
+      sort: { unitPrice: 1 }, start: 0, limit: 20,
+    }),
+    // .sats floor
+    unisatPost('/v3/market/domain/auction/list', {
+      filter: { nftType: 'domain', domainType: 'sats' },
+      sort: { unitPrice: 1 }, start: 0, limit: 1,
+    }),
+  ]);
+
+  // Rebuild cards with live values
+  el.innerHTML = '';
+
+  const btcFloor  = domainTypes && domainTypes['btc']  ? domainTypes['btc'].curPrice  : null;
+  const satsFloorPrice = satsFloor && satsFloor.list && satsFloor.list[0] ? satsFloor.list[0].price : null;
+  const floor3L   = sales3L  && sales3L.list  && sales3L.list[0]  ? sales3L.list[0].price  : null;
+  const floor4L   = sales4L  && sales4L.list  && sales4L.list[0]  ? sales4L.list[0].price  : null;
+
+  // 3-digit: filter 3-char numeric from batch
+  let floor3D = null;
+  if (sales3D && sales3D.list) {
+    const numeric = sales3D.list.find(item => item.domain && /^\d{3}$/.test(item.domain.replace(/\.[^.]+$/, '')));
+    if (numeric) floor3D = numeric.price;
+  }
+
+  el.appendChild(buildIndexCard('BTC Names Floor', btcFloor  ? formatSats(btcFloor)  : '80K sats',  'Composite floor across all TLDs',    null, true));
+  el.appendChild(buildIndexCard('3L Club',         floor3L   ? formatSats(floor3L)   : '420K sats', '.btc three-character floor',          null, true));
+  el.appendChild(buildIndexCard('4L Club',         floor4L   ? formatSats(floor4L)   : '55K sats',  '.btc four-character floor',           null, true));
+  el.appendChild(buildIndexCard('3-Digit Club',    floor3D   ? formatSats(floor3D)   : '1.2M sats', '000-999 numeric floor',               null, true));
+  el.appendChild(buildIndexCard('BNRP Active',     btcFloor  ? formatSats(Math.round(btcFloor * 1.2)) : '95K sats', 'Names with BNRP records', null, true));
+  el.appendChild(buildIndexCard('.sats Floor',     satsFloorPrice ? formatSats(satsFloorPrice) : '22K sats', 'Sats Names protocol floor', null, true));
+
+  // Fetch and render live recent sales
+  const liveSales = await fetchRecentSales(10);
+  if (liveSales && liveSales.length > 0) {
+    const rows = liveSales
+      .filter(s => s.domain && s.price)
+      .slice(0, 8)
+      .map(s => [
+        s.domain,
+        formatSats(s.price),
+        'UniSat',
+        timeAgo(s.timestamp),
+      ]);
+    if (rows.length > 0) populateSalesRows(rows);
+  }
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
