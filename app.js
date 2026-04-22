@@ -146,8 +146,10 @@ function calc24hVolume(domainTypesMap) {
 
 function formatSats(n) {
   if (!n || isNaN(n)) return '—';
-  if (n >= 1e8) return (n / 1e8).toFixed(4) + ' BTC';
-  return n.toLocaleString() + ' sats';
+  const btc = n / 1e8;
+  if (btc >= 1)    return btc.toFixed(4).replace(/\.?0+$/, '') + ' BTC';
+  if (btc >= 0.01) return btc.toFixed(4).replace(/0+$/, '') + ' BTC';
+  return btc.toFixed(8).replace(/0+$/, '') + ' BTC';
 }
 function shortAddr(addr) {
   if (!addr) return '—';
@@ -585,9 +587,9 @@ function setStatEl(id, val) {
 async function updateStats() {
   // Set fallback placeholders immediately so stats bar is never empty
   setStatEl('statTotal',    '1.2M+');
-  setStatEl('statBtcFloor', '80K sats');
-  setStatEl('statSatsFloor','22K sats');
-  setStatEl('stat3LFloor',  '420K sats');
+  setStatEl('statBtcFloor', '0.0008 BTC');
+  setStatEl('statSatsFloor','0.00022 BTC');
+  setStatEl('stat3LFloor',  '0.0042 BTC');
   setStatEl('statBnrp',     '247');
   setStatEl('statVol',      '$14.2K');
 
@@ -790,37 +792,10 @@ async function initProfilePage() {
     });
   }
 
-  // Buy link
-  const buyBtn = qs('#buyBtn');
-  if (buyBtn) {
-    const base = getBase(name);
-    const tldRaw = getTld(name).replace('.', '');
-    // If we have an inscription ID, link directly to that listing; otherwise search UniSat by name
-    buyBtn.href = inscId
-      ? `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`
-      : `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
-    buyBtn.target = '_blank';
-    buyBtn.rel = 'noopener noreferrer';
-  }
+  // Buy button + listing status — native modal via market worker
+  initBuyBtn(name, inscId);
 
-  // Listing status — check live UniSat data if API key set
-  qs('#listingPrice').textContent = 'Checking...';
-  qs('#listingStatus').textContent = '';
-  if (inscId && UNISAT_API_KEY) {
-    unisatPost('/v3/market/domain/auction/inscription_info', { inscriptionId: inscId }).then(info => {
-      if (info && info.price && !info.notOnSale) {
-        qs('#listingPrice').textContent = formatSats(info.price);
-        qs('#listingStatus').innerHTML = `Listed on UniSat &middot; <a href="https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">Buy now</a>`;
-        if (buyBtn) buyBtn.href = `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`;
-      } else {
-        qs('#listingPrice').textContent = 'Not listed';
-        qs('#listingStatus').textContent = 'Not currently for sale. Make an offer via UniSat.';
-      }
-    });
-  } else {
-    qs('#listingPrice').textContent = 'Not listed';
-    qs('#listingStatus').textContent = 'This name is not currently listed for sale. Make an offer via UniSat.';
-  }
+
 
   // Activity (placeholder)
   const actEl = qs('#activityFeed');
@@ -859,6 +834,67 @@ function getScoreComponents(data) {
     { label: 'Palindrome', pct: (palScore / 100) * 100 },
     { label: 'BNRP',     pct: (bnrpScore / 100) * 100 },
   ];
+}
+
+// ── Native buy button ────────────────────────────────────────────────────────
+// Wires #buyBtn (and listing status) to the market worker buy flow.
+// Falls back gracefully to UniSat external link if worker is unreachable.
+const MARKET_API = 'https://btcnative-market.galanin.workers.dev';
+
+async function initBuyBtn(name, inscId) {
+  const buyBtn = qs('#buyBtn');
+  const listingPriceEl = qs('#listingPrice');
+  const listingStatusEl = qs('#listingStatus');
+  if (!buyBtn) return;
+
+  const tldRaw = getTld(name).replace('.', '');
+  const base = getBase(name);
+  const fallbackUrl = inscId
+    ? `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`
+    : `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
+
+  // Start with fallback behaviour while we fetch listing
+  buyBtn.textContent = 'Buy';
+  buyBtn.onclick = () => window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+  if (listingPriceEl) listingPriceEl.textContent = 'Checking...';
+
+  try {
+    const res = await fetch(`${MARKET_API}/api/listing?name=${encodeURIComponent(name)}`, { signal: AbortSignal.timeout(6000) });
+    const data = await res.json();
+
+    if (data.ok && data.listed) {
+      // Name is listed -- wire native buy modal
+      const { priceSats, feeSats, totalSats, auctionId } = data;
+      if (listingPriceEl) listingPriceEl.textContent = formatSats(priceSats);
+      if (listingStatusEl) {
+        listingStatusEl.innerHTML = `Listed &middot; <span style="color:var(--color-text-muted);font-size:var(--text-xs);">+${formatSats(feeSats)} platform fee</span>`;
+      }
+      buyBtn.textContent = `Buy for ${formatSats(totalSats)}`;
+      buyBtn.onclick = (e) => {
+        e.preventDefault();
+        // openBuyModal is loaded via buy-modal.js module
+        if (typeof window.openBuyModal === 'function') {
+          window.openBuyModal({ name, auctionId, priceSats });
+        } else {
+          window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+        }
+      };
+    } else {
+      // Not listed
+      if (listingPriceEl) listingPriceEl.textContent = 'Not listed';
+      if (listingStatusEl) listingStatusEl.textContent = 'Not currently for sale. Make an offer via UniSat.';
+      buyBtn.textContent = 'View on UniSat';
+      buyBtn.style.background = 'var(--color-surface-offset)';
+      buyBtn.style.color = 'var(--color-text-muted)';
+    }
+  } catch (e) {
+    // Worker unreachable -- silent fallback to UniSat link
+    if (listingPriceEl) listingPriceEl.textContent = 'See UniSat';
+    if (listingStatusEl) {
+      listingStatusEl.innerHTML = `<a href="${fallbackUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">Check listing on UniSat</a>`;
+    }
+    buyBtn.onclick = () => window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+  }
 }
 
 function showProfileError() {
@@ -1126,12 +1162,12 @@ async function renderMarketIndexes() {
 
   // Fallback placeholders rendered immediately
   const fallbackIndexes = [
-    { name: 'BTC Names Floor', value: '80K sats',  desc: 'Composite floor across all TLDs', change: null },
-    { name: '3L Club',         value: '420K sats', desc: '.btc three-character floor',       change: null },
-    { name: '4L Club',         value: '55K sats',  desc: '.btc four-character floor',        change: null },
-    { name: '3-Digit Club',    value: '1.2M sats', desc: '000-999 numeric floor',            change: null },
-    { name: 'BNRP Active',     value: '95K sats',  desc: 'Names with BNRP records',         change: null },
-    { name: '.sats Floor',     value: '22K sats',  desc: 'Sats Names protocol floor',       change: null },
+    { name: 'BTC Names Floor', value: '0.0008 BTC',   desc: 'Composite floor across all TLDs', change: null },
+    { name: '3L Club',         value: '0.0042 BTC',   desc: '.btc three-character floor',       change: null },
+    { name: '4L Club',         value: '0.00055 BTC',  desc: '.btc four-character floor',        change: null },
+    { name: '3-Digit Club',    value: '0.012 BTC',    desc: '000-999 numeric floor',            change: null },
+    { name: 'BNRP Active',     value: '0.00095 BTC',  desc: 'Names with BNRP records',          change: null },
+    { name: '.sats Floor',     value: '0.00022 BTC',  desc: 'Sats Names protocol floor',        change: null },
   ];
   fallbackIndexes.forEach(idx => el.appendChild(buildIndexCard(idx.name, idx.value, idx.desc, idx.change, true)));
 
@@ -1188,12 +1224,12 @@ async function renderMarketIndexes() {
     if (numeric) floor3D = numeric.price;
   }
 
-  el.appendChild(buildIndexCard('BTC Names Floor', btcFloor  ? formatSats(btcFloor)  : '80K sats',  'Composite floor across all TLDs',    null, true));
-  el.appendChild(buildIndexCard('3L Club',         floor3L   ? formatSats(floor3L)   : '420K sats', '.btc three-character floor',          null, true));
-  el.appendChild(buildIndexCard('4L Club',         floor4L   ? formatSats(floor4L)   : '55K sats',  '.btc four-character floor',           null, true));
-  el.appendChild(buildIndexCard('3-Digit Club',    floor3D   ? formatSats(floor3D)   : '1.2M sats', '000-999 numeric floor',               null, true));
-  el.appendChild(buildIndexCard('BNRP Active',     btcFloor  ? formatSats(Math.round(btcFloor * 1.2)) : '95K sats', 'Names with BNRP records', null, true));
-  el.appendChild(buildIndexCard('.sats Floor',     satsFloorPrice ? formatSats(satsFloorPrice) : '22K sats', 'Sats Names protocol floor', null, true));
+  el.appendChild(buildIndexCard('BTC Names Floor', btcFloor  ? formatSats(btcFloor)  : '0.0008 BTC',   'Composite floor across all TLDs',    null, true));
+  el.appendChild(buildIndexCard('3L Club',         floor3L   ? formatSats(floor3L)   : '0.0042 BTC',   '.btc three-character floor',          null, true));
+  el.appendChild(buildIndexCard('4L Club',         floor4L   ? formatSats(floor4L)   : '0.00055 BTC',  '.btc four-character floor',           null, true));
+  el.appendChild(buildIndexCard('3-Digit Club',    floor3D   ? formatSats(floor3D)   : '0.012 BTC',    '000-999 numeric floor',               null, true));
+  el.appendChild(buildIndexCard('BNRP Active',     btcFloor  ? formatSats(Math.round(btcFloor * 1.2)) : '0.00095 BTC', 'Names with BNRP records', null, true));
+  el.appendChild(buildIndexCard('.sats Floor',     satsFloorPrice ? formatSats(satsFloorPrice) : '0.00022 BTC', 'Sats Names protocol floor', null, true));
 
   // Fetch and render live recent sales
   const liveSales = await fetchRecentSales(10);
@@ -1933,10 +1969,25 @@ function renderBulkTable(rows, filter) {
     actionTd.style.textAlign = 'right';
     if (bestPrice && bestTld) {
       const info = tldData[bestTld];
-      const buyUrl = info && info.inscriptionId
-        ? `https://unisat.io/market/ordinals/auction?inscriptionId=${info.inscriptionId}`
-        : `https://unisat.io/bns/market?type=${encodeURIComponent(bestTld.replace('.',''))}&search=${encodeURIComponent(base)}`;
-      actionTd.innerHTML = `<a href="${buyUrl}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--sm">Buy</a>`;
+      const buyFullName = base + bestTld;
+      const buyBtn = document.createElement('button');
+      buyBtn.className = 'btn btn--primary btn--sm';
+      buyBtn.textContent = 'Buy';
+      buyBtn.onclick = () => {
+        if (typeof window.openBuyModal === 'function') {
+          window.openBuyModal({
+            name: buyFullName,
+            auctionId: info && info.auctionId,
+            priceSats: bestPrice,
+          });
+        } else {
+          const fallback = info && info.inscriptionId
+            ? `https://unisat.io/market/ordinals/auction?inscriptionId=${info.inscriptionId}`
+            : `https://unisat.io/bns/market?type=${encodeURIComponent(bestTld.replace('.',''))}&search=${encodeURIComponent(base)}`;
+          window.open(fallback, '_blank', 'noopener,noreferrer');
+        }
+      };
+      actionTd.appendChild(buyBtn);
     }
     tr.appendChild(actionTd);
 
@@ -2093,30 +2144,8 @@ function renderMinimalProfile(name, data) {
     });
   }
 
-  // Buy button
-  const buyBtn = qs('#buyBtn');
-  if (buyBtn) {
-    const tldRaw = tld.replace('.', '');
-    buyBtn.href = inscId
-      ? `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`
-      : `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
-    buyBtn.target = '_blank';
-  }
-
-  // Listing
-  qs('#listingPrice').textContent = 'Not listed';
-  qs('#listingStatus').textContent = 'Checking UniSat for active listing...';
-  if (inscId && UNISAT_API_KEY) {
-    unisatPost('/v3/market/domain/auction/inscription_info', { inscriptionId: inscId }).then(info => {
-      if (info && info.price) {
-        qs('#listingPrice').textContent = formatSats(info.price);
-        qs('#listingStatus').innerHTML = `Listed on UniSat &middot; <a href="https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}" target="_blank" style="color:var(--color-primary);">Buy now</a>`;
-      } else {
-        qs('#listingPrice').textContent = 'Not listed';
-        qs('#listingStatus').textContent = 'Not currently for sale.';
-      }
-    });
-  }
+  // Buy button + listing status — native modal via market worker
+  initBuyBtn(name, inscId);
 
   // Activity
   const actEl = qs('#activityFeed');
@@ -2281,33 +2310,8 @@ async function initProfilePageMVP() {
     });
   }
 
-  const buyBtn = qs('#buyBtn');
-  if (buyBtn) {
-    const tldRaw = getTld(name).replace('.', '');
-    buyBtn.href = inscId
-      ? `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`
-      : `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
-    buyBtn.target = '_blank';
-    buyBtn.rel = 'noopener noreferrer';
-  }
-
-  qs('#listingPrice').textContent = 'Checking...';
-  qs('#listingStatus').textContent = '';
-  if (inscId && UNISAT_API_KEY) {
-    unisatPost('/v3/market/domain/auction/inscription_info', { inscriptionId: inscId }).then(info => {
-      if (info && info.price && !info.notOnSale) {
-        qs('#listingPrice').textContent = formatSats(info.price);
-        qs('#listingStatus').innerHTML = `Listed on UniSat &middot; <a href="https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">Buy now</a>`;
-        if (buyBtn) buyBtn.href = `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`;
-      } else {
-        qs('#listingPrice').textContent = 'Not listed';
-        qs('#listingStatus').textContent = 'Not currently for sale. Make an offer via UniSat.';
-      }
-    });
-  } else {
-    qs('#listingPrice').textContent = 'Not listed';
-    qs('#listingStatus').textContent = 'This name is not currently listed for sale. Make an offer via UniSat.';
-  }
+  // Buy button + listing status — native modal via market worker
+  initBuyBtn(name, inscId);
 
   // Activity (overview tab)
   const actEl = qs('#activityFeed');
