@@ -115,15 +115,15 @@
 
           <!-- Price range -->
           <div class="filter-sidebar__section">
-            <span class="filter-sidebar__label">Price (sats)</span>
+            <span class="filter-sidebar__label">Price (BTC)</span>
             <div class="price-range-wrap">
               <div>
                 <span class="price-range-label">Min</span>
-                <input class="price-range-input" id="priceMin" type="number" placeholder="0" min="0" oninput="applyPriceFilter()" />
+                <input class="price-range-input" id="priceMin" type="number" placeholder="0" min="0" step="0.0001" oninput="applyPriceFilter()" />
               </div>
               <div>
                 <span class="price-range-label">Max</span>
-                <input class="price-range-input" id="priceMax" type="number" placeholder="Any" min="0" oninput="applyPriceFilter()" />
+                <input class="price-range-input" id="priceMax" type="number" placeholder="Any" min="0" step="0.0001" oninput="applyPriceFilter()" />
               </div>
             </div>
           </div>

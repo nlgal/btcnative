@@ -1411,8 +1411,9 @@ let gridDense = false;
 function applyPriceFilter() {
   const minEl = document.getElementById('priceMin');
   const maxEl = document.getElementById('priceMax');
-  currentPriceMin = minEl && minEl.value ? parseInt(minEl.value) : null;
-  currentPriceMax = maxEl && maxEl.value ? parseInt(maxEl.value) : null;
+  // Inputs are in BTC -- convert to sats for comparison against n.price
+  currentPriceMin = minEl && minEl.value ? Math.round(parseFloat(minEl.value) * 1e8) : null;
+  currentPriceMax = maxEl && maxEl.value ? Math.round(parseFloat(maxEl.value) * 1e8) : null;
   renderListings(getFilteredNamesMVP());
 }
 
