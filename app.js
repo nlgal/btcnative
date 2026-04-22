@@ -772,8 +772,15 @@ async function initProfilePage() {
 
   // Buy link
   const buyBtn = qs('#buyBtn');
-  if (buyBtn && inscId) {
-    buyBtn.href = `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`;
+  if (buyBtn) {
+    const base = getBase(name);
+    const tldRaw = getTld(name).replace('.', '');
+    // If we have an inscription ID, link directly to that listing; otherwise search UniSat by name
+    buyBtn.href = inscId
+      ? `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`
+      : `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
+    buyBtn.target = '_blank';
+    buyBtn.rel = 'noopener noreferrer';
   }
 
   // Listing status — check live UniSat data if API key set
