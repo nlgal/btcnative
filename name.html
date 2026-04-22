@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Name Profile — BTC Native</title>
   <meta name="description" content="Bitcoin name profile, identity, and market data." />
+  <!-- Open Graph / Twitter card — updated dynamically by JS -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="BTC Native" />
+  <meta property="og:title" id="ogTitle" content="Bitcoin Name Profile — BTC Native" />
+  <meta property="og:description" id="ogDesc" content="View identity, market data, and attributes for this Bitcoin name." />
+  <meta property="og:image" id="ogImage" content="https://btcnative.name/assets/og-default.png" />
+  <meta property="og:url" id="ogUrl" content="https://btcnative.name/name.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@ordinalpunk72" />
+  <meta name="twitter:title" id="twTitle" content="Bitcoin Name Profile — BTC Native" />
+  <meta name="twitter:description" id="twDesc" content="View identity, market data, and attributes for this Bitcoin name." />
+  <meta name="twitter:image" id="twImage" content="https://btcnative.name/assets/og-default.png" />
   <link rel="preconnect" href="https://api.fontshare.com" />
   <link rel="stylesheet" href="./base.css" />
   <link rel="stylesheet" href="./style.css" />
@@ -27,6 +39,8 @@
         <li><a href="./explore.html" class="nav__link">Explore</a></li>
         <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
         <li><a href="./bulk.html" class="nav__link">Bulk</a></li>
+        <li><a href="./sell.html" class="nav__link">Sell</a></li>
+        <li><a href="./portfolio.html" class="nav__link">Portfolio</a></li>
       </ul>
       <div class="nav__actions">
         <div style="position:relative; width:200px;">
@@ -133,6 +147,9 @@
           <div class="profile-card__divider"></div>
           <div class="profile-card__actions">
             <button class="btn btn--primary btn--full" id="buyBtn">Buy</button>
+            <button class="btn btn--outline btn--sm" id="shareBtn" onclick="shareProfile()" title="Share on X" aria-label="Share on X">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </button>
             <button class="btn btn--outline btn--sm" id="watchBtn" onclick="toggleWatch()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             </button>

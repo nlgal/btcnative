@@ -16,6 +16,26 @@
 
 const MARKET_API = 'https://btcnative-market.galanin.workers.dev';
 
+// BTC/USD for modal (local copy — buy-modal.js is a separate module)
+let _bmBtcUsd = null;
+async function _bmGetBtcUsd() {
+  if (_bmBtcUsd) return _bmBtcUsd;
+  try {
+    const r = await fetch('https://mempool.space/api/v1/prices', { signal: AbortSignal.timeout(4000) });
+    const d = await r.json();
+    _bmBtcUsd = d.USD || 95000;
+  } catch { _bmBtcUsd = 95000; }
+  return _bmBtcUsd;
+}
+function _bmFormatUsd(sats, btcUsd) {
+  if (!sats || !btcUsd) return '';
+  const usd = (sats / 1e8) * btcUsd;
+  if (usd >= 1000) return '$' + Math.round(usd).toLocaleString();
+  if (usd >= 10)   return '$' + usd.toFixed(0);
+  if (usd >= 1)    return '$' + usd.toFixed(2);
+  return '$' + usd.toFixed(2);
+}
+
 // ── Wallet detection ──────────────────────────────────────────────────────────
 
 function detectWallet() {
@@ -184,6 +204,7 @@ function createModal(name, priceSats, feeSats) {
         <span class="bn-modal__total-label">You pay</span>
         <span class="bn-modal__total-value bn-modal__value--accent">${formatSatsModal(totalSats)}</span>
       </div>
+      <div class="bn-modal__usd" id="bnModalUsd" style="text-align:right; font-size:0.78rem; color:var(--color-text-muted,#888); margin-top:4px;"></div>
 
       <button class="bn-modal__cta" id="bnBuyBtn">Connect wallet &amp; buy</button>
       <div class="bn-modal__status" id="bnBuyStatus"></div>
@@ -218,6 +239,12 @@ async function openBuyModal({ name, auctionId, priceSats }) {
   const feeSats = Math.max(Math.round(priceSats * 0.01), 1000);
   const modal = createModal(name, priceSats, feeSats);
   document.body.appendChild(modal);
+
+  // Populate USD equivalent
+  _bmGetBtcUsd().then(rate => {
+    const usdEl = document.getElementById('bnModalUsd');
+    if (usdEl) usdEl.textContent = '≈ ' + _bmFormatUsd(totalSats, rate);
+  });
 
   const btn = modal.querySelector('#bnBuyBtn');
   const statusEl = modal.querySelector('#bnBuyStatus');

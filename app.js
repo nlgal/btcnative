@@ -10,6 +10,27 @@ const UNISAT_API      = 'https://open-api.unisat.io';
 const UNISAT_API_KEY  = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
 const SUPPORTED_TLDS  = ['.btc', '.sats', '.x', '.ord', '.gm', '.xbt', '.sat', '.unisat', '.fb'];
 
+// ── BTC/USD price ─────────────────────────────────────────────────────────────
+let _btcUsd = null;
+async function getBtcUsd() {
+  if (_btcUsd) return _btcUsd;
+  try {
+    const r = await fetch('https://mempool.space/api/v1/prices', { signal: AbortSignal.timeout(4000) });
+    const d = await r.json();
+    _btcUsd = d.USD || 95000;
+  } catch { _btcUsd = 95000; }
+  return _btcUsd;
+}
+
+function formatUsd(sats, btcUsd) {
+  if (!sats || !btcUsd) return '';
+  const usd = (sats / 1e8) * btcUsd;
+  if (usd >= 1000) return '$' + Math.round(usd).toLocaleString();
+  if (usd >= 10)   return '$' + usd.toFixed(0);
+  if (usd >= 1)    return '$' + usd.toFixed(2);
+  return '$' + usd.toFixed(2);
+}
+
 // TLD enum values as UniSat expects them
 const UNISAT_TLD_MAP = {
   '.btc':    'btc',
@@ -263,8 +284,16 @@ function buildNameCard(data) {
       ${bnrp && bnrp.records ? `<svg class="name-card__bnrp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" title="BNRP verified"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
     </div>
     <div class="name-card__badges"></div>
-    ${price ? `<div class="name-card__price">${formatSats(price)}</div>` : ''}
+    ${price ? `<div class="name-card__price">${formatSats(price)}<span class="name-card__usd"></span></div>` : ''}
   `;
+
+  // async USD price
+  if (price) {
+    getBtcUsd().then(rate => {
+      const usdEl = card.querySelector('.name-card__usd');
+      if (usdEl) usdEl.textContent = ' · ' + formatUsd(price, rate);
+    });
+  }
 
   // async avatar
   const avatarEl = card.querySelector('.name-card__avatar');
@@ -865,10 +894,15 @@ async function initBuyBtn(name, inscId) {
     if (data.ok && data.listed) {
       // Name is listed -- wire native buy modal
       const { priceSats, feeSats, totalSats, auctionId } = data;
-      if (listingPriceEl) listingPriceEl.textContent = formatSats(priceSats);
+      if (listingPriceEl) {
+        listingPriceEl.innerHTML = formatSats(priceSats) + '<span class="listing-usd"></span>';
+        getBtcUsd().then(r => { const el = qs('.listing-usd'); if (el) el.textContent = ' · ' + formatUsd(priceSats, r); });
+      }
       if (listingStatusEl) {
         listingStatusEl.innerHTML = `Listed &middot; <span style="color:var(--color-text-muted);font-size:var(--text-xs);">+${formatSats(feeSats)} platform fee</span>`;
       }
+      window._profileListed = true;
+      window._profileListedPrice = formatSats(priceSats);
       buyBtn.textContent = `Buy for ${formatSats(totalSats)}`;
       buyBtn.onclick = (e) => {
         e.preventDefault();
@@ -2338,6 +2372,63 @@ async function initProfilePageMVP() {
   const fullResolvedData = { name, records, inscriptionId: inscId, address: addr };
   renderMetadata(fullResolvedData);
   initProfileTabData(name, fullResolvedData);
+
+  // Update og:image + twitter meta dynamically
+  updateProfileMeta({ name, records, inscId, addr });
+}
+
+// ── Social meta updater ────────────────────────────────────────────────────────
+function updateProfileMeta({ name, records, inscId, addr }) {
+  const display  = records.display || name;
+  const desc     = records.description
+    ? records.description.slice(0, 120)
+    : `Bitcoin name ${name} — identity, market data, and attributes on BTC Native.`;
+
+  // og:image: use the ordinals.com content URL for the inscription avatar if available,
+  // otherwise use the name inscription itself as the image
+  let imageUrl = 'https://btcnative.name/assets/og-default.png';
+  if (records.avatar && records.avatar.startsWith('ord:')) {
+    const avatarId = records.avatar.replace('ord:', '');
+    imageUrl = `https://ordinals.com/content/${avatarId}`;
+  } else if (inscId) {
+    imageUrl = `https://ordinals.com/content/${inscId}`;
+  }
+
+  const pageUrl = `https://btcnative.name/name.html?name=${encodeURIComponent(name)}`;
+  const title   = `${display} — BTC Native`;
+
+  // Update <meta> tags
+  function setMeta(id, attr, val) {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute(attr, val);
+  }
+  setMeta('ogTitle',  'content', title);
+  setMeta('ogDesc',   'content', desc);
+  setMeta('ogImage',  'content', imageUrl);
+  setMeta('ogUrl',    'content', pageUrl);
+  setMeta('twTitle',  'content', title);
+  setMeta('twDesc',   'content', desc);
+  setMeta('twImage',  'content', imageUrl);
+
+  // Store for share button
+  window._profileShareData = { name, display, imageUrl, pageUrl, records };
+}
+
+// ── Share on X ────────────────────────────────────────────────────────────────
+function shareProfile() {
+  const data = window._profileShareData;
+  if (!data) return;
+  const { name, display, pageUrl, records } = data;
+
+  const listed = window._profileListed; // set by initBuyBtn
+  const priceStr = listed && window._profileListedPrice
+    ? ` Listed for ${window._profileListedPrice}.`
+    : '';
+  const twitter = records && records['com.twitter'] ? ` @${records['com.twitter']}` : '';
+
+  const text = `${display !== name ? display + ' (' + name + ')' : name}${twitter} on @ordinalpunk72's BTC Native marketplace.${priceStr}`;
+  const url  = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(pageUrl)}`;
+  window.open(url, '_blank', 'noopener,width=580,height=420');
 }
 
 // ── New explore init ──────────────────────────────────────────────────────────

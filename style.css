@@ -1268,3 +1268,16 @@
   padding: 1px 5px;
   border-radius: var(--radius-sm);
 }
+
+/* ── USD price display ── */
+.name-card__usd {
+  font-size: 10px;
+  color: var(--color-text-faint);
+  font-family: var(--font-sans);
+  font-weight: 400;
+}
+.listing-usd {
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+  margin-left: var(--space-2);
+}
