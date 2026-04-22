@@ -439,10 +439,39 @@ const CATEGORIES = {
   ],
 };
 
+function slugToExploreUrl(slug) {
+  const base = './explore.html?tab=listings';
+  const map = {
+    // Numeric clubs — filter by length and numeric special
+    '100club':   `${base}&len=1-2&special=numeric`,
+    '1kclub':    `${base}&len=3&special=numeric`,
+    '10kclub':   `${base}&len=4&special=numeric`,
+    '999club':   `${base}&special=999`,
+    'allsame':   `${base}&special=allsame`,
+    // Letter clubs
+    '1l':        `${base}&len=1-2&special=letters`,
+    '3l':        `${base}&len=3`,
+    '4l':        `${base}&len=4`,
+    'palindrome':`${base}&special=palindrome`,
+    'dictionary':`${base}&special=dictionary`,
+    // TLDs
+    'tld-btc':   `${base}&tld=.btc`,
+    'tld-sats':  `${base}&tld=.sats`,
+    'tld-x':     `${base}&tld=.x`,
+    'tld-ord':   `${base}&tld=.ord`,
+    'tld-unisat':`${base}&tld=.unisat`,
+    'tld-xbt':   `${base}&tld=.xbt`,
+    // Activity
+    'bnrp':      `${base}&special=bnrp`,
+    'listed':    `${base}`,
+  };
+  return map[slug] || `${base}`;
+}
+
 function buildCategoryCard(cat) {
   const card = document.createElement('a');
   card.className = 'category-card';
-  card.href = `./explore.html?category=${cat.slug}`;
+  card.href = slugToExploreUrl(cat.slug);
   card.style.setProperty('--card-accent', cat.color);
   card.style.setProperty('--card-accent-dim', cat.colorDim);
   card.innerHTML = `
@@ -948,8 +977,13 @@ function getFilteredNames() {
     if (currentLen === '3'   && base.length !== 3) return false;
     if (currentLen === '4'   && base.length !== 4) return false;
     if (currentLen === '5'   && base.length !== 5) return false;
-    if (currentSpecial === 'bnrp' && !n.bnrp) return false;
-    if (currentSpecial === 'palindrome') { const b = getBase(n.name); if (b !== b.split('').reverse().join('') || b.length < 2) return false; }
+    if (currentSpecial === 'bnrp'      && !n.bnrp) return false;
+    if (currentSpecial === 'numeric')   { const b = getBase(n.name); if (!/^\d+$/.test(b)) return false; }
+    if (currentSpecial === 'letters')   { const b = getBase(n.name); if (!/^[a-zA-Z]+$/.test(b)) return false; }
+    if (currentSpecial === 'palindrome'){ const b = getBase(n.name); if (b !== b.split('').reverse().join('') || b.length < 2) return false; }
+    if (currentSpecial === '999')       { const b = getBase(n.name); if (!/^9+$/.test(b)) return false; }
+    if (currentSpecial === 'allsame')   { const b = getBase(n.name); if (b.length < 2 || !b.split('').every(c => c === b[0])) return false; }
+    if (currentSpecial === 'dictionary'){ /* best-effort: filter to alpha-only, len 4+ */ const b = getBase(n.name); if (!/^[a-zA-Z]{4,}$/.test(b)) return false; }
     return true;
   });
 }
