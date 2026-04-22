@@ -664,11 +664,31 @@ async function initProfilePage() {
     }
   };
   const liveData = await resolveName(name);
-  const data = liveData || SEED_PROFILES[name] || null;
+  // resolveName returns BNRP identity records (name+records) or raw inscription data (no records)
+  // We only use liveData if it has actual identity records or a name field
+  const hasIdentity = liveData && (liveData.name || (liveData.records && Object.keys(liveData.records).length));
+  const data = (hasIdentity ? liveData : null) || SEED_PROFILES[name] || null;
 
   qs('#profileSkeleton').style.display = 'none';
 
-  if (!data && !SEED_PROFILES[name]) { showProfileError(); return; }
+  if (!data) {
+    // If we got inscription data from API (name exists on-chain even without BNRP records),
+    // use inscription data to show a minimal profile
+    if (liveData && liveData.data && liveData.data.address) {
+      // Build minimal profile from inscription info
+      const inscData = liveData.data;
+      const minimalData = {
+        name,
+        inscriptionId: inscData.inscriptionId,
+        address: inscData.address,
+        records: {},
+      };
+      renderMinimalProfile(name, minimalData);
+      initProfileTabData(name, minimalData);
+      return;
+    }
+    showProfileError(); return;
+  }
 
   // Build resolved data with guaranteed records object
   const resolvedData = data || { name, records: {}, address: null };
@@ -1338,15 +1358,1096 @@ function setSearch(name) {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
+// Original boot disabled — see MVP boot at bottom of file
+// document.addEventListener('DOMContentLoaded', ...) -- replaced by initIndexMVP / initProfilePageMVP / initExplorePageMVP
+
+// ════════════════════════════════════════════════════════════════════════════
+// MVP ADDITIONS — recently listed, price drops, bulk search, advanced filters,
+// profile tabs, sale history, comps, metadata, grid density toggle
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Price range filter state ──────────────────────────────────────────────────
+let currentPriceMin = null;
+let currentPriceMax = null;
+let currentSort = 'price_asc';
+let gridDense = false;
+
+function applyPriceFilter() {
+  const minEl = document.getElementById('priceMin');
+  const maxEl = document.getElementById('priceMax');
+  currentPriceMin = minEl && minEl.value ? parseInt(minEl.value) : null;
+  currentPriceMax = maxEl && maxEl.value ? parseInt(maxEl.value) : null;
+  renderListings(getFilteredNamesMVP());
+}
+
+function clearAllFilters() {
+  currentTld     = 'all';
+  currentLen     = 'all';
+  currentSpecial = null;
+  currentPriceMin = null;
+  currentPriceMax = null;
+  currentSort    = 'price_asc';
+  document.querySelectorAll('[data-tld]').forEach(b => b.classList.toggle('active', b.dataset.tld === 'all'));
+  document.querySelectorAll('[data-len]').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('[data-special]').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === 'price_asc'));
+  const minEl = document.getElementById('priceMin');
+  const maxEl = document.getElementById('priceMax');
+  if (minEl) minEl.value = '';
+  if (maxEl) maxEl.value = '';
+  renderListings(getFilteredNamesMVP());
+}
+
+// Override sortNames to use new key scheme
+function sortNames(key, btn) {
+  currentSort = key;
+  document.querySelectorAll('[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === key));
+  renderListings(getFilteredNamesMVP());
+}
+
+// Override filterLen to support 6+
+function filterLen(len, btn) {
+  if (currentLen === len) {
+    currentLen = 'all';
+    if (btn) btn.classList.remove('active');
+  } else {
+    currentLen = len;
+    document.querySelectorAll('[data-len]').forEach(b => b.classList.toggle('active', b.dataset.len === len));
+  }
+  renderListings(getFilteredNamesMVP());
+}
+
+// Override filterTld
+function filterTld(tld, btn) {
+  currentTld = tld;
+  document.querySelectorAll('[data-tld]').forEach(b => b.classList.toggle('active', b.dataset.tld === tld));
+  renderListings(getFilteredNamesMVP());
+}
+
+// Override filterSpecial
+function filterSpecial(special, btn) {
+  if (currentSpecial === special) {
+    currentSpecial = null;
+    if (btn) btn.classList.remove('active');
+  } else {
+    currentSpecial = special;
+    document.querySelectorAll('[data-special]').forEach(b => b.classList.toggle('active', b.dataset.special === special));
+  }
+  renderListings(getFilteredNamesMVP());
+}
+
+function getFilteredNamesMVP() {
+  const pool = LIVE_LISTINGS || SEED_NAMES;
+  let filtered = pool.filter(n => {
+    if (currentTld !== 'all' && getTld(n.name) !== currentTld) return false;
+    const base = getBase(n.name);
+    const len = base.length;
+    if (currentLen === '1-2' && len > 2)   return false;
+    if (currentLen === '3'   && len !== 3)  return false;
+    if (currentLen === '4'   && len !== 4)  return false;
+    if (currentLen === '5'   && len !== 5)  return false;
+    if (currentLen === '6+'  && len < 6)    return false;
+    if (currentPriceMin && n.price && n.price < currentPriceMin) return false;
+    if (currentPriceMax && n.price && n.price > currentPriceMax) return false;
+    if (currentSpecial === 'bnrp'      && !n.bnrp) return false;
+    if (currentSpecial === 'numeric')   { if (!/^\d+$/.test(base)) return false; }
+    if (currentSpecial === 'letters')   { if (!/^[a-zA-Z]+$/.test(base)) return false; }
+    if (currentSpecial === 'palindrome'){ if (base !== base.split('').reverse().join('') || base.length < 2) return false; }
+    if (currentSpecial === '999')       { if (!/^9+$/.test(base)) return false; }
+    if (currentSpecial === 'allsame')   { if (base.length < 2 || !base.split('').every(c => c === base[0])) return false; }
+    if (currentSpecial === 'dictionary'){ if (!/^[a-zA-Z]{4,}$/.test(base)) return false; }
+    return true;
+  });
+
+  // Sort
+  if (currentSort === 'price_asc')  filtered.sort((a, b) => (a.price || 99999999) - (b.price || 99999999));
+  if (currentSort === 'price_desc') filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+  if (currentSort === 'score')      filtered.sort((a, b) => calcScore(b) - calcScore(a));
+  if (currentSort === 'recent')     filtered.reverse(); // reverse order = most recent first
+
+  return filtered;
+}
+
+// Grid density toggle
+function toggleGridDensity(btn) {
+  gridDense = !gridDense;
+  const grid = document.getElementById('listingsGrid');
+  if (!grid) return;
+  if (gridDense) {
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(140px, 1fr))';
+    grid.style.gap = 'var(--space-2)';
+    if (btn) btn.textContent = 'Normal';
+  } else {
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(180px, 1fr))';
+    grid.style.gap = 'var(--space-3)';
+    if (btn) btn.textContent = 'Dense';
+  }
+}
+
+// ── Profile tabs ──────────────────────────────────────────────────────────────
+function switchProfileTab(tab, btn) {
+  document.querySelectorAll('.profile-tab').forEach(b => b.classList.toggle('active', b.dataset.ptab === tab));
+  document.querySelectorAll('.tab-content').forEach(el => {
+    el.classList.toggle('active', el.id === `ptab-${tab}`);
+  });
+}
+
+// ── Sale history fetch + render ───────────────────────────────────────────────
+async function fetchAndRenderSaleHistory(name) {
+  const el = document.getElementById('saleHistoryTimeline');
+  if (!el) return;
+
+  const base = getBase(name);
+  const tldRaw = getTld(name).replace('.', '');
+
+  // Query UniSat for actions (sales/listings) for this name
+  let events = [];
+  if (UNISAT_API_KEY) {
+    const data = await unisatPost('/v3/market/domain/auction/actions', {
+      filter: { nftType: 'domain', domainType: tldRaw, keyword: base, event: 'Sold' },
+      start: 0,
+      limit: 10,
+    });
+    if (data && data.list) events = data.list;
+  }
+
+  el.innerHTML = '';
+
+  // Registration genesis event always first
+  const genesis = document.createElement('div');
+  genesis.className = 'history-event history-event--muted';
+  genesis.innerHTML = `
+    <div class="history-event__row">
+      <span class="history-event__type">Registered</span>
+      <span class="history-event__price">genesis</span>
+    </div>
+    <div class="history-event__meta">First inscription on Bitcoin</div>
+  `;
+  el.appendChild(genesis);
+
+  if (events.length === 0) {
+    const noSales = document.createElement('div');
+    noSales.className = 'history-event history-event--muted';
+    noSales.innerHTML = `
+      <div class="history-event__row">
+        <span class="history-event__type" style="color:var(--color-text-faint);">No sales recorded</span>
+      </div>
+      <div class="history-event__meta">No sale history found on UniSat</div>
+    `;
+    el.appendChild(noSales);
+    return;
+  }
+
+  events.forEach(ev => {
+    const div = document.createElement('div');
+    div.className = 'history-event';
+    div.innerHTML = `
+      <div class="history-event__row">
+        <span class="history-event__type">Sold</span>
+        <span class="history-event__price">${formatSats(ev.price)}</span>
+      </div>
+      <div class="history-event__meta">${timeAgo(ev.timestamp)} · UniSat</div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+// ── Comps: similar names listed at market price ───────────────────────────────
+async function fetchAndRenderComps(name) {
+  const el = document.getElementById('compsGrid');
+  if (!el) return;
+
+  el.innerHTML = Array(4).fill(0).map(() =>
+    `<div class="name-card skeleton" style="height:88px; border-radius:var(--radius-lg);"></div>`
+  ).join('');
+
+  const base   = getBase(name);
+  const tldRaw = getTld(name).replace('.', '');
+  const len    = base.length;
+
+  // Fetch names of same length + TLD
+  const data = UNISAT_API_KEY ? await fetchListings({
+    domainType: tldRaw,
+    minLength: len,
+    maxLength: len,
+    page: 0,
+    pageSize: 8,
+  }) : null;
+
+  el.innerHTML = '';
+
+  if (!data || !data.list || data.list.length === 0) {
+    el.innerHTML = `<p style="color:var(--color-text-faint); font-size:var(--text-sm); grid-column:1/-1;">No comparable listings found right now.</p>`;
+    return;
+  }
+
+  const comps = data.list
+    .filter(item => {
+      const itemName = item.domain ? (item.domain.includes('.') ? item.domain : item.domain + '.' + tldRaw) : '';
+      return itemName !== name;
+    })
+    .slice(0, 6);
+
+  if (comps.length === 0) {
+    el.innerHTML = `<p style="color:var(--color-text-faint); font-size:var(--text-sm); grid-column:1/-1;">No comparable listings found right now.</p>`;
+    return;
+  }
+
+  comps.forEach(item => {
+    const card = buildNameCard(unisatListingToCard(item));
+    el.appendChild(card);
+  });
+}
+
+// ── Metadata table render ─────────────────────────────────────────────────────
+function renderMetadata(data) {
+  const tbody = document.getElementById('metaTableBody');
+  if (!tbody) return;
+
+  const name   = data.name || '';
+  const records = data.records || {};
+  const inscId  = data.inscriptionId || data.nameInscriptionId || null;
+
+  const rows = [
+    { label: 'Full name',    value: name },
+    { label: 'Base',         value: getBase(name) },
+    { label: 'TLD',          value: getTld(name) },
+    { label: 'Length',       value: `${getBase(name).length} chars` },
+    { label: 'Inscription',  value: inscId ? `<a href="https://ordinals.com/inscription/${inscId}" target="_blank" rel="noopener noreferrer">${inscId.slice(0,20)}...${inscId.slice(-8)}</a>` : '—' },
+    { label: 'Owner',        value: data.address || data.owner ? `<a href="https://mempool.space/address/${data.address || data.owner}" target="_blank" rel="noopener noreferrer">${shortAddr(data.address || data.owner)}</a>` : '—' },
+    { label: 'BNRP records', value: records && Object.keys(records).length > 0 ? Object.keys(records).join(', ') : 'None' },
+    { label: 'Avatar',       value: records.avatar ? (records.avatar.startsWith('ord:') ? `<a href="https://ordinals.com/inscription/${records.avatar.slice(4)}" target="_blank" rel="noopener noreferrer">ord inscription</a>` : records.avatar) : '—' },
+    { label: 'Display name', value: records.display || '—' },
+    { label: 'Twitter',      value: records['com.twitter'] ? `<a href="https://x.com/${records['com.twitter']}" target="_blank" rel="noopener noreferrer">@${records['com.twitter']}</a>` : '—' },
+    { label: 'Website',      value: records.url ? `<a href="${records.url}" target="_blank" rel="noopener noreferrer">${records.url.replace('https://','')}</a>` : '—' },
+    { label: 'Description',  value: records.description || '—' },
+    { label: 'BNRP resolver',value: `<a href="https://bnrp.name/api/resolve?domain=${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">Resolve live</a>` },
+  ];
+
+  tbody.innerHTML = '';
+  rows.forEach(({ label, value }) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${label}</td><td>${value}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Override initProfilePage to support tabs ──────────────────────────────────
+// We patch in after the existing initProfilePage by hooking into DOMContentLoaded
+// at the bottom. The tab switch and data fetching are injected post-load.
+function initProfileTabData(name, data) {
+  // Render metadata immediately (no API needed)
+  renderMetadata(data);
+
+  // Fetch sale history and comps only when those tabs are first activated
+  let historyLoaded = false;
+  let compsLoaded   = false;
+
+  const overviewTab  = document.querySelector('[data-ptab="overview"]');
+  const historyTab   = document.querySelector('[data-ptab="history"]');
+  const compsTab     = document.querySelector('[data-ptab="comps"]');
+
+  if (historyTab) {
+    historyTab.addEventListener('click', () => {
+      if (!historyLoaded) {
+        historyLoaded = true;
+        fetchAndRenderSaleHistory(name);
+      }
+    });
+  }
+  if (compsTab) {
+    compsTab.addEventListener('click', () => {
+      if (!compsLoaded) {
+        compsLoaded = true;
+        fetchAndRenderComps(name);
+      }
+    });
+  }
+}
+
+// ── Recently Listed fetch ─────────────────────────────────────────────────────
+async function fetchAndRenderRecentlyListed() {
+  const el = document.getElementById('recentlyListed');
+  if (!el) return;
+
+  if (!UNISAT_API_KEY) {
+    el.innerHTML = '';
+    SEED_NAMES.slice(0, 6).forEach(n => {
+      const card = buildNameCard({ ...n, score: calcScore(n) });
+      card.style.flex = '0 0 180px';
+      el.appendChild(card);
+    });
+    return;
+  }
+
+  // Fetch freshest listings (newest first via start=0, no special sort — just latest inscribed)
+  const data = await fetchListings({ page: 0, pageSize: 12 });
+  el.innerHTML = '';
+  if (!data || !data.list || data.list.length === 0) {
+    SEED_NAMES.slice(0, 6).forEach(n => {
+      const card = buildNameCard({ ...n, score: calcScore(n) });
+      card.style.flex = '0 0 180px';
+      el.appendChild(card);
+    });
+    return;
+  }
+
+  data.list.slice(0, 10).forEach(item => {
+    const cardData = unisatListingToCard(item);
+    const card = buildNameCard({ ...cardData, score: calcScore(cardData) });
+    card.style.flex = '0 0 180px';
+    el.appendChild(card);
+  });
+}
+
+// ── Price Drops: listings with price below floor estimates ───────────────────
+async function fetchAndRenderPriceDrops() {
+  const el = document.getElementById('priceDrops');
+  if (!el) return;
+
+  if (!UNISAT_API_KEY) {
+    el.innerHTML = '';
+    SEED_NAMES.slice(0, 5).forEach(n => {
+      const card = buildNameCard({ ...n, score: calcScore(n) });
+      card.style.flex = '0 0 180px';
+      el.appendChild(card);
+    });
+    return;
+  }
+
+  // Fetch .btc listings sorted by low price — these represent price drops relative to floor
+  const data = await unisatPost('/v3/market/domain/auction/list', {
+    filter: { nftType: 'domain', domainType: 'btc' },
+    sort: { unitPrice: 1 },
+    start: 0,
+    limit: 10,
+  });
+
+  el.innerHTML = '';
+
+  if (!data || !data.list || data.list.length === 0) {
+    SEED_NAMES.slice(0, 5).forEach(n => {
+      const card = buildNameCard({ ...n, score: calcScore(n) });
+      card.style.flex = '0 0 180px';
+      el.appendChild(card);
+    });
+    return;
+  }
+
+  // Tag them as price drops (low price relative to category)
+  data.list.slice(0, 8).forEach(item => {
+    const cardData = unisatListingToCard(item);
+    const score = calcScore(cardData);
+    // Show as price drop only if price is noteworthy (non-zero)
+    if (!cardData.price) return;
+
+    const card = buildNameCard({ ...cardData, score });
+    card.style.flex = '0 0 180px';
+
+    // Inject a price-drop tag above price
+    const priceEl = card.querySelector('.name-card__price');
+    if (priceEl) {
+      const tag = document.createElement('span');
+      tag.className = 'price-drop-tag';
+      tag.innerHTML = `<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> low ask`;
+      priceEl.parentNode.insertBefore(tag, priceEl);
+    }
+    el.appendChild(card);
+  });
+
+  if (el.children.length === 0) {
+    SEED_NAMES.slice(0, 5).forEach(n => {
+      const card = buildNameCard({ ...n, score: calcScore(n) });
+      card.style.flex = '0 0 180px';
+      el.appendChild(card);
+    });
+  }
+}
+
+// ── Bulk search logic ─────────────────────────────────────────────────────────
+let BULK_RESULTS = []; // [{ base, tld, name, price, listed }]
+
+function parseBulkInput(raw) {
+  if (!raw) return [];
+  return raw
+    .split(/[\n,]+/)
+    .map(s => s.trim().toLowerCase())
+    .filter(s => s.length > 0 && s.length <= 63)
+    .map(s => {
+      // Strip known TLD if present so we always work with base
+      for (const tld of SUPPORTED_TLDS) {
+        if (s.endsWith(tld)) return s.slice(0, s.length - tld.length);
+      }
+      return s.replace(/\.[^.]*$/, '') || s; // strip any trailing .xxx
+    })
+    .filter((s, i, arr) => arr.indexOf(s) === i) // deduplicate
+    .filter(s => /^[a-z0-9-]+$/.test(s))
+    .slice(0, 50); // cap at 50 names
+}
+
+function getActiveBulkTlds() {
+  return [...document.querySelectorAll('#bulkTldChips .filter-chip--sm.active')]
+    .map(b => b.dataset.tld)
+    .filter(Boolean);
+}
+
+async function runBulkSearch() {
+  const textarea = document.getElementById('bulkTextarea');
+  if (!textarea) return;
+  const bases = parseBulkInput(textarea.value);
+  if (bases.length === 0) return;
+
+  const emptyEl   = document.getElementById('bulkEmpty');
+  const loadingEl = document.getElementById('bulkLoading');
+  const resultsEl = document.getElementById('bulkResults');
+  const csvBtn    = document.getElementById('bulkCsvBtn');
+
+  if (emptyEl)   emptyEl.style.display   = 'none';
+  if (resultsEl) resultsEl.style.display = 'none';
+  if (loadingEl) loadingEl.style.display = 'block';
+
+  const activeTlds = getActiveBulkTlds();
+  if (activeTlds.length === 0) activeTlds.push('.btc');
+
+  BULK_RESULTS = [];
+
+  // Build lookup map: base -> { tld: { price, listed, inscriptionId } }
+  const priceMap = {};
+  for (const base of bases) priceMap[base] = {};
+
+  // Fetch prices for each base across all active TLDs
+  const promises = [];
+  for (const base of bases) {
+    for (const tld of activeTlds) {
+      const domainType = tld.replace('.', '');
+      promises.push(
+        (async () => {
+          if (!UNISAT_API_KEY) return;
+          const data = await unisatPost('/v3/market/domain/auction/list', {
+            filter: { nftType: 'domain', domainType, keyword: base },
+            sort: { unitPrice: 1 },
+            start: 0,
+            limit: 1,
+          });
+          const item = data && data.list && data.list[0];
+          // Match exact domain
+          if (item && item.domain) {
+            const itemBase = getBase(item.domain.includes('.') ? item.domain : item.domain + tld);
+            if (itemBase === base) {
+              priceMap[base][tld] = { price: item.price || item.unitPrice, listed: true, inscriptionId: item.inscriptionId };
+              return;
+            }
+          }
+          priceMap[base][tld] = { price: null, listed: false };
+        })()
+      );
+    }
+  }
+
+  await Promise.all(promises);
+
+  // Build results rows
+  BULK_RESULTS = bases.map(base => {
+    let bestPrice = null;
+    let bestTld = null;
+    for (const tld of activeTlds) {
+      const info = priceMap[base][tld];
+      if (info && info.listed && info.price) {
+        if (!bestPrice || info.price < bestPrice) {
+          bestPrice = info.price;
+          bestTld   = tld;
+        }
+      }
+    }
+    return { base, tldData: priceMap[base], bestPrice, bestTld, activeTlds };
+  });
+
+  if (loadingEl) loadingEl.style.display = 'none';
+  if (resultsEl) resultsEl.style.display = 'block';
+  if (csvBtn)    csvBtn.style.display    = '';
+
+  renderBulkTable(BULK_RESULTS, 'all');
+
+  const countEl = document.getElementById('bulkResultCount');
+  if (countEl) countEl.textContent = `${BULK_RESULTS.length} names checked across ${activeTlds.join(', ')}`;
+
+  // Update table headers to match active TLDs
+  updateBulkTableHeaders(activeTlds);
+}
+
+function updateBulkTableHeaders(tlds) {
+  const table = document.getElementById('bulkTable');
+  if (!table) return;
+  const thead = table.querySelector('thead tr');
+  if (!thead) return;
+  // Rebuild header
+  const fixedCols = ['Name', 'Best price', ''];
+  thead.innerHTML = `<th>Name</th>` +
+    tlds.map(t => `<th>${t}</th>`).join('') +
+    `<th>Best price</th><th></th>`;
+}
+
+function renderBulkTable(rows, filter) {
+  const tbody = document.getElementById('bulkTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  let filtered = rows;
+  if (filter === 'listed')    filtered = rows.filter(r => r.bestPrice);
+  if (filter === 'notlisted') filtered = rows.filter(r => !r.bestPrice);
+
+  filtered.forEach(row => {
+    const { base, tldData, bestPrice, bestTld, activeTlds } = row;
+    const tr = document.createElement('tr');
+
+    // Name cell
+    const nameTd = document.createElement('td');
+    nameTd.className = 'bulk-name-cell';
+    const primaryName = base + (bestTld || (activeTlds[0] || '.btc'));
+    nameTd.innerHTML = `<a href="./name.html?name=${encodeURIComponent(primaryName)}">${base}<span style="color:var(--color-primary);">${bestTld || (activeTlds[0] || '.btc')}</span></a>`;
+    tr.appendChild(nameTd);
+
+    // TLD columns
+    (activeTlds || ['.btc', '.sats', '.x', '.ord', '.xbt']).forEach(tld => {
+      const td = document.createElement('td');
+      const info = tldData[tld] || { price: null, listed: false };
+      const fullName = base + tld;
+      if (info.listed && info.price) {
+        td.innerHTML = `<a href="./name.html?name=${encodeURIComponent(fullName)}" class="bulk-tld-chip listed"><span class="bulk-tld-price">${formatSats(info.price)}</span></a>`;
+      } else {
+        td.innerHTML = `<a href="./name.html?name=${encodeURIComponent(fullName)}" class="bulk-tld-chip not-listed">—</a>`;
+      }
+      tr.appendChild(td);
+    });
+
+    // Best price
+    const bestTd = document.createElement('td');
+    bestTd.style.fontFamily = 'var(--font-mono)';
+    bestTd.style.fontWeight = '700';
+    bestTd.style.color = bestPrice ? 'var(--color-primary)' : 'var(--color-text-faint)';
+    bestTd.textContent = bestPrice ? formatSats(bestPrice) : 'Not listed';
+    tr.appendChild(bestTd);
+
+    // Action
+    const actionTd = document.createElement('td');
+    actionTd.style.textAlign = 'right';
+    if (bestPrice && bestTld) {
+      const info = tldData[bestTld];
+      const buyUrl = info && info.inscriptionId
+        ? `https://unisat.io/market/ordinals/auction?inscriptionId=${info.inscriptionId}`
+        : `https://unisat.io/bns/market?type=${encodeURIComponent(bestTld.replace('.',''))}&search=${encodeURIComponent(base)}`;
+      actionTd.innerHTML = `<a href="${buyUrl}" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--sm">Buy</a>`;
+    }
+    tr.appendChild(actionTd);
+
+    tbody.appendChild(tr);
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:var(--space-8); color:var(--color-text-faint); font-size:var(--text-sm);">No names match this filter.</td></tr>`;
+  }
+}
+
+function applyBulkFilter(filter, btn) {
+  document.querySelectorAll('[data-bulk-filter]').forEach(b => b.classList.toggle('active', b.dataset.bulkFilter === filter));
+  renderBulkTable(BULK_RESULTS, filter);
+}
+
+function exportBulkCsv() {
+  if (BULK_RESULTS.length === 0) return;
+  const activeTlds = getActiveBulkTlds();
+  const header = ['Name', ...activeTlds, 'Best price', 'Best TLD'].join(',');
+  const rows = BULK_RESULTS.map(r => {
+    const tldPrices = activeTlds.map(tld => {
+      const info = r.tldData[tld];
+      return info && info.price ? info.price : '';
+    });
+    return [r.base, ...tldPrices, r.bestPrice || '', r.bestTld || ''].join(',');
+  });
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'btcnative-bulk.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadExample(type) {
+  const textarea = document.getElementById('bulkTextarea');
+  if (!textarea) return;
+  const examples = {
+    numeric:  Array.from({length: 20}, (_, i) => 100 + i).join('\n'),
+    letters3: ['btc','ord','sat','gm','xbt','abc','xyz','nft','web','dao','dex','pow','pos','mev','rwa'].join('\n'),
+    animals:  ['cat','dog','fox','owl','bee','ant','bat','elk','cod','eel','gnu','yak','emu','jay','koi'].join('\n'),
+  };
+  textarea.value = examples[type] || '';
+}
+
+// Toggle TLD chip in bulk panel
+document.addEventListener('click', e => {
+  const chip = e.target.closest('#bulkTldChips .filter-chip--sm');
+  if (!chip) return;
+  chip.classList.toggle('active');
+});
+
+// ── New index init: original + recently listed + price drops ─────────────────
+async function initIndexMVP() {
+  // Original init: categories, stats, seed names, BNRP section
+  // --- categories ---
+  const catGrid = qs('#categoryGrid');
+  if (catGrid) {
+    const all = [
+      CATEGORIES.numeric[0], CATEGORIES.numeric[1], CATEGORIES.numeric[2],
+      CATEGORIES.letters[1], CATEGORIES.letters[2],
+      CATEGORIES.tld[0], CATEGORIES.tld[1],
+      CATEGORIES.signal[0],
+    ];
+    all.forEach(cat => catGrid.appendChild(buildCategoryCard(cat)));
+  }
+  renderSeedNames('recentSales', SEED_NAMES.slice(0, 4));
+  renderSeedNames('bnrpNames', SEED_NAMES.filter(n => n.bnrp));
+  updateStats();
+
+  if (UNISAT_API_KEY) {
+    fetchDomainTypes().then(domainTypes => {
+      if (!domainTypes) return;
+      const tldToKey = { 'tld-btc': 'btc', 'tld-sats': 'sats', 'tld-x': 'x', 'tld-ord': 'ord' };
+      Object.entries(tldToKey).forEach(([slug, key]) => {
+        const dt = domainTypes[key];
+        if (dt && dt.curPrice) {
+          qsa(`[data-floor-slug="${slug}"]`).forEach(el => {
+            el.textContent = formatSats(dt.curPrice);
+          });
+        }
+      });
+    });
+  }
+  const bnrpData = await resolveName('trump.btc');
+  if (bnrpData && bnrpData.name) {
+    const el = qs('#bnrpNames');
+    if (el) {
+      el.innerHTML = '';
+      const cardData = {
+        name: 'trump.btc',
+        inscriptionId: bnrpData.inscriptionId || 'ac975126b9a6138238bb3a42b1a9c5b9b4da91bca6bacb6539bc34dbed2cf329i0',
+        address: bnrpData.address,
+        bnrp: bnrpData,
+        score: calcScore({ name: 'trump.btc', bnrp: bnrpData }),
+      };
+      el.appendChild(buildNameCard(cardData));
+      SEED_NAMES.slice(1, 4).forEach(n => el.appendChild(buildNameCard({ ...n, score: calcScore(n) })));
+    }
+  }
+  // New sections
+  await fetchAndRenderRecentlyListed();
+  await fetchAndRenderPriceDrops();
+}
+
+// ── Minimal profile for names with inscription but no BNRP records ───────────
+function renderMinimalProfile(name, data) {
+  const base    = getBase(name);
+  const tld     = getTld(name);
+  const initial = base[0] ? base[0].toUpperCase() : '?';
+  const records = data.records || {};
+  const score   = calcScore({ name, bnrp: { records } });
+
+  qs('#profileSkeleton').style.display = 'none';
+  qs('#profileContent').removeAttribute('style');
+  qs('#profileName').textContent = base + tld;
+  qs('#breadcrumbName').textContent = name;
+  qs('#profileAvatar').textContent = initial;
+
+  const addr = data.address;
+  if (addr) {
+    qs('#profileAddress').innerHTML = `<a href="https://mempool.space/address/${addr}" target="_blank" rel="noopener noreferrer" title="${addr}">${shortAddr(addr)}</a>`;
+  }
+
+  const inscId = data.inscriptionId;
+  if (inscId) {
+    qs('#profileInscriptionId').innerHTML = `<a href="https://ordinals.com/inscription/${inscId}" target="_blank" rel="noopener noreferrer" title="${inscId}">${inscId.slice(0,20)}...${inscId.slice(-8)}</a>`;
+  }
+
+  // Score ring
+  const circ = qs('#scoreCircle');
+  const scoreEl = qs('#scoreValue');
+  if (circ && scoreEl) {
+    scoreEl.textContent = score;
+    scoreEl.style.color = scoreColor(score);
+    const circumference = 2 * Math.PI * 26;
+    setTimeout(() => { circ.style.strokeDashoffset = circumference * (1 - score / 1000); }, 100);
+  }
+
+  // Attributes
+  const attrEl = qs('#attrBadges');
+  if (attrEl) {
+    attrEl.innerHTML = '';
+    computeBadges({ name, bnrp: null }).forEach(b => {
+      const href = badgeToExploreUrl(b.label, name);
+      const el = href ? document.createElement('a') : document.createElement('span');
+      el.className = `badge-lg badge-lg--${b.color}`;
+      if (href) { el.href = href; el.style.textDecoration = 'none'; }
+      el.textContent = b.label;
+      attrEl.appendChild(el);
+    });
+  }
+
+  // Buy button
+  const buyBtn = qs('#buyBtn');
+  if (buyBtn) {
+    const tldRaw = tld.replace('.', '');
+    buyBtn.href = inscId
+      ? `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`
+      : `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
+    buyBtn.target = '_blank';
+  }
+
+  // Listing
+  qs('#listingPrice').textContent = 'Not listed';
+  qs('#listingStatus').textContent = 'Checking UniSat for active listing...';
+  if (inscId && UNISAT_API_KEY) {
+    unisatPost('/v3/market/domain/auction/inscription_info', { inscriptionId: inscId }).then(info => {
+      if (info && info.price) {
+        qs('#listingPrice').textContent = formatSats(info.price);
+        qs('#listingStatus').innerHTML = `Listed on UniSat &middot; <a href="https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}" target="_blank" style="color:var(--color-primary);">Buy now</a>`;
+      } else {
+        qs('#listingPrice').textContent = 'Not listed';
+        qs('#listingStatus').textContent = 'Not currently for sale.';
+      }
+    });
+  }
+
+  // Activity
+  const actEl = qs('#activityFeed');
+  if (actEl) actEl.innerHTML = `<div class="activity-item"><div class="activity-dot"></div><span class="activity-text"><strong>${name}</strong> registered</span><span class="activity-time">genesis</span></div>`;
+
+  // Similar
+  const simEl = qs('#similarNames');
+  if (simEl) {
+    const similars = SEED_NAMES.filter(n => getTld(n.name) === tld && n.name !== name).slice(0, 4);
+    similars.forEach(n => simEl.appendChild(buildNameCard({ ...n, score: calcScore(n) })));
+    if (!similars.length) simEl.innerHTML = `<p style="color:var(--color-text-faint); font-size:var(--text-sm); grid-column:1/-1;">No similar names indexed yet.</p>`;
+  }
+
+  // Score breakdown
+  const breakdownEl = qs('#scoreBreakdown');
+  if (breakdownEl) {
+    const components = getScoreComponents({ name, bnrp: { records } });
+    breakdownEl.innerHTML = components.map(c => `
+      <div class="score-bar-row">
+        <span class="score-bar-label">${c.label}</span>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:${c.pct}%"></div></div>
+      </div>`).join('');
+  }
+}
+
+// ── New profile init: original + tabs ────────────────────────────────────────
+async function initProfilePageMVP() {
+  const params = new URLSearchParams(location.search);
+  const name = params.get('name');
+  if (!name) { showProfileError(); return; }
+
+  document.title = `${name} — BTC Native`;
+  const bc = qs('#breadcrumbName');
+  if (bc) bc.textContent = name;
+
+  // Nav search
+  const navSearch  = qs('#navSearch');
+  const navResults = qs('#navResults');
+  if (navSearch) initSearchInput(navSearch, navResults);
+
+  const SEED_PROFILES = {
+    'trump.btc': {
+      name: 'trump.btc',
+      inscriptionId: 'ac975126b9a6138238bb3a42b1a9c5b9b4da91bca6bacb6539bc34dbed2cf329i0',
+      address: 'bc1pkdqs4ksyha8n2ugxtyywku35pwmv7t60yrru0f860aaf3u5faujq9a6hmc',
+      records: {
+        avatar: 'ord:a859c487d16725cea4c9ccc6d87dda3168e03b388d5e4c9f2acc1ab42dd3d471i0',
+        display: 'Trump',
+        description: 'Protocol architect. Built BNRP — open standard for Bitcoin-native identity and name resolution.',
+        'com.twitter': 'ordinalpunk72',
+        url: 'https://www.bnrp.name'
+      }
+    }
+  };
+  const liveData = await resolveName(name);
+  // resolveName returns BNRP identity records (name+records) or raw inscription data (no records)
+  // We only use liveData if it has actual identity records or a name field
+  const hasIdentity = liveData && (liveData.name || (liveData.records && Object.keys(liveData.records).length));
+  const data = (hasIdentity ? liveData : null) || SEED_PROFILES[name] || null;
+
+  qs('#profileSkeleton').style.display = 'none';
+
+  if (!data) {
+    // If we got inscription data from API (name exists on-chain even without BNRP records),
+    // use inscription data to show a minimal profile
+    if (liveData && liveData.data && liveData.data.address) {
+      // Build minimal profile from inscription info
+      const inscData = liveData.data;
+      const minimalData = {
+        name,
+        inscriptionId: inscData.inscriptionId,
+        address: inscData.address,
+        records: {},
+      };
+      renderMinimalProfile(name, minimalData);
+      initProfileTabData(name, minimalData);
+      return;
+    }
+    showProfileError(); return;
+  }
+
+  const resolvedData = data || { name, records: {}, address: null };
+  if (!resolvedData.records) resolvedData.records = {};
+  const hasBnrp = !!(resolvedData.records && Object.keys(resolvedData.records).length);
+
+  const base    = getBase(name);
+  const tld     = getTld(name);
+  const initial = base[0] ? base[0].toUpperCase() : '?';
+  const records = (resolvedData && resolvedData.records) || {};
+  const score   = calcScore({ name, bnrp: { records } });
+
+  qs('#profileContent').removeAttribute('style');
+  qs('#profileName').textContent = base + tld;
+  qs('#breadcrumbName').textContent = name;
+
+  if (records.display)     qs('#profileDisplayName').textContent = records.display;
+  if (records.description) qs('#profileDesc').textContent = records.description;
+
+  const avatarEl = qs('#profileAvatar');
+  avatarEl.textContent = initial;
+  if (records.avatar) {
+    initAvatar(avatarEl, records.avatar, initial);
+    qs('#profileBanner').style.background = 'linear-gradient(135deg, #1a1200, #2d1f00, #0a0a0a)';
+  }
+
+  if (hasBnrp || (resolvedData && resolvedData.name) || records.display) {
+    const badge = qs('#profileBnrpBadge');
+    if (badge) badge.style.display = 'block';
+  }
+
+  const addr = resolvedData.address || resolvedData.owner;
+  if (addr) {
+    qs('#profileAddress').innerHTML = `<a href="https://mempool.space/address/${addr}" target="_blank" rel="noopener noreferrer" title="${addr}">${shortAddr(addr)}</a>`;
+  }
+  if (records['com.twitter']) {
+    qs('#profileTwitterField').style.display = 'block';
+    qs('#profileTwitter').innerHTML = `<a href="https://x.com/${records['com.twitter']}" target="_blank" rel="noopener noreferrer">@${records['com.twitter']}</a>`;
+  }
+  if (records.url) {
+    qs('#profileUrlField').style.display = 'block';
+    qs('#profileUrl').innerHTML = `<a href="${records.url}" target="_blank" rel="noopener noreferrer">${records.url.replace('https://','')}</a>`;
+  }
+
+  const inscId = resolvedData.inscriptionId || resolvedData.nameInscriptionId;
+  if (inscId) {
+    qs('#profileInscriptionId').innerHTML = `<a href="https://ordinals.com/inscription/${inscId}" target="_blank" rel="noopener noreferrer" title="${inscId}">${inscId.slice(0,20)}...${inscId.slice(-8)}</a>`;
+  }
+
+  const circ = qs('#scoreCircle');
+  const scoreEl = qs('#scoreValue');
+  if (circ && scoreEl) {
+    scoreEl.textContent = score;
+    scoreEl.style.color = scoreColor(score);
+    const circumference = 2 * Math.PI * 26;
+    const offset = circumference * (1 - score / 1000);
+    setTimeout(() => { circ.style.strokeDashoffset = offset; }, 100);
+  }
+
+  const breakdownEl = qs('#scoreBreakdown');
+  if (breakdownEl) {
+    const components = getScoreComponents({ name, bnrp: { records } });
+    breakdownEl.innerHTML = components.map(c => `
+      <div class="score-bar-row">
+        <span class="score-bar-label">${c.label}</span>
+        <div class="score-bar-track"><div class="score-bar-fill" style="width:${c.pct}%"></div></div>
+      </div>`).join('');
+  }
+
+  const attrEl = qs('#attrBadges');
+  if (attrEl) {
+    attrEl.innerHTML = '';
+    const fullData = { name, bnrp: { records }, inscriptionId: inscId };
+    const badges = [...computeBadges(fullData).map(b => ({...b, size: 'lg'}))];
+    if (getBase(name).length <= 5) badges.push({ label: `${getBase(name).length} chars`, color: 'muted', size: 'lg' });
+    badges.forEach(b => {
+      const href = badgeToExploreUrl(b.label, name);
+      const el = href ? document.createElement('a') : document.createElement('span');
+      el.className = `badge-lg badge-lg--${b.color}`;
+      if (href) { el.href = href; el.style.cursor = 'pointer'; el.style.textDecoration = 'none'; }
+      el.textContent = b.label;
+      attrEl.appendChild(el);
+    });
+  }
+
+  const buyBtn = qs('#buyBtn');
+  if (buyBtn) {
+    const tldRaw = getTld(name).replace('.', '');
+    buyBtn.href = inscId
+      ? `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`
+      : `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
+    buyBtn.target = '_blank';
+    buyBtn.rel = 'noopener noreferrer';
+  }
+
+  qs('#listingPrice').textContent = 'Checking...';
+  qs('#listingStatus').textContent = '';
+  if (inscId && UNISAT_API_KEY) {
+    unisatPost('/v3/market/domain/auction/inscription_info', { inscriptionId: inscId }).then(info => {
+      if (info && info.price && !info.notOnSale) {
+        qs('#listingPrice').textContent = formatSats(info.price);
+        qs('#listingStatus').innerHTML = `Listed on UniSat &middot; <a href="https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">Buy now</a>`;
+        if (buyBtn) buyBtn.href = `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`;
+      } else {
+        qs('#listingPrice').textContent = 'Not listed';
+        qs('#listingStatus').textContent = 'Not currently for sale. Make an offer via UniSat.';
+      }
+    });
+  } else {
+    qs('#listingPrice').textContent = 'Not listed';
+    qs('#listingStatus').textContent = 'This name is not currently listed for sale. Make an offer via UniSat.';
+  }
+
+  // Activity (overview tab)
+  const actEl = qs('#activityFeed');
+  if (actEl) {
+    actEl.innerHTML = `
+      <div class="activity-item"><div class="activity-dot"></div><span class="activity-text"><strong>${name}</strong> registered</span><span class="activity-time">genesis</span></div>
+      ${records.avatar ? `<div class="activity-item"><div class="activity-dot" style="background:var(--color-success);"></div><span class="activity-text">BNRP record inscribed — avatar set</span><span class="activity-time">recent</span></div>` : ''}
+      <div class="activity-item"><div class="activity-dot" style="background:var(--color-text-faint);"></div><span class="activity-text">Indexed by BTC Native</span><span class="activity-time">now</span></div>
+    `;
+  }
+
+  // Similar names
+  const simEl = qs('#similarNames');
+  if (simEl) {
+    const similars = SEED_NAMES.filter(n => getTld(n.name) === tld && n.name !== name).slice(0, 4);
+    similars.forEach(n => simEl.appendChild(buildNameCard({ ...n, score: calcScore(n) })));
+    if (similars.length === 0) {
+      simEl.innerHTML = `<p style="color:var(--color-text-faint); font-size:var(--text-sm); grid-column:1/-1;">No similar names indexed yet.</p>`;
+    }
+  }
+
+  // Wire up profile tabs with lazy data loading
+  const fullResolvedData = { name, records, inscriptionId: inscId, address: addr };
+  renderMetadata(fullResolvedData);
+  initProfileTabData(name, fullResolvedData);
+}
+
+// ── New explore init ──────────────────────────────────────────────────────────
+async function initExplorePageMVP() {
+  const params = new URLSearchParams(location.search);
+  const tab = params.get('tab') || 'categories';
+  switchTab(tab);
+
+  // Populate categories
+  const rarityEl     = qs('#rarityCategories');
+  const provenanceEl = qs('#provenanceCategories');
+  const signalEl     = qs('#signalCategories');
+  const tldEl        = qs('#tldCategories');
+  if (rarityEl)     CATEGORIES.numeric.forEach(c => rarityEl.appendChild(buildCategoryCard(c)));
+  if (provenanceEl) CATEGORIES.letters.forEach(c => provenanceEl.appendChild(buildCategoryCard(c)));
+  if (tldEl)        CATEGORIES.tld.forEach(c => tldEl.appendChild(buildCategoryCard(c)));
+  if (signalEl)     CATEGORIES.signal.forEach(c => signalEl.appendChild(buildCategoryCard(c)));
+
+  // Apply URL filters
+  const urlLen     = params.get('len');
+  const urlTld     = params.get('tld');
+  const urlSpecial = params.get('special');
+  const urlSort    = params.get('sort');
+  if (urlLen)     { currentLen     = urlLen;     const b = qs(`[data-len="${urlLen}"]`);         if (b) b.classList.add('active'); }
+  if (urlTld)     { currentTld     = urlTld;     const b = qs(`[data-tld="${urlTld}"]`);         if (b) b.classList.add('active'); }
+  if (urlSpecial) { currentSpecial = urlSpecial; const b = qs(`[data-special="${urlSpecial}"]`); if (b) b.classList.add('active'); }
+  if (urlSort)    { currentSort    = urlSort; }
+
+  // TLD 'all' chip
+  if (!urlTld) {
+    const allChip = qs('[data-tld="all"]');
+    if (allChip) allChip.classList.add('active');
+  }
+
+  // Build API params
+  const apiParams = {};
+  if (urlTld)  apiParams.domainType = urlTld.replace('.', '');
+  if (urlLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
+  if (urlLen === '3')   { apiParams.minLength = 3; apiParams.maxLength = 3; }
+  if (urlLen === '4')   { apiParams.minLength = 4; apiParams.maxLength = 4; }
+  if (urlLen === '5')   { apiParams.minLength = 5; apiParams.maxLength = 5; }
+  if (urlLen === '6+')  { apiParams.minLength = 6; }
+
+  const hasUrlFilter = urlLen || urlTld || urlSpecial;
+  const gridEl = qs('#listingsGrid');
+
+  if (UNISAT_API_KEY && (hasUrlFilter || tab === 'listings')) {
+    if (gridEl) {
+      gridEl.innerHTML = Array(8).fill(0).map(() =>
+        `<div class="name-card skeleton" style="height:96px;border-radius:var(--radius-lg);"></div>`
+      ).join('');
+    }
+    const result = await fetchListings(apiParams);
+    if (result && result.list && result.list.length > 0) {
+      LIVE_LISTINGS = result.list.map(unisatListingToCard);
+    }
+    renderListings(getFilteredNamesMVP());
+    const countEl = qs('#listingCount');
+    if (countEl && result && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
+    const loadBtn = qs('#loadMoreBtn');
+    if (loadBtn) loadBtn.style.display = '';
+  } else {
+    renderListings(getFilteredNamesMVP());
+    if (UNISAT_API_KEY) {
+      fetchListings(apiParams).then(result => {
+        if (result && result.list && result.list.length > 0) {
+          LIVE_LISTINGS = result.list.map(unisatListingToCard);
+          renderListings(getFilteredNamesMVP());
+          const countEl = qs('#listingCount');
+          if (countEl && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
+        }
+        const loadBtn = qs('#loadMoreBtn');
+        if (loadBtn) loadBtn.style.display = '';
+      });
+    }
+  }
+
+  renderMarketIndexes();
+
+  // Nav search
+  const navSearch  = qs('#navSearch');
+  const navResults = qs('#navResults');
+  if (navSearch) initSearchInput(navSearch, navResults);
+}
+
+// ── New loadMore using MVP filter ─────────────────────────────────────────────
+async function loadMore() {
+  if (!UNISAT_API_KEY) return;
+  const page = LIVE_LISTINGS ? Math.floor(LIVE_LISTINGS.length / 20) : 0;
+  const result = await fetchListings({ page, pageSize: 20 });
+  if (result && result.list) {
+    const newItems = result.list.map(unisatListingToCard);
+    LIVE_LISTINGS = [...(LIVE_LISTINGS || []), ...newItems];
+    renderListings(getFilteredNamesMVP());
+  }
+}
+
+// ── Main boot (replaces original DOMContentLoaded) ───────────────────────────
+// The original DOMContentLoaded is still registered above and will fire,
+// but we re-route here with a second listener that runs the MVP versions.
+// The original listener calls initIndex/initProfilePage/initExplorePage which
+// are still the old versions. We need to prevent that. We do this by overwriting
+// the page detection right at the DOMContentLoaded moment using a flag.
+let _mvpBooted = false;
 document.addEventListener('DOMContentLoaded', () => {
+  if (_mvpBooted) return;
+  _mvpBooted = true;
   const path = location.pathname;
-  // Support both /page.html and /page (SPA mode strips .html extension)
   const isIndex   = path.endsWith('index.html') || path.endsWith('index') || path.endsWith('/') || path === '';
   const isProfile = path.includes('name.html') || path.endsWith('/name');
   const isExplore = path.includes('explore.html') || path.endsWith('/explore');
+  const isBulk    = path.includes('bulk.html') || path.endsWith('/bulk');
 
   if (isIndex) {
-    initIndex();
+    initIndexMVP();
     const heroSearch = qs('#heroSearch');
     const heroResults = qs('#heroResults');
     if (heroSearch) {
@@ -1357,6 +2458,17 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   }
-  if (isProfile) initProfilePage();
-  if (isExplore) initExplorePage();
+  if (isProfile) initProfilePageMVP();
+  if (isExplore) initExplorePageMVP();
+  if (isBulk) {
+    const navSearch  = qs('#navSearch');
+    const navResults = qs('#navResults');
+    if (navSearch) initSearchInput(navSearch, navResults);
+    const textarea = qs('#bulkTextarea');
+    if (textarea) {
+      textarea.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && e.metaKey) runBulkSearch();
+      });
+    }
+  }
 });

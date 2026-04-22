@@ -26,12 +26,13 @@
         <li><a href="./index.html" class="nav__link">Discover</a></li>
         <li><a href="./explore.html" class="nav__link active">Explore</a></li>
         <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
+        <li><a href="./bulk.html" class="nav__link">Bulk</a></li>
       </ul>
       <div class="nav__actions">
-        <div class="search-wrap" style="width:240px; position:relative;">
+        <div class="nav__search-compact" style="position:relative;">
           <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="left:var(--space-3);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input class="search-input" id="navSearch" type="text" placeholder="Search names..." autocomplete="off"
-            style="height:36px; font-size:var(--text-sm); padding-left:var(--space-10); border-radius:var(--radius-lg);" />
+            style="height:36px; font-size:var(--text-sm); padding-left:36px; border-radius:var(--radius-lg);" />
           <div class="search-results" id="navResults" style="display:none;"></div>
         </div>
         <button class="nav__theme-btn" data-theme-toggle aria-label="Toggle theme">
@@ -45,81 +46,137 @@
 <main>
   <div class="container container--wide">
 
-    <!-- Page header -->
-    <div style="padding-block:var(--space-8) var(--space-6); border-bottom:1px solid var(--color-divider);">
-      <h1 style="font-family:var(--font-display); font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--color-text);">Explore</h1>
-      <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-top:var(--space-2);">Browse Bitcoin names by category, TLD, and rarity. Floor prices updated every 10 minutes.</p>
+    <!-- Page header + tab bar -->
+    <div style="padding-block:var(--space-6) var(--space-2); border-bottom:1px solid var(--color-divider);">
+      <h1 style="font-family:var(--font-display); font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--color-text); margin-bottom:var(--space-2);">Explore</h1>
+      <div style="display:flex; gap:var(--space-1); padding-top:var(--space-3); flex-wrap:wrap;">
+        <button class="filter-chip" data-tab="categories" onclick="switchTab('categories')">Categories</button>
+        <button class="filter-chip" data-tab="listings" onclick="switchTab('listings')">Listings</button>
+        <button class="filter-chip" data-tab="market" onclick="switchTab('market')">Market</button>
+      </div>
     </div>
 
-    <!-- Tab bar -->
-    <div style="display:flex; gap:var(--space-1); padding-block:var(--space-4); border-bottom:1px solid var(--color-divider); margin-bottom:var(--space-2);">
-      <button class="filter-chip active" data-tab="categories" onclick="switchTab('categories')">Categories</button>
-      <button class="filter-chip" data-tab="listings" onclick="switchTab('listings')">All Listings</button>
-      <button class="filter-chip" data-tab="market" onclick="switchTab('market')">Market</button>
-    </div>
-
-    <!-- CATEGORIES TAB -->
-    <div id="tabCategories" class="tab-panel">
+    <!-- ── CATEGORIES TAB ── -->
+    <div id="tabCategories" class="tab-panel" style="display:none;">
       <div style="padding-block:var(--space-6);">
-        <h2 style="font-family:var(--font-display); font-size:var(--text-base); font-weight:700; margin-bottom:var(--space-1); color:var(--color-text); text-transform:uppercase; letter-spacing:0.06em; font-size:var(--text-xs); color:var(--color-text-faint);">Numbers</h2>
+        <p style="font-size:var(--text-xs); text-transform:uppercase; letter-spacing:0.1em; font-weight:700; color:var(--color-text-faint); margin-bottom:var(--space-4);">Numbers</p>
         <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-4);">Numeric name clubs by range. Fixed supply, high collector demand.</p>
         <div class="category-grid" id="rarityCategories"></div>
       </div>
       <div style="padding-block:var(--space-6); border-top:1px solid var(--color-divider);">
-        <h2 style="font-family:var(--font-display); font-size:var(--text-xs); font-weight:700; margin-bottom:var(--space-1); color:var(--color-text-faint); text-transform:uppercase; letter-spacing:0.06em;">Letters &amp; Patterns</h2>
+        <p style="font-size:var(--text-xs); text-transform:uppercase; letter-spacing:0.1em; font-weight:700; color:var(--color-text-faint); margin-bottom:var(--space-4);">Letters &amp; Patterns</p>
         <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-4);">Letter count tiers and rare structural patterns.</p>
         <div class="category-grid" id="provenanceCategories"></div>
       </div>
       <div style="padding-block:var(--space-6); border-top:1px solid var(--color-divider);">
-        <h2 style="font-family:var(--font-display); font-size:var(--text-xs); font-weight:700; margin-bottom:var(--space-1); color:var(--color-text-faint); text-transform:uppercase; letter-spacing:0.06em;">By TLD</h2>
+        <p style="font-size:var(--text-xs); text-transform:uppercase; letter-spacing:0.1em; font-weight:700; color:var(--color-text-faint); margin-bottom:var(--space-4);">By TLD</p>
         <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-4);">Browse by top-level domain. Each TLD has its own market and community.</p>
         <div class="category-grid" id="tldCategories"></div>
       </div>
       <div style="padding-block:var(--space-6); border-top:1px solid var(--color-divider);">
-        <h2 style="font-family:var(--font-display); font-size:var(--text-xs); font-weight:700; margin-bottom:var(--space-1); color:var(--color-text-faint); text-transform:uppercase; letter-spacing:0.06em;">Activity</h2>
+        <p style="font-size:var(--text-xs); text-transform:uppercase; letter-spacing:0.1em; font-weight:700; color:var(--color-text-faint); margin-bottom:var(--space-4);">Activity</p>
         <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-4);">Names with active on-chain signals.</p>
         <div class="category-grid" id="signalCategories"></div>
       </div>
     </div>
 
-    <!-- LISTINGS TAB -->
+    <!-- ── LISTINGS TAB ── -->
     <div id="tabListings" class="tab-panel" style="display:none;">
-      <div class="filter-bar" style="padding-top:var(--space-6);">
-        <span style="font-size:var(--text-xs); color:var(--color-text-faint); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-right:var(--space-2);">TLD</span>
-        <button class="filter-chip active" data-tld="all" onclick="filterTld('all', this)">All</button>
-        <button class="filter-chip" data-tld=".btc" onclick="filterTld('.btc', this)">.btc</button>
-        <button class="filter-chip" data-tld=".sats" onclick="filterTld('.sats', this)">.sats</button>
-        <button class="filter-chip" data-tld=".x" onclick="filterTld('.x', this)">.x</button>
-        <button class="filter-chip" data-tld=".ord" onclick="filterTld('.ord', this)">.ord</button>
-        <button class="filter-chip" data-tld=".gm" onclick="filterTld('.gm', this)">.gm</button>
-        <span style="width:1px; height:20px; background:var(--color-border); margin-inline:var(--space-2);"></span>
-        <span style="font-size:var(--text-xs); color:var(--color-text-faint); font-weight:600; text-transform:uppercase; letter-spacing:0.08em; margin-right:var(--space-2);">Length</span>
-        <button class="filter-chip" data-len="1-2" onclick="filterLen('1-2', this)">1-2L</button>
-        <button class="filter-chip" data-len="3" onclick="filterLen('3', this)">3L</button>
-        <button class="filter-chip" data-len="4" onclick="filterLen('4', this)">4L</button>
-        <button class="filter-chip" data-len="5" onclick="filterLen('5', this)">5L</button>
-        <span style="width:1px; height:20px; background:var(--color-border); margin-inline:var(--space-2);"></span>
-        <button class="filter-chip" data-special="bnrp" onclick="filterSpecial('bnrp', this)">BNRP only</button>
-        <button class="filter-chip" data-special="listed" onclick="filterSpecial('listed', this)">Listed</button>
-        <span style="margin-left:auto; font-size:var(--text-xs); color:var(--color-text-faint); font-family:var(--font-mono);" id="listingCount">— names</span>
-      </div>
-      <!-- Sort -->
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-4);">
-        <span style="font-size:var(--text-xs); color:var(--color-text-faint);">Sort by</span>
-        <div style="display:flex; gap:var(--space-2);">
-          <button class="filter-chip active" onclick="sortNames('score', this)">Score</button>
-          <button class="filter-chip" onclick="sortNames('price', this)">Price</button>
-          <button class="filter-chip" onclick="sortNames('age', this)">Inscription age</button>
-          <button class="filter-chip" onclick="sortNames('recent', this)">Recent</button>
+      <div class="explore-layout">
+
+        <!-- Sidebar filters -->
+        <aside class="filter-sidebar">
+          <!-- TLD -->
+          <div class="filter-sidebar__section">
+            <span class="filter-sidebar__label">TLD</span>
+            <div class="filter-sidebar__chips">
+              <button class="filter-chip--sm active" data-tld="all" onclick="filterTld('all', this)">All</button>
+              <button class="filter-chip--sm" data-tld=".btc" onclick="filterTld('.btc', this)">.btc</button>
+              <button class="filter-chip--sm" data-tld=".sats" onclick="filterTld('.sats', this)">.sats</button>
+              <button class="filter-chip--sm" data-tld=".x" onclick="filterTld('.x', this)">.x</button>
+              <button class="filter-chip--sm" data-tld=".ord" onclick="filterTld('.ord', this)">.ord</button>
+              <button class="filter-chip--sm" data-tld=".gm" onclick="filterTld('.gm', this)">.gm</button>
+              <button class="filter-chip--sm" data-tld=".xbt" onclick="filterTld('.xbt', this)">.xbt</button>
+              <button class="filter-chip--sm" data-tld=".unisat" onclick="filterTld('.unisat', this)">.unisat</button>
+            </div>
+          </div>
+
+          <!-- Length -->
+          <div class="filter-sidebar__section">
+            <span class="filter-sidebar__label">Name Length</span>
+            <div class="filter-sidebar__chips">
+              <button class="filter-chip--sm" data-len="1-2" onclick="filterLen('1-2', this)">1-2</button>
+              <button class="filter-chip--sm" data-len="3" onclick="filterLen('3', this)">3</button>
+              <button class="filter-chip--sm" data-len="4" onclick="filterLen('4', this)">4</button>
+              <button class="filter-chip--sm" data-len="5" onclick="filterLen('5', this)">5</button>
+              <button class="filter-chip--sm" data-len="6+" onclick="filterLen('6+', this)">6+</button>
+            </div>
+          </div>
+
+          <!-- Price range -->
+          <div class="filter-sidebar__section">
+            <span class="filter-sidebar__label">Price (sats)</span>
+            <div class="price-range-wrap">
+              <div>
+                <span class="price-range-label">Min</span>
+                <input class="price-range-input" id="priceMin" type="number" placeholder="0" min="0" oninput="applyPriceFilter()" />
+              </div>
+              <div>
+                <span class="price-range-label">Max</span>
+                <input class="price-range-input" id="priceMax" type="number" placeholder="Any" min="0" oninput="applyPriceFilter()" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Special filters -->
+          <div class="filter-sidebar__section">
+            <span class="filter-sidebar__label">Special</span>
+            <div class="filter-sidebar__chips">
+              <button class="filter-chip--sm" data-special="numeric" onclick="filterSpecial('numeric', this)">Numeric</button>
+              <button class="filter-chip--sm" data-special="letters" onclick="filterSpecial('letters', this)">Letters only</button>
+              <button class="filter-chip--sm" data-special="palindrome" onclick="filterSpecial('palindrome', this)">Palindrome</button>
+              <button class="filter-chip--sm" data-special="999" onclick="filterSpecial('999', this)">999 Club</button>
+              <button class="filter-chip--sm" data-special="allsame" onclick="filterSpecial('allsame', this)">All Same</button>
+              <button class="filter-chip--sm" data-special="dictionary" onclick="filterSpecial('dictionary', this)">Dictionary</button>
+              <button class="filter-chip--sm" data-special="bnrp" onclick="filterSpecial('bnrp', this)">BNRP only</button>
+            </div>
+          </div>
+
+          <!-- Sort -->
+          <div class="filter-sidebar__section">
+            <span class="filter-sidebar__label">Sort by</span>
+            <div class="filter-sidebar__chips" style="flex-direction:column; align-items:flex-start;">
+              <button class="filter-chip--sm active" data-sort="price_asc" onclick="sortNames('price_asc', this)">Price: low to high</button>
+              <button class="filter-chip--sm" data-sort="price_desc" onclick="sortNames('price_desc', this)">Price: high to low</button>
+              <button class="filter-chip--sm" data-sort="score" onclick="sortNames('score', this)">Collector score</button>
+              <button class="filter-chip--sm" data-sort="recent" onclick="sortNames('recent', this)">Recently listed</button>
+            </div>
+          </div>
+
+          <!-- Clear -->
+          <div class="filter-sidebar__section">
+            <button class="btn btn--outline btn--sm btn--full" onclick="clearAllFilters()">Clear all filters</button>
+          </div>
+        </aside>
+
+        <!-- Results -->
+        <div>
+          <div class="sort-bar">
+            <span class="sort-bar__count" id="listingCount">— names</span>
+            <button class="btn btn--outline btn--sm" onclick="toggleGridDensity(this)" id="densityBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              Dense
+            </button>
+          </div>
+          <div class="name-grid" id="listingsGrid" style="grid-template-columns:repeat(auto-fill, minmax(180px,1fr));"></div>
+          <div style="text-align:center; padding:var(--space-8);">
+            <button class="btn btn--outline" id="loadMoreBtn" onclick="loadMore()" style="display:none;">Load more</button>
+          </div>
         </div>
-      </div>
-      <div class="name-grid" id="listingsGrid" style="grid-template-columns:repeat(auto-fill, minmax(180px,1fr));"></div>
-      <div style="text-align:center; padding:var(--space-8);">
-        <button class="btn btn--outline" id="loadMoreBtn" onclick="loadMore()">Load more</button>
       </div>
     </div>
 
-    <!-- MARKET TAB -->
+    <!-- ── MARKET TAB ── -->
     <div id="tabMarket" class="tab-panel" style="display:none;">
       <div style="padding-block:var(--space-8);">
         <h2 style="font-family:var(--font-display); font-size:var(--text-lg); font-weight:700; margin-bottom:var(--space-6); color:var(--color-text);">Market Indexes</h2>
@@ -141,6 +198,7 @@
       <ul class="footer__links" role="list">
         <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Protocol</a></li>
         <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
+        <li><a href="./bulk.html">Bulk Search</a></li>
       </ul>
     </div>
   </div>

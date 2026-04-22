@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BTC Native — Bitcoin Name Explorer</title>
-  <meta name="description" content="Discover, track, and trade Bitcoin-native names across .btc, .sats, .x, .ord and more. Powered by BNRP open resolution." />
+  <title>BTC Native — Bitcoin Name Market</title>
+  <meta name="description" content="The market for Bitcoin names. Buy, sell, and track .btc, .sats, .x, .ord and more. Floor prices, collector scores, BNRP identity cards." />
   <link rel="preconnect" href="https://api.fontshare.com" />
   <link rel="stylesheet" href="./base.css" />
   <link rel="stylesheet" href="./style.css" />
@@ -27,6 +27,7 @@
         <li><a href="./index.html" class="nav__link active">Discover</a></li>
         <li><a href="./explore.html" class="nav__link">Explore</a></li>
         <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
+        <li><a href="./bulk.html" class="nav__link">Bulk</a></li>
       </ul>
       <div class="nav__actions">
         <button class="nav__theme-btn" data-theme-toggle aria-label="Toggle theme">
@@ -97,10 +98,11 @@
   </div>
 </div>
 
-<!-- ── CATEGORIES ──────────────────────────────────────────────────── -->
+<!-- ── MAIN ──────────────────────────────────────────────────────── -->
 <main>
   <div class="container">
 
+    <!-- Categories -->
     <section class="section">
       <div class="section__header">
         <h2 class="section__title">Categories</h2>
@@ -113,6 +115,48 @@
 
     <div class="divider"></div>
 
+    <!-- Recently Listed -->
+    <section class="section" style="padding-bottom:var(--space-8);">
+      <div class="section__header">
+        <h2 class="section__title">
+          <span class="section-label">LIVE</span>
+          Recently Listed
+        </h2>
+        <a href="./explore.html?tab=listings" class="section__link">All listings →</a>
+      </div>
+      <div class="scroll-row" id="recentlyListed">
+        <!-- skeleton while loading -->
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Price Drops -->
+    <section class="section" style="padding-bottom:var(--space-8);">
+      <div class="section__header">
+        <h2 class="section__title">
+          Price Drops
+        </h2>
+        <a href="./explore.html?tab=listings&sort=recent" class="section__link">See more →</a>
+      </div>
+      <div class="scroll-row" id="priceDrops">
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Recent Sales -->
     <section class="section">
       <div class="section__header">
         <h2 class="section__title">Recent Sales</h2>
@@ -125,10 +169,11 @@
 
     <div class="divider"></div>
 
+    <!-- BNRP Verified -->
     <section class="section">
       <div class="section__header">
         <h2 class="section__title">BNRP Verified</h2>
-        <a href="./explore.html?filter=bnrp" class="section__link">View all →</a>
+        <a href="./explore.html?tab=listings&special=bnrp" class="section__link">View all →</a>
       </div>
       <p style="color:var(--color-text-muted); font-size:var(--text-sm); margin-bottom:var(--space-6); max-width:60ch;">Names with active <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">BNRP</a> identity records — avatar, display name, and linked addresses set on-chain.</p>
       <div class="name-grid" id="bnrpNames">
@@ -148,6 +193,7 @@
         <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Protocol</a></li>
         <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
         <li><a href="./explore.html">Explore</a></li>
+        <li><a href="./bulk.html">Bulk</a></li>
       </ul>
     </div>
   </div>
