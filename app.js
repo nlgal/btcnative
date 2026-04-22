@@ -1215,71 +1215,89 @@ function initSearchInput(input, resultsEl) {
   });
 }
 
+// Primary TLDs to show as variants in search results
+const SEARCH_TLDS = ['.btc', '.sats', '.x', '.ord', '.xbt'];
+
 async function runSearch(q, input, resultsEl) {
-  resultsEl.innerHTML = `<div class="search-result-loading">Resolving ${q}...</div>`;
   resultsEl.style.display = 'block';
 
-  // Determine if it looks like a full name with TLD
-  const hasTld = SUPPORTED_TLDS.some(tld => q.endsWith(tld));
-  const name = hasTld ? q : null;
+  // Strip any TLD the user typed so we always work with the base
+  const hasTld   = SUPPORTED_TLDS.some(t => q.endsWith(t));
+  const base     = hasTld ? getBase(q) : q.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const typedTld = hasTld ? getTld(q) : null;
 
-  if (name) {
-    const data = await resolveName(name);
-    if (data) {
-      showSearchResult(data, name, resultsEl);
-    } else {
-      resultsEl.innerHTML = `
-        <div class="search-result-item" onclick="navigateToName('${name}')">
-          <div class="search-result-avatar">${getBase(name)[0].toUpperCase()}</div>
-          <div>
-            <div class="search-result-name">${name}</div>
-            <div class="search-result-sub">No BNRP record · View profile</div>
-          </div>
-          <span class="badge badge--muted search-result-badge">Unverified</span>
-        </div>`;
-    }
-  } else {
-    // Show suggestions
-    const matches = SEED_NAMES.filter(n => n.name.includes(q.toLowerCase()));
-    if (matches.length > 0) {
-      resultsEl.innerHTML = '';
-      matches.slice(0, 5).forEach(n => {
-        const item = document.createElement('div');
-        item.className = 'search-result-item';
-        item.onclick = () => navigateToName(n.name);
-        const base = getBase(n.name); const tld = getTld(n.name);
-        const records = (n.bnrp && n.bnrp.records) || {};
-        item.innerHTML = `
-          <div class="search-result-avatar" data-avatar="${records.avatar||''}" data-initial="${base[0].toUpperCase()}">${base[0].toUpperCase()}</div>
-          <div>
-            <div class="search-result-name">${base}<span style="color:var(--color-primary)">${tld}</span></div>
-            <div class="search-result-sub">${records.display || 'No BNRP record'}</div>
-          </div>
-          ${records.avatar ? `<span class="badge badge--green search-result-badge">BNRP</span>` : ''}
-        `;
-        if (records.avatar) {
-          const av = item.querySelector('.search-result-avatar');
-          initAvatar(av, records.avatar, base[0].toUpperCase());
-        }
-        resultsEl.appendChild(item);
-      });
-    } else {
-      // Try resolving with .btc suffix
-      const withBtc = q + '.btc';
-      const data = await resolveName(withBtc);
-      if (data) {
-        showSearchResult(data, withBtc, resultsEl);
-      } else {
-        resultsEl.innerHTML = `
-          <div class="search-result-item" onclick="navigateToName('${withBtc}')">
-            <div class="search-result-avatar">${q[0].toUpperCase()}</div>
-            <div>
-              <div class="search-result-name">${withBtc}</div>
-              <div class="search-result-sub">View profile</div>
-            </div>
-          </div>`;
+  if (!base) { resultsEl.style.display = 'none'; return; }
+
+  // Show TLD variant rows immediately (instant feedback)
+  const tlds = typedTld ? [typedTld] : SEARCH_TLDS;
+  resultsEl.innerHTML = '';
+
+  // Header
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:var(--space-2) var(--space-4) var(--space-1); font-size:var(--text-xs); color:var(--color-text-faint); font-family:var(--font-mono); letter-spacing:0.05em; text-transform:uppercase;';
+  header.textContent = `"${base}" across TLDs`;
+  resultsEl.appendChild(header);
+
+  const rows = {};
+  tlds.forEach(tld => {
+    const fullName = base + tld;
+    const item = document.createElement('div');
+    item.className = 'search-result-item';
+    item.onclick = () => navigateToName(fullName);
+    item.innerHTML = `
+      <div class="search-result-name" style="flex:1;">${base}<span style="color:var(--color-primary);">${tld}</span></div>
+      <span class="search-result-price" style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-faint);">—</span>
+    `;
+    resultsEl.appendChild(item);
+    rows[fullName] = item.querySelector('.search-result-price');
+  });
+
+  // If user typed a full name, also resolve BNRP identity async
+  if (typedTld) {
+    const fullName = base + typedTld;
+    resolveName(fullName).then(data => {
+      if (!data || !data.records) return;
+      const records = data.records;
+      const row = resultsEl.querySelector('.search-result-item');
+      if (!row) return;
+      if (records.display) {
+        const sub = document.createElement('span');
+        sub.style.cssText = 'font-size:var(--text-xs);color:var(--color-text-faint);margin-left:var(--space-2);';
+        sub.textContent = records.display;
+        row.querySelector('.search-result-name').appendChild(sub);
       }
-    }
+      if (records.avatar) {
+        const av = document.createElement('div');
+        av.className = 'search-result-avatar';
+        av.dataset.initial = base[0].toUpperCase();
+        av.textContent = base[0].toUpperCase();
+        row.prepend(av);
+        initAvatar(av, records.avatar, base[0].toUpperCase());
+      }
+    });
+  }
+
+  // Fetch live floor/listing prices from UniSat in background
+  if (UNISAT_API_KEY) {
+    tlds.forEach(tld => {
+      const domainType = tld.replace('.', '');
+      const fullName = base + tld;
+      unisatPost('/v3/market/domain/auction/list', {
+        filter: { nftType: 'domain', domainType, keyword: base },
+        start: 0, limit: 1, sort: { unitPrice: 1 }
+      }).then(data => {
+        const priceEl = rows[fullName];
+        if (!priceEl) return;
+        const item = data && data.list && data.list[0];
+        if (item && item.unitPrice) {
+          priceEl.textContent = formatSats(item.unitPrice);
+          priceEl.style.color = 'var(--color-primary)';
+          priceEl.style.fontWeight = '600';
+        } else {
+          priceEl.textContent = 'Not listed';
+        }
+      }).catch(() => {});
+    });
   }
 }
 
