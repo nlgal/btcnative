@@ -572,8 +572,8 @@
             <span class="fee-row__value" id="delistPrice">—</span>
           </div>
           <div class="fee-row">
-            <span class="fee-row__label">Auction ID</span>
-            <span class="fee-row__value" id="delistAuctionId" style="font-size:var(--text-xs); word-break:break-all;">—</span>
+            <span class="fee-row__label">Platform</span>
+            <span class="fee-row__value">BTC Native</span>
           </div>
           <button class="sell-delist" id="delistBtn">Cancel listing</button>
           <div class="sell-status" id="delistStatus"></div>
@@ -680,41 +680,228 @@ async function getWalletPubkey(wallet) {
   }
   throw new Error('Unsupported wallet');
 }
-// signPsbt for LISTING: uses SIGHASH_SINGLE|ANYONECANPAY (131) so anyone can add inputs
-async function signPsbtListing(wallet, psbtHex, signIndexes) {
-  const toSignInputs = signIndexes.map(i => ({
-    index: i,
-    address: wallet._address,
-    sighashTypes: [131], // SIGHASH_SINGLE | SIGHASH_ANYONECANPAY
-  }));
-  if (wallet.type === 'unisat') {
-    return wallet.api.signPsbt(psbtHex, { autoFinalized: false, toSignInputs });
-  }
-  if (wallet.type === 'xverse') {
-    const res = await wallet.api.request('signPsbt', {
-      psbt: psbtHex,
-      broadcast: false,
-      signInputs: Object.fromEntries(signIndexes.map(i => [i, ['SIGHASH_SINGLE_ANYONECANPAY']])),
-    });
-    return res.result.psbt;
-  }
-  throw new Error('Unsupported wallet');
+// ── Own-PSBT listing helpers ─────────────────────────────────────────────────
+
+/**
+ * Fetch UTXOs for an address from mempool.space.
+ * Returns array of { txid, vout, value, status }.
+ */
+async function fetchUtxos(address) {
+  const res = await fetch(`https://mempool.space/api/address/${encodeURIComponent(address)}/utxo`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error('Failed to fetch UTXOs from mempool.space');
+  return res.json();
 }
-// signPsbt for BUYING: standard SIGHASH_ALL
-async function signPsbtBuy(wallet, psbtHex, signIndexes) {
-  const toSignInputs = signIndexes.map(i => ({ index: i, address: wallet._address }));
+
+/**
+ * Find the UTXO containing a specific inscription.
+ * UniSat returns the outpoint (txid:vout) for an inscription.
+ * We match that to the address's UTXOs.
+ */
+async function fetchInscriptionUtxo(inscriptionId, sellerAddress) {
+  // 1. Get inscription info from UniSat — returns outpoint
+  const infoRes = await fetch(
+    `https://open-api.unisat.io/v1/indexer/inscription/info/${encodeURIComponent(inscriptionId)}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${UNISAT_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(8000),
+    }
+  );
+  const infoData = await infoRes.json();
+  if (infoData.code !== 0) throw new Error(infoData.msg || 'Could not fetch inscription info');
+  const info = infoData.data;
+
+  // outpoint format: txid:vout
+  const utxoTxid = info.utxo?.txid || info.txid;
+  const utxoVout = typeof info.utxo?.vout !== 'undefined' ? info.utxo.vout : (typeof info.outputIndex !== 'undefined' ? info.outputIndex : 0);
+  const utxoValue = info.utxo?.satoshi || info.satoshi || info.value || 546;
+
+  if (!utxoTxid) throw new Error('Inscription UTXO not found — it may be unconfirmed or already spent');
+
+  return { txid: utxoTxid, vout: utxoVout, value: utxoValue };
+}
+
+/**
+ * Build and sign a seller PSBT using SIGHASH_SINGLE|ANYONECANPAY.
+ *
+ * PSBT structure:
+ *   input[0]  = inscription UTXO (seller signs SIGHASH_SINGLE|ANYONECANPAY = 0x83)
+ *   output[0] = seller address, priceSats  (paired with input[0] by SIGHASH_SINGLE)
+ *
+ * The buyer will later add:
+ *   input[1..] = buyer's funding UTXOs  (SIGHASH_ALL)
+ *   output[1]  = buyer's address (inscription delivery)
+ *   output[2]  = fee address, feeSats
+ *   output[3]  = buyer's change address, changeSats
+ *
+ * We build PSBT as raw bytes (version 0), base64-encode, then ask wallet to sign.
+ * Returns signed PSBT hex string.
+ */
+async function buildAndSignListingPsbt(wallet, inscUtxo, sellerAddress, priceSats) {
+  // Build a minimal PSBT v0 with one P2TR input and one P2TR output.
+  // PSBT bytes are constructed manually to avoid needing a bundled lib.
+
+  // ── bech32m decode helper (same as worker) ────────────────────────────────
+  function bech32mDecode(addr) {
+    const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+    const lower = addr.toLowerCase();
+    const sep = lower.lastIndexOf('1');
+    if (sep < 1 || sep + 7 > lower.length) throw new Error('Invalid bech32m address: ' + addr);
+    const data = [];
+    for (let i = sep + 1; i < lower.length; i++) {
+      const idx = CHARSET.indexOf(lower[i]);
+      if (idx < 0) throw new Error('Invalid bech32m char');
+      data.push(idx);
+    }
+    const witnessProgram5bit = data.slice(1, data.length - 6);
+    const bytes = [];
+    let acc = 0, bits = 0;
+    for (const val of witnessProgram5bit) {
+      acc = (acc << 5) | val;
+      bits += 5;
+      if (bits >= 8) { bits -= 8; bytes.push((acc >> bits) & 0xff); }
+    }
+    return new Uint8Array(bytes); // 32-byte x-only pubkey
+  }
+
+  function p2trScript(addr) {
+    const prog = bech32mDecode(addr);
+    if (prog.length !== 32) throw new Error('Not a P2TR address: ' + addr);
+    const s = new Uint8Array(34);
+    s[0] = 0x51; s[1] = 0x20;
+    s.set(prog, 2);
+    return s;
+  }
+
+  function writeVarint(n) {
+    if (n < 0xfd) return new Uint8Array([n]);
+    if (n <= 0xffff) { const b = new Uint8Array(3); b[0] = 0xfd; new DataView(b.buffer).setUint16(1, n, true); return b; }
+    if (n <= 0xffffffff) { const b = new Uint8Array(5); b[0] = 0xfe; new DataView(b.buffer).setUint32(1, n, true); return b; }
+    throw new Error('varint overflow');
+  }
+
+  function uint64LE(n) {
+    const b = new Uint8Array(8);
+    new DataView(b.buffer).setUint32(0, n >>> 0, true);
+    new DataView(b.buffer).setUint32(4, Math.floor(n / 0x100000000) >>> 0, true);
+    return b;
+  }
+
+  function uint32LE(n) {
+    const b = new Uint8Array(4);
+    new DataView(b.buffer).setUint32(0, n, true);
+    return b;
+  }
+
+  function hexToBytes(hex) {
+    const b = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) b[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+    return b;
+  }
+
+  function concat(...arrays) {
+    const total = arrays.reduce((s, a) => s + a.length, 0);
+    const out = new Uint8Array(total);
+    let off = 0;
+    for (const a of arrays) { out.set(a, off); off += a.length; }
+    return out;
+  }
+
+  function bytesToHex(b) {
+    return Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+
+  function bytesToB64(b) {
+    let s = '';
+    for (const x of b) s += String.fromCharCode(x);
+    return btoa(s);
+  }
+
+  // ── Build unsigned tx ────────────────────────────────────────────────────
+  // Reverse txid for little-endian
+  const txidBytes = hexToBytes(inscUtxo.txid).reverse();
+  const voutBytes = uint32LE(inscUtxo.vout);
+  const seqBytes  = new Uint8Array([0xff, 0xff, 0xff, 0xfd]); // RBF sequence
+
+  const sellerScript = p2trScript(sellerAddress);
+  const priceBytes   = uint64LE(priceSats);
+
+  // unsigned tx:
+  // version (4) + input_count (1) + input (41) + output_count (1) + output + locktime (4)
+  // input: txid(32) + vout(4) + scriptSig_len(1=0) + sequence(4)
+  // output: value(8) + script_len(varint) + script
+  const unsignedTx = concat(
+    new Uint8Array([0x02, 0x00, 0x00, 0x00]),          // version 2 LE
+    writeVarint(1),                                     // 1 input
+    txidBytes, voutBytes,
+    new Uint8Array([0x00]),                             // scriptSig length 0
+    seqBytes,
+    writeVarint(1),                                     // 1 output
+    priceBytes, writeVarint(sellerScript.length), sellerScript,
+    new Uint8Array([0x00, 0x00, 0x00, 0x00])           // locktime 0
+  );
+
+  // ── PSBT global map ──────────────────────────────────────────────────────
+  // magic: 70736274ff
+  // key type 0x00 = unsigned tx
+  const txLenVarint = writeVarint(unsignedTx.length);
+  const globalMap = concat(
+    new Uint8Array([0x70, 0x73, 0x62, 0x74, 0xff]),    // PSBT magic
+    new Uint8Array([0x01, 0x00]),                        // key len=1, type=0x00
+    txLenVarint, unsignedTx,
+    new Uint8Array([0x00])                              // end global map
+  );
+
+  // ── PSBT per-input map ───────────────────────────────────────────────────
+  // For a P2TR input we need witness_utxo (key type 0x01)
+  // witness_utxo = 8-byte value + script
+  const utxoValue   = uint64LE(inscUtxo.value);
+  const utxoScript  = p2trScript(sellerAddress);  // P2TR output script of inscription UTXO
+  const witnessUtxoVal = concat(utxoValue, writeVarint(utxoScript.length), utxoScript);
+  const witnessUtxoKey = new Uint8Array([0x01, 0x01]); // key len=1, type=0x01
+  const inputMap = concat(
+    witnessUtxoKey,
+    writeVarint(witnessUtxoVal.length), witnessUtxoVal,
+    new Uint8Array([0x00])                              // end input map
+  );
+
+  // ── PSBT per-output map ──────────────────────────────────────────────────
+  // Empty map for our one output
+  const outputMap = new Uint8Array([0x00]);
+
+  const psbtBytes = concat(globalMap, inputMap, outputMap);
+  const psbtHex = bytesToHex(psbtBytes);
+  const psbtB64 = bytesToB64(psbtBytes);
+
+  // ── Ask wallet to sign SIGHASH_SINGLE|ANYONECANPAY (0x83 = 131) ──────────
+  // UniSat sign API accepts base64 or hex
+  let signedPsbtHex;
   if (wallet.type === 'unisat') {
-    return wallet.api.signPsbt(psbtHex, { autoFinalized: false, toSignInputs });
-  }
-  if (wallet.type === 'xverse') {
-    const res = await wallet.api.request('signPsbt', {
-      psbt: psbtHex,
-      broadcast: false,
-      signInputs: Object.fromEntries(signIndexes.map(i => [i, ['SIGHASH_DEFAULT']])),
+    const signed = await wallet.api.signPsbt(psbtB64, {
+      autoFinalized: false,
+      toSignInputs: [{
+        index: 0,
+        address: sellerAddress,
+        sighashTypes: [131], // SIGHASH_SINGLE | SIGHASH_ANYONECANPAY
+      }],
     });
-    return res.result.psbt;
+    signedPsbtHex = signed; // UniSat returns hex
+  } else if (wallet.type === 'xverse') {
+    const res = await wallet.api.request('signPsbt', {
+      psbt: psbtB64,
+      broadcast: false,
+      signInputs: { '0': ['SIGHASH_SINGLE_ANYONECANPAY'] },
+    });
+    signedPsbtHex = res.result.psbt;
+  } else {
+    throw new Error('Unsupported wallet');
   }
-  throw new Error('Unsupported wallet');
+
+  return signedPsbtHex;
 }
 
 // State
@@ -795,7 +982,7 @@ async function lookupName() {
       document.getElementById('previewStatus').textContent = 'Listed';
       document.getElementById('previewStatus').className = 'name-preview__status name-preview__status--listed';
       document.getElementById('delistPrice').textContent = fmtBtc(listData.priceSats);
-      document.getElementById('delistAuctionId').textContent = listData.auctionId || '—';
+  
       document.getElementById('panelDelist').style.display = 'block';
       setStep(2);
     } else {
@@ -855,13 +1042,13 @@ async function updateFeePreview() {
     return;
   }
 
-  const priceSats = Math.round(btcVal * 1e8);
-  const feeSats = Math.max(Math.round(priceSats * 0.01), 1000);
-  const receiveSats = priceSats - feeSats;
+  const priceSats  = Math.round(btcVal * 1e8);
+  const feeSats     = Math.max(Math.round(priceSats * 0.01), 1000);  // 1% BTC Native fee
+  const receiveSats = priceSats - feeSats;                            // seller nets this
 
-  document.getElementById('feeRowPrice').textContent = fmtBtc(priceSats);
-  document.getElementById('feeRowFee').textContent = fmtBtc(feeSats);
-  document.getElementById('feeRowReceive').innerHTML = fmtBtc(receiveSats) + '<span class="fee-row__usd" id="feeRowUsd"></span>';
+  document.getElementById('feeRowPrice').textContent   = fmtBtc(priceSats);
+  document.getElementById('feeRowFee').textContent     = fmtBtc(feeSats);
+  document.getElementById('feeRowReceive').innerHTML   = fmtBtc(receiveSats) + '<span class="fee-row__usd" id="feeRowUsd"></span>';
 
   const rate = await getSellBtcUsd();
   document.getElementById('priceUsdHint').textContent = fmtUsd(priceSats, rate);
@@ -904,56 +1091,37 @@ async function listName() {
     setStatus(statusEl, 'info', `Connecting ${wallet.type}...`);
     const sellerAddress = await getWalletAddress(wallet);
     wallet._address = sellerAddress;
-    const sellerPubkey = await getWalletPubkey(wallet);
+    // pubkey not needed for own-PSBT listing flow
 
-    // 2. Create listing order — UniSat returns auctionId + PSBT hex + signIndexes
-    btn.textContent = 'Generating listing...';
-    setStatus(statusEl, 'info', 'Generating listing...');
+    // 2. Find inscription UTXO on Bitcoin chain
+    btn.textContent = 'Finding inscription...';
+    setStatus(statusEl, 'info', 'Locating inscription on Bitcoin chain...');
+    const inscUtxo = await fetchInscriptionUtxo(currentInscId, sellerAddress);
 
-    const createRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/create_put_on`, {
+    // 3. Build + sign PSBT (SIGHASH_SINGLE|ANYONECANPAY)
+    btn.textContent = 'Sign to list...';
+    setStatus(statusEl, 'info', 'Review and sign the listing in your wallet...');
+    const signedPsbtHex = await buildAndSignListingPsbt(wallet, inscUtxo, sellerAddress, priceSats);
+
+    // 4. Store signed PSBT in market worker KV
+    btn.textContent = 'Submitting...';
+    setStatus(statusEl, 'info', 'Storing listing...');
+
+    const listRes = await fetch(`${MARKET_API}/api/psbt/list`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${UNISAT_API_KEY}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nftType: 'domain',
-        inscriptionId: currentInscId,
-        initPrice: String(priceSats),
-        unitPrice: String(priceSats),
-        pubkey: sellerPubkey,
-        marketType: 'fixedPrice',
+        name:            currentName,
+        psbtHex:         signedPsbtHex,
+        sellerAddress,
+        priceSats,
+        inscriptionId:   currentInscId,
+        inscriptionUtxo: inscUtxo,
       }),
     });
-
-    const createData = await createRes.json();
-    if (createData.code !== 0 || !createData.data?.psbt) {
-      throw new Error(createData.msg || 'Failed to generate listing');
-    }
-
-    const { auctionId, psbt: psbtHex, signIndexes } = createData.data;
-
-    // 3. Seller signs — SIGHASH_SINGLE|ANYONECANPAY so buyer can add their inputs
-    btn.textContent = 'Waiting for signature...';
-    setStatus(statusEl, 'info', 'Sign the listing in your wallet...');
-    const signedPsbt = await signPsbtListing(wallet, psbtHex, signIndexes || [0]);
-
-    // 4. Confirm listing — submit signed PSBT
-    btn.textContent = 'Submitting...';
-    setStatus(statusEl, 'info', 'Submitting listing...');
-
-    const confirmRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/confirm_put_on`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${UNISAT_API_KEY}`,
-      },
-      body: JSON.stringify({ auctionId, psbt: signedPsbt }),
-    });
-
-    const submitData = await confirmRes.json();
-    if (submitData.code !== 0) {
-      throw new Error(submitData.msg || 'Failed to confirm listing');
+    const listData = await listRes.json();
+    if (!listData.ok) {
+      throw new Error(listData.error || 'Failed to store listing');
     }
 
     // 5. Success
@@ -983,7 +1151,7 @@ async function listName() {
 document.getElementById('delistBtn').addEventListener('click', delistName);
 
 async function delistName() {
-  if (!currentName || !currentListing?.auctionId) return;
+  if (!currentName) return;
   const btn = document.getElementById('delistBtn');
   const statusEl = document.getElementById('delistStatus');
   btn.disabled = true;
@@ -997,58 +1165,24 @@ async function delistName() {
     }
     setStatus(statusEl, 'info', 'Connecting wallet...');
     const sellerAddress = await getWalletAddress(wallet);
-    wallet._address = sellerAddress;
-    const sellerPubkey = await getWalletPubkey(wallet);
 
-    // 1. Create delist order — UniSat returns PSBT + sign indexes
-    setStatus(statusEl, 'info', 'Generating cancellation...');
-    const cancelRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/create_put_off`, {
+    // Remove from KV — authenticated by seller address match server-side
+    setStatus(statusEl, 'info', 'Removing listing...');
+    const res = await fetch(`${MARKET_API}/api/psbt/delist`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${UNISAT_API_KEY}`,
-      },
-      body: JSON.stringify({
-        auctionId: currentListing.auctionId,
-        nftAddress: sellerAddress,
-        btcAddress: sellerAddress,
-        btcPubkey: sellerPubkey,
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: currentName, sellerAddress }),
     });
-    const cancelData = await cancelRes.json();
-    if (cancelData.code !== 0 || !cancelData.data?.psbt) {
-      throw new Error(cancelData.msg || 'Could not generate cancellation');
-    }
-    const { psbt: delistPsbtHex, nftSignIndexes = [], btcSignIndexes = [] } = cancelData.data;
-    const allSignIndexes = [...new Set([...nftSignIndexes, ...btcSignIndexes])];
-
-    // 2. Sign — delist uses standard signing (not SIGHASH_SINGLE)
-    setStatus(statusEl, 'info', 'Sign the cancellation in your wallet...');
-    const signedPsbt = await signPsbtBuy(wallet, delistPsbtHex, allSignIndexes.length ? allSignIndexes : [0]);
-
-    // 3. Confirm delist
-    setStatus(statusEl, 'info', 'Submitting cancellation...');
-    const confirmRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/confirm_put_off`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${UNISAT_API_KEY}`,
-      },
-      body: JSON.stringify({ auctionId: currentListing.auctionId, psbt: signedPsbt }),
-    });
-    const confirmData = await confirmRes.json();
-    if (confirmData.code !== 0) throw new Error(confirmData.msg || 'Cancellation failed');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Delist failed');
 
     setStatus(statusEl, 'success', `<strong>${currentName}</strong> has been delisted.`);
     btn.textContent = 'Delisted';
-
+    document.getElementById('panelDelist').style.display = 'none';
+    document.getElementById('panelStep2').style.display = 'block';
+    setStep(2);
   } catch (e) {
-    const msg = e.message || String(e);
-    if (msg.includes('User rejected') || msg.includes('cancelled')) {
-      setStatus(statusEl, 'info', 'Cancelled.');
-    } else {
-      setStatus(statusEl, 'error', msg);
-    }
+    setStatus(statusEl, 'error', e.message || 'Delist failed');
     btn.disabled = false;
   }
 }
@@ -1122,9 +1256,8 @@ function prefillSell(name) {
 
 // Quick delist directly from the listings section
 async function quickDelist(btn) {
-  const name      = btn.dataset.name;
-  const auctionId = btn.dataset.auction;
-  if (!name || !auctionId) { alert('Missing auction data. Try refreshing.'); return; }
+  const name = btn.dataset.name;
+  if (!name) { alert('Missing name. Try refreshing.'); return; }
 
   btn.textContent = 'Delisting...';
   btn.disabled = true;
@@ -1133,28 +1266,14 @@ async function quickDelist(btn) {
     const wallet = detectWallet();
     if (!wallet) throw new Error('No wallet detected.');
     const sellerAddress = await getWalletAddress(wallet);
-    wallet._address = sellerAddress;
-    const sellerPubkey = await getWalletPubkey(wallet);
 
-    const cancelRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/create_put_off`, {
+    const res = await fetch(`${MARKET_API}/api/psbt/delist`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${UNISAT_API_KEY}` },
-      body: JSON.stringify({ auctionId, nftAddress: sellerAddress, btcAddress: sellerAddress, btcPubkey: sellerPubkey }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, sellerAddress }),
     });
-    const cancelData = await cancelRes.json();
-    if (cancelData.code !== 0 || !cancelData.data?.psbt) throw new Error(cancelData.msg || 'Could not generate cancellation');
-
-    const { psbt: delistPsbtHex, nftSignIndexes = [], btcSignIndexes = [] } = cancelData.data;
-    const allIndexes = [...new Set([...nftSignIndexes, ...btcSignIndexes])];
-    const signedPsbt = await signPsbtBuy(wallet, delistPsbtHex, allIndexes.length ? allIndexes : [0]);
-
-    const confirmRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/confirm_put_off`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${UNISAT_API_KEY}` },
-      body: JSON.stringify({ auctionId, psbt: signedPsbt }),
-    });
-    const confirmData = await confirmRes.json();
-    if (confirmData.code !== 0) throw new Error(confirmData.msg || 'Cancellation failed');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Delist failed');
 
     // Remove the row on success
     const rowId = 'listing-row-' + name.replace(/[^a-z0-9]/g, '_');
@@ -1166,10 +1285,7 @@ async function quickDelist(btn) {
       document.getElementById('yourListingsSection').style.display = 'none';
     }
   } catch (e) {
-    const msg = e.message || String(e);
-    if (!msg.includes('User rejected') && !msg.includes('cancelled')) {
-      alert('Delist failed: ' + msg);
-    }
+    alert('Delist failed: ' + (e.message || e));
     btn.textContent = 'Delist';
     btn.disabled = false;
   }

@@ -1,26 +1,35 @@
 /**
- * btcnative Buy Modal
- * Self-custodied PSBT buy flow with 1% platform fee.
+ * btcnative Buy Modal v2.0
+ * Own-PSBT buyer flow — fully independent of UniSat settlement.
  *
  * Flow:
- *   1. GET  /api/listing        — validate listing + canonical inscription check
- *   2. POST create_bid_prepare  — confirm auction still live, get fee rate
- *   3. POST create_bid          — UniSat builds the combined PSBT (unsigned by buyer)
- *   4. POST /api/psbt/prepare   — worker injects 1% fee output into the PSBT
- *   5. wallet.signPsbt          — buyer signs their inputs on the fee-injected PSBT
- *   6. POST confirm_bid         — UniSat broadcasts; sale settles on-chain
+ *   1. GET  /api/psbt/listing   — fetch seller's signed SIGHASH_SINGLE|ANYONECANPAY PSBT
+ *   2. wallet.getBitcoinUtxos() — get buyer's available UTXOs
+ *   3. Build combined PSBT:
+ *        input[0]  = inscription UTXO (already signed by seller in stored PSBT)
+ *        input[1+] = buyer funding UTXOs (buyer signs SIGHASH_ALL)
+ *        output[0] = seller address, priceSats (from seller PSBT)
+ *        output[1] = buyer address, inscriptionDust (546 sats — inscription delivery)
+ *        output[2] = fee address, feeSats (1% platform fee)
+ *        output[3] = buyer change address, changeSats
+ *   4. wallet.signPsbt — buyer signs their inputs (SIGHASH_ALL)
+ *   5. POST /api/psbt/broadcast — finalize + broadcast to mempool.space
  *
- * The fee output is injected BEFORE the buyer signs, so their SIGHASH_ALL
- * covers all outputs including the platform fee. The seller's SIGHASH_SINGLE
- * is unaffected (it commits input 0 → output 0 only).
+ * SIGHASH_SINGLE|ANYONECANPAY means seller's signature commits to:
+ *   - Their inscription input
+ *   - output[0] (their payment)
+ * ...and nothing else. So buyer can freely add inputs + outputs.
  *
- * Usage:
- *   openBuyModal({ name: 'trump.btc', auctionId: '...', priceSats: 500000 });
+ * Buyer's SIGHASH_ALL commits to the entire transaction including fee output,
+ * so the fee cannot be stripped without invalidating the buyer's signature.
  */
 
 const UNISAT_BASE_BM = 'https://open-api.unisat.io';
 const UNISAT_KEY_BM  = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
 const MARKET_API_BM  = 'https://btcnative-market.galanin.workers.dev';
+
+const INSCRIPTION_DUST = 546; // sats for inscription delivery output
+const FEE_RATE_FALLBACK = 6;  // sat/vbyte fallback
 
 // ── Formatting ────────────────────────────────────────────────────────────────
 let _bmBtcUsd = null;
@@ -45,6 +54,112 @@ function _bmFmtBtc(sats) {
   return btc.toFixed(8).replace(/0+$/, '') + ' BTC';
 }
 
+// ── Bitcoin helpers ───────────────────────────────────────────────────────────
+
+function _bmHexToBytes(hex) {
+  const b = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) b[i / 2] = parseInt(hex.slice(i, i + 2), 16);
+  return b;
+}
+
+function _bmBytesToHex(b) {
+  return Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+
+function _bmBytesToB64(b) {
+  let s = '';
+  for (const x of b) s += String.fromCharCode(x);
+  return btoa(s);
+}
+
+function _bmB64ToBytes(b64) {
+  const bin = atob(b64);
+  const b = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+  return b;
+}
+
+function _bmConcat(...arrays) {
+  const total = arrays.reduce((s, a) => s + a.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const a of arrays) { out.set(a, off); off += a.length; }
+  return out;
+}
+
+function _bmWriteVarint(n) {
+  if (n < 0xfd) return new Uint8Array([n]);
+  if (n <= 0xffff) { const b = new Uint8Array(3); b[0] = 0xfd; new DataView(b.buffer).setUint16(1, n, true); return b; }
+  if (n <= 0xffffffff) { const b = new Uint8Array(5); b[0] = 0xfe; new DataView(b.buffer).setUint32(1, n, true); return b; }
+  throw new Error('varint overflow');
+}
+
+function _bmReadVarint(view, offset) {
+  const first = view.getUint8(offset);
+  if (first < 0xfd) return { value: first, length: 1 };
+  if (first === 0xfd) return { value: view.getUint16(offset + 1, true), length: 3 };
+  if (first === 0xfe) return { value: view.getUint32(offset + 2, true), length: 5 };
+  const lo = view.getUint32(offset + 1, true);
+  const hi = view.getUint32(offset + 5, true);
+  return { value: lo + hi * 0x100000000, length: 9 };
+}
+
+function _bmUint64LE(n) {
+  const b = new Uint8Array(8);
+  new DataView(b.buffer).setUint32(0, n >>> 0, true);
+  new DataView(b.buffer).setUint32(4, Math.floor(n / 0x100000000) >>> 0, true);
+  return b;
+}
+
+function _bmUint32LE(n) {
+  const b = new Uint8Array(4);
+  new DataView(b.buffer).setUint32(0, n, true);
+  return b;
+}
+
+function _bmBech32mDecode(addr) {
+  const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  const lower = addr.toLowerCase();
+  const sep = lower.lastIndexOf('1');
+  if (sep < 1 || sep + 7 > lower.length) throw new Error('Invalid bech32m address: ' + addr);
+  const data = [];
+  for (let i = sep + 1; i < lower.length; i++) {
+    const idx = CHARSET.indexOf(lower[i]);
+    if (idx < 0) throw new Error('Invalid bech32m char in: ' + addr);
+    data.push(idx);
+  }
+  const witnessProgram5bit = data.slice(1, data.length - 6);
+  const bytes = [];
+  let acc = 0, bits = 0;
+  for (const val of witnessProgram5bit) {
+    acc = (acc << 5) | val;
+    bits += 5;
+    if (bits >= 8) { bits -= 8; bytes.push((acc >> bits) & 0xff); }
+  }
+  return new Uint8Array(bytes);
+}
+
+function _bmP2trScript(addr) {
+  const prog = _bmBech32mDecode(addr);
+  if (prog.length !== 32) throw new Error('Not a P2TR address: ' + addr);
+  const s = new Uint8Array(34);
+  s[0] = 0x51; s[1] = 0x20;
+  s.set(prog, 2);
+  return s;
+}
+
+// ── Fee rate ──────────────────────────────────────────────────────────────────
+
+async function _bmGetFeeRate() {
+  try {
+    const r = await fetch('https://mempool.space/api/v1/fees/recommended', { signal: AbortSignal.timeout(4000) });
+    const d = await r.json();
+    return d.fastestFee || d.halfHourFee || FEE_RATE_FALLBACK;
+  } catch {
+    return FEE_RATE_FALLBACK;
+  }
+}
+
 // ── Wallet ────────────────────────────────────────────────────────────────────
 function _bmDetectWallet() {
   if (window.unisat) return { type: 'unisat', api: window.unisat };
@@ -61,21 +176,19 @@ async function _bmGetAddress(wallet) {
   if (wallet.type === 'xverse') {
     const res = await wallet.api.request('getAccounts', { purposes: ['ordinals', 'payment'] });
     wallet._paymentAddress = res.result.find(a => a.purpose === 'payment')?.address || res.result[0].address;
-    return res.result.find(a => a.purpose === 'ordinals')?.address || res.result[0].address;
+    return res.result.find(a => a.purpose === 'payment')?.address || res.result[0].address;
   }
   throw new Error('Unsupported wallet');
 }
 
-async function _bmGetPubkey(wallet) {
+async function _bmGetPubkey(wallet, address) {
   if (wallet.type === 'unisat') {
-    // UniSat returns compressed pubkey (02/03 + 32 bytes = 66 hex chars).
-    // For taproot (bc1p) addresses, x-only pubkey (32 bytes = 64 hex chars) is needed.
     const compressed = await wallet.api.getPublicKey();
     if (compressed && compressed.length === 66) return compressed.slice(2);
     return compressed;
   }
   if (wallet.type === 'xverse') {
-    const res = await wallet.api.request('getAccounts', { purposes: ['ordinals'] });
+    const res = await wallet.api.request('getAccounts', { purposes: ['payment'] });
     const pk = res.result[0].publicKey;
     if (pk && pk.length === 66) return pk.slice(2);
     return pk;
@@ -83,59 +196,271 @@ async function _bmGetPubkey(wallet) {
   throw new Error('Unsupported wallet');
 }
 
-async function _bmSignPsbt(wallet, psbtHex, signIndexes, pubkey) {
+/**
+ * Get buyer's UTXOs.
+ * UniSat provides getBitcoinUtxos() which returns confirmed + unconfirmed UTXOs.
+ * Xverse requires fetching from mempool.space.
+ */
+async function _bmGetUtxos(wallet, address) {
   if (wallet.type === 'unisat') {
-    const toSignInputs = (signIndexes && signIndexes.length > 0)
-      ? signIndexes.map(i => ({ index: i, publicKey: pubkey, disableToSignCheck: true }))
-      : [{ index: 0, publicKey: pubkey, disableToSignCheck: true }];
-    const signed = await wallet.api.signPsbt(psbtHex, {
-      autoFinalized: false,
-      toSignInputs,
-    });
-    return signed; // hex
+    try {
+      const utxos = await wallet.api.getBitcoinUtxos();
+      // UniSat returns [{ txid, vout, satoshis }]
+      if (utxos && utxos.length > 0) {
+        return utxos.map(u => ({
+          txid:  u.txid,
+          vout:  u.vout,
+          value: u.satoshis || u.value || u.amount,
+        }));
+      }
+    } catch (_) { /* fall through to mempool */ }
+  }
+  // Fallback: mempool.space
+  const res = await fetch(`https://mempool.space/api/address/${encodeURIComponent(address)}/utxo`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error('Could not fetch UTXOs — try again');
+  const utxos = await res.json();
+  // Filter to confirmed UTXOs only for safety
+  return utxos.filter(u => u.status?.confirmed).map(u => ({
+    txid:  u.txid,
+    vout:  u.vout,
+    value: u.value,
+  }));
+}
+
+// ── PSBT construction ─────────────────────────────────────────────────────────
+
+/**
+ * Parse the seller's SIGHASH_SINGLE|ANYONECANPAY PSBT and extract:
+ * - The inscription input (txid, vout, value, scriptPubKey)
+ * - The seller payment output (address/script, value)
+ * - The raw bytes of the partial signature for input 0
+ *
+ * Then build a new combined PSBT with buyer inputs/outputs appended.
+ *
+ * Returns { psbtB64, buyerInputIndexes } for wallet signing.
+ */
+function _bmBuildCombinedPsbt({
+  sellerPsbtHex,
+  inscriptionUtxo,   // { txid, vout, value }
+  sellerAddress,
+  priceSats,
+  buyerUtxos,        // array of { txid, vout, value } — funding inputs
+  buyerAddress,      // inscription delivery
+  feeAddress,
+  feeSats,
+  feeRate,
+}) {
+  // ── Parse seller PSBT ───────────────────────────────────────────────────────
+  // We need to extract the partial sig from the seller's signed PSBT.
+  const sellerPsbt = _bmHexToBytes(sellerPsbtHex);
+  const sellerView = new DataView(sellerPsbt.buffer, sellerPsbt.byteOffset);
+
+  // Validate magic
+  if (sellerView.getUint32(0) !== 0x70736274 || sellerPsbt[4] !== 0xff) {
+    throw new Error('Invalid seller PSBT format');
+  }
+
+  // Find global map end (skip unsigned tx)
+  let off = 5;
+  let sellerUnsignedTx = null;
+  while (off < sellerPsbt.length) {
+    const keyLen = sellerPsbt[off];
+    if (keyLen === 0x00) { off++; break; }
+    const keyType = sellerPsbt[off + 1];
+    off += 1 + keyLen;
+    const { value: valLen, length: valLenSize } = _bmReadVarint(sellerView, off);
+    off += valLenSize;
+    if (keyType === 0x00 && keyLen === 1) {
+      sellerUnsignedTx = sellerPsbt.slice(off, off + valLen);
+    }
+    off += valLen;
+  }
+  if (!sellerUnsignedTx) throw new Error('Could not parse seller PSBT unsigned tx');
+
+  // Parse input 0 map from seller PSBT — find partial_sig (key type 0x02)
+  // and witness_utxo (key type 0x01)
+  let partialSig = null;
+  let sigPubkey  = null;
+  while (off < sellerPsbt.length) {
+    const keyLen = sellerPsbt[off];
+    if (keyLen === 0x00) { off++; break; }
+    const keyType = sellerPsbt[off + 1];
+    const fullKey = sellerPsbt.slice(off + 1, off + 1 + keyLen);
+    off += 1 + keyLen;
+    const { value: valLen, length: valLenSize } = _bmReadVarint(sellerView, off);
+    const valData = sellerPsbt.slice(off + valLenSize, off + valLenSize + valLen);
+    off += valLenSize + valLen;
+
+    if (keyType === 0x02 && keyLen >= 1) {
+      // partial_sig: key = [0x02, pubkey...], value = DER signature
+      sigPubkey  = fullKey.slice(1); // drop key type byte
+      partialSig = valData;
+    }
+  }
+
+  if (!partialSig) throw new Error('Seller PSBT does not contain a partial signature. Was it signed?');
+
+  // ── Build combined PSBT ─────────────────────────────────────────────────────
+  // Calculate transaction weight for fee estimation
+  // P2TR input: 41 bytes (outpoint+seq) + 65 bytes witness = ~106 vbytes
+  // P2TR output: 43 bytes each
+  // We estimate: 10 overhead + 68 * numInputs + 43 * numOutputs (vbytes)
+  const numInputs  = 1 + buyerUtxos.length;  // seller + buyer funding
+  const numOutputs = 4;                       // seller + buyer + fee + change
+  const estVbytes  = 10 + 68 * numInputs + 43 * numOutputs;
+  const networkFee = Math.ceil(estVbytes * feeRate);
+
+  // Select UTXOs: need priceSats + feeSats + INSCRIPTION_DUST + networkFee
+  const totalNeeded = priceSats + feeSats + INSCRIPTION_DUST + networkFee;
+  let selectedUtxos = [];
+  let selectedTotal = 0;
+  // Sort by value descending for efficient selection
+  const sortedUtxos = [...buyerUtxos].sort((a, b) => b.value - a.value);
+  for (const u of sortedUtxos) {
+    // Skip the inscription UTXO if it appears in buyer's list
+    if (u.txid === inscriptionUtxo.txid && u.vout === inscriptionUtxo.vout) continue;
+    selectedUtxos.push(u);
+    selectedTotal += u.value;
+    if (selectedTotal >= totalNeeded) break;
+  }
+
+  if (selectedTotal < totalNeeded) {
+    const shortfall = totalNeeded - selectedTotal;
+    throw new Error(
+      `Insufficient balance. Need ${_bmFmtBtc(totalNeeded)} total ` +
+      `(${_bmFmtBtc(priceSats)} price + ${_bmFmtBtc(feeSats)} fee + network fees), ` +
+      `but wallet only has ${_bmFmtBtc(selectedTotal)} in confirmed UTXOs. ` +
+      `Short by ${_bmFmtBtc(shortfall)}.`
+    );
+  }
+
+  const changeSats = selectedTotal - priceSats - feeSats - INSCRIPTION_DUST - networkFee;
+
+  // ── Build unsigned tx ───────────────────────────────────────────────────────
+  const inscTxid = _bmHexToBytes(inscriptionUtxo.txid).reverse();
+  const seqRBF = new Uint8Array([0xff, 0xff, 0xff, 0xfd]);
+
+  // inputs
+  const sellerInput = _bmConcat(inscTxid, _bmUint32LE(inscriptionUtxo.vout), new Uint8Array([0x00]), seqRBF);
+  const buyerInputs = selectedUtxos.map(u =>
+    _bmConcat(_bmHexToBytes(u.txid).reverse(), _bmUint32LE(u.vout), new Uint8Array([0x00]), seqRBF)
+  );
+  const allInputBytes = _bmConcat(sellerInput, ...(buyerInputs.length ? buyerInputs : []));
+
+  // outputs
+  const sellerScript = _bmP2trScript(sellerAddress);
+  const buyerScript  = _bmP2trScript(buyerAddress);
+  const feeScript    = _bmP2trScript(feeAddress);
+
+  const sellerOut = _bmConcat(_bmUint64LE(priceSats), _bmWriteVarint(sellerScript.length), sellerScript);
+  const buyerOut  = _bmConcat(_bmUint64LE(INSCRIPTION_DUST), _bmWriteVarint(buyerScript.length), buyerScript);
+  const feeOut    = _bmConcat(_bmUint64LE(feeSats), _bmWriteVarint(feeScript.length), feeScript);
+
+  let changeOut = new Uint8Array(0);
+  let outputCount = 3;
+  if (changeSats > 546) {
+    outputCount = 4;
+    const changeScript = _bmP2trScript(buyerAddress);
+    changeOut = _bmConcat(_bmUint64LE(changeSats), _bmWriteVarint(changeScript.length), changeScript);
+  }
+
+  const unsignedTx = _bmConcat(
+    new Uint8Array([0x02, 0x00, 0x00, 0x00]),                 // version 2
+    _bmWriteVarint(numInputs),
+    allInputBytes,
+    _bmWriteVarint(outputCount),
+    sellerOut, buyerOut, feeOut,
+    ...(changeSats > 546 ? [changeOut] : []),
+    new Uint8Array([0x00, 0x00, 0x00, 0x00])                  // locktime 0
+  );
+
+  // ── Build PSBT ───────────────────────────────────────────────────────────────
+  // Global map: magic + unsigned tx
+  const txLenVarint = _bmWriteVarint(unsignedTx.length);
+  const globalMap = _bmConcat(
+    new Uint8Array([0x70, 0x73, 0x62, 0x74, 0xff]),
+    new Uint8Array([0x01, 0x00]),                              // key type 0x00 = unsigned tx
+    txLenVarint, unsignedTx,
+    new Uint8Array([0x00])                                     // end global map
+  );
+
+  // Input 0 map: seller's inscription UTXO
+  // witness_utxo (0x01) + partial_sig (0x02 + pubkey = sig)
+  const inscValue     = _bmUint64LE(inscriptionUtxo.value);
+  const inscScript    = _bmP2trScript(sellerAddress);
+  const witnessUtxo0  = _bmConcat(inscValue, _bmWriteVarint(inscScript.length), inscScript);
+
+  // partial_sig key: [0x02] + pubkey (33 bytes for compressed, 32 for x-only)
+  // We stored the seller sig from their signed PSBT. Reconstruct key from sigPubkey.
+  const sigKey = sigPubkey
+    ? _bmConcat(new Uint8Array([0x02]), sigPubkey)
+    : new Uint8Array([0x02, ...new Array(33).fill(0)]); // fallback placeholder
+
+  const input0Map = _bmConcat(
+    new Uint8Array([0x01, 0x01]), _bmWriteVarint(witnessUtxo0.length), witnessUtxo0,
+    _bmWriteVarint(sigKey.length), sigKey,
+    _bmWriteVarint(partialSig.length), partialSig,
+    new Uint8Array([0x00])                                     // end input 0 map
+  );
+
+  // Input 1..N maps: buyer funding UTXOs (witness_utxo for each)
+  const buyerInputMaps = selectedUtxos.map(u => {
+    const utxoVal    = _bmUint64LE(u.value);
+    const utxoScript = _bmP2trScript(buyerAddress);
+    const witnessUtxo = _bmConcat(utxoVal, _bmWriteVarint(utxoScript.length), utxoScript);
+    return _bmConcat(
+      new Uint8Array([0x01, 0x01]), _bmWriteVarint(witnessUtxo.length), witnessUtxo,
+      new Uint8Array([0x00])
+    );
+  });
+
+  // Output maps: all empty
+  const outputMaps = new Uint8Array(outputCount).fill(0x00); // N empty maps
+
+  const combinedPsbt = _bmConcat(
+    globalMap,
+    input0Map,
+    ...(buyerInputMaps.length ? buyerInputMaps : []),
+    outputMaps
+  );
+
+  const psbtB64 = _bmBytesToB64(combinedPsbt);
+
+  // Buyer must sign inputs 1..N (the funding inputs they added)
+  const buyerInputIndexes = selectedUtxos.map((_, i) => i + 1);
+
+  return {
+    psbtB64,
+    psbtHex: _bmBytesToHex(combinedPsbt),
+    buyerInputIndexes,
+    networkFee,
+    changeSats: changeSats > 546 ? changeSats : 0,
+  };
+}
+
+// ── Sign ──────────────────────────────────────────────────────────────────────
+
+async function _bmSignPsbt(wallet, psbtB64, signIndexes, buyerAddress, buyerPubkey) {
+  if (wallet.type === 'unisat') {
+    const toSignInputs = signIndexes.map(i => ({
+      index: i,
+      address: buyerAddress,
+      ...(buyerPubkey ? { publicKey: buyerPubkey } : {}),
+      disableToSignCheck: true,
+    }));
+    return wallet.api.signPsbt(psbtB64, { autoFinalized: true, toSignInputs });
   }
   if (wallet.type === 'xverse') {
     const res = await wallet.api.request('signPsbt', {
-      psbt: psbtHex,
+      psbt: psbtB64,
       broadcast: false,
-      signInputs: Object.fromEntries(
-        (signIndexes || [0]).map(i => [String(i), ['SIGHASH_DEFAULT']])
-      ),
+      signInputs: Object.fromEntries(signIndexes.map(i => [String(i), ['SIGHASH_DEFAULT']])),
     });
-    return res.result.psbt; // hex
+    return res.result.psbt;
   }
   throw new Error('Unsupported wallet');
-}
-
-// ── UniSat API ────────────────────────────────────────────────────────────────
-async function _bmUnisat(path, body) {
-  const res = await fetch(`${UNISAT_BASE_BM}${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${UNISAT_KEY_BM}`,
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(20000),
-  });
-  const data = await res.json();
-  if (data.code !== 0) {
-    const msg = data.msg || 'Unknown error';
-    if (msg.toLowerCase().includes('order not exist') || msg.toLowerCase().includes('not exist')) {
-      throw new Error('This listing is no longer active. It may have been sold or delisted.');
-    }
-    if (msg.toLowerCase().includes('receive address') || msg.toLowerCase().includes('bind first') || msg.toLowerCase().includes('need to bind')) {
-      throw new Error('UniSat rejected the bid address. Make sure your UniSat wallet is unlocked, on the Taproot account, and try again. (Error: ' + msg + ')');
-    }
-    if (msg.toLowerCase().includes('public key') || msg.toLowerCase().includes('pubkey')) {
-      throw new Error('Wallet address mismatch. Make sure your wallet is unlocked and on the correct account.');
-    }
-    if (msg.toLowerCase().includes('balance') || msg.toLowerCase().includes('insufficient')) {
-      throw new Error('Insufficient balance. You need more BTC to complete this purchase.');
-    }
-    throw new Error(msg);
-  }
-  return data.data;
 }
 
 // ── Modal styles ──────────────────────────────────────────────────────────────
@@ -216,37 +541,36 @@ function _bmSetStatus(el, type, html) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-async function openBuyModal({ name, auctionId, priceSats }) {
+async function openBuyModal({ name, priceSats: _priceSats }) {
   _bmInjectStyles();
 
-  // Single call: resolve listing + validate canonical inscription
-  let sellerAddress = null;
+  // Fetch listing from our worker (includes PSBT + inscription UTXO)
+  let listing = null;
   try {
-    const res = await fetch(`${MARKET_API_BM}/api/listing?name=${encodeURIComponent(name)}`);
-    const data = await res.json();
+    const res = await fetch(`${MARKET_API_BM}/api/psbt/listing?name=${encodeURIComponent(name)}`);
+    listing = await res.json();
+  } catch (_) {}
 
-    if (data.invalidReInscription) {
-      const c = data.canonicalInscriptionId || '';
-      alert(`Cannot buy ${name}: this listing is a re-inscription.\n\nOnly the first inscription (${c.slice(0,14)}...) is the valid BNS name.`);
-      return;
-    }
-    if (data.ok && data.listed) {
-      auctionId = data.auctionId;
-      priceSats = data.priceSats;
-      sellerAddress = data.sellerAddress || null;
-    } else if (!auctionId || !priceSats) {
-      alert(`${name} is not currently listed for sale.`);
-      return;
-    }
-  } catch (_) {
-    if (!auctionId || !priceSats) {
-      alert('Could not verify listing. Please try again.');
-      return;
-    }
+  if (!listing || !listing.listed) {
+    const msg = listing?.invalidReInscription
+      ? `Cannot buy ${name}: re-inscription detected. Only the first inscription is valid.`
+      : `${name} is not currently listed for sale.`;
+    alert(msg);
+    return;
   }
 
-  // Fee preview (1% of price, min 1000 sats)
-  const feeSats = Math.max(Math.round(priceSats * 0.01), 1000);
+  if (listing.invalidReInscription) {
+    alert(`Cannot buy ${name}: this is a re-inscription. Only the first inscription is valid.`);
+    return;
+  }
+
+  const { priceSats, feeSats, feeAddress, sellerAddress, inscriptionId, inscriptionUtxo, psbtHex } = listing;
+  const sellerPsbtHex = psbtHex;
+
+  if (!sellerPsbtHex) {
+    alert('Listing data is incomplete. Try again or contact support.');
+    return;
+  }
 
   // Build modal
   const backdrop = document.createElement('div');
@@ -265,10 +589,10 @@ async function openBuyModal({ name, auctionId, priceSats }) {
       </div>
       <div class="bn-modal__row">
         <span class="bn-modal__label">Network fee</span>
-        <span class="bn-modal__value bn-modal__value--faint" id="bnNetworkFee">estimated at signing</span>
+        <span class="bn-modal__value bn-modal__value--faint" id="bnNetworkFee">calculated at signing</span>
       </div>
       <div class="bn-modal__total">
-        <span class="bn-modal__total-label">You pay</span>
+        <span class="bn-modal__total-label">You pay (est.)</span>
         <span class="bn-modal__total-value bn-modal__value--accent" id="bnTotalVal">${_bmFmtBtc(priceSats + feeSats)}</span>
       </div>
       <div class="bn-modal__usd" id="bnModalUsd"></div>
@@ -282,7 +606,7 @@ async function openBuyModal({ name, auctionId, priceSats }) {
 
   _bmGetBtcUsd().then(rate => {
     const el = document.getElementById('bnModalUsd');
-    if (el) el.textContent = '≈ ' + _bmFmtUsd(priceSats + feeSats, rate);
+    if (el) el.textContent = 'approx. ' + _bmFmtUsd(priceSats + feeSats, rate);
   });
 
   const btn    = backdrop.querySelector('#bnBuyBtn');
@@ -311,7 +635,7 @@ async function openBuyModal({ name, auctionId, priceSats }) {
       const buyerAddress = await _bmGetAddress(wallet);
       wallet._address = buyerAddress;
 
-      // Self-purchase guard — UniSat API rejects bids where buyer === seller
+      // Self-purchase guard
       if (sellerAddress && buyerAddress.toLowerCase() === sellerAddress.toLowerCase()) {
         _bmSetStatus(status, 'error', 'You own this listing. Connect a different wallet to buy it.');
         btn.disabled = false;
@@ -319,50 +643,60 @@ async function openBuyModal({ name, auctionId, priceSats }) {
         return;
       }
 
-      // UniSat requires a Taproot (bc1p) address to buy Ordinals.
-      // If the wallet is set to Native Segwit (bc1q) or Legacy, buying will fail.
-      if (wallet.type === 'unisat' && !buyerAddress.startsWith('bc1p')) {
+      // Taproot address required for Ordinals
+      if (!buyerAddress.startsWith('bc1p')) {
         _bmSetStatus(status, 'error',
-          'Your UniSat wallet is set to a non-Taproot address type (<code>' + buyerAddress.slice(0,10) + '...</code>).<br><br>' +
-          'To buy Ordinals, switch to <strong>Taproot</strong> in UniSat: open the extension, tap your address at the top, select <strong>Taproot</strong>.');
+          'Your wallet is set to a non-Taproot address type (<code>' + buyerAddress.slice(0, 10) + '...</code>).<br><br>' +
+          'To buy Ordinals, switch to <strong>Taproot</strong>: open UniSat, tap your address, select <strong>Taproot</strong>.');
         btn.disabled = false;
         btn.textContent = 'Try again';
         return;
       }
 
-      const buyerPubkey = await _bmGetPubkey(wallet);
+      const buyerPubkey = await _bmGetPubkey(wallet, buyerAddress);
 
-      // ── Step 2: Prepare bid (confirm auction still live, get fee rate) ────
-      btn.textContent = 'Checking listing...';
-      _bmSetStatus(status, 'info', 'Verifying listing is still active...');
+      // ── Step 2: Fetch UTXOs ───────────────────────────────────────────────
+      btn.textContent = 'Loading UTXOs...';
+      _bmSetStatus(status, 'info', 'Fetching your UTXOs...');
       stepEl.textContent = 'Step 2 of 4';
+      const buyerUtxos = await _bmGetUtxos(wallet, buyerAddress);
+      if (!buyerUtxos.length) {
+        _bmSetStatus(status, 'error', 'No confirmed UTXOs found in your wallet. Make sure you have BTC and try again.');
+        btn.disabled = false;
+        btn.textContent = 'Try again';
+        return;
+      }
 
-      const prepData = await _bmUnisat(
-        '/v3/market/domain/auction/create_bid_prepare',
-        { auctionId, bidPrice: priceSats, address: buyerAddress, pubkey: buyerPubkey }
-      );
-      const feeRate = prepData.feeRate || prepData.fastestFeeRate || 5;
-
-      // ── Step 3: Build PSBT via UniSat ─────────────────────────────────────
+      // ── Step 3: Build combined PSBT ───────────────────────────────────────
       btn.textContent = 'Building transaction...';
       _bmSetStatus(status, 'info', 'Building transaction...');
       stepEl.textContent = 'Step 3 of 4';
 
-      const bidData = await _bmUnisat(
-        '/v3/market/domain/auction/create_bid',
-        {
-          auctionId,
-          bidPrice: priceSats,
-          address: buyerAddress,
-          pubkey: buyerPubkey,
+      const feeRate = await _bmGetFeeRate();
+
+      let psbtData;
+      try {
+        psbtData = _bmBuildCombinedPsbt({
+          sellerPsbtHex,
+          inscriptionUtxo,
+          sellerAddress,
+          priceSats,
+          buyerUtxos,
+          buyerAddress,
+          feeAddress,
+          feeSats,
           feeRate,
-          nftAddress: buyerAddress,
-        }
-      );
+        });
+      } catch (buildErr) {
+        _bmSetStatus(status, 'error', buildErr.message);
+        btn.disabled = false;
+        btn.textContent = 'Try again';
+        return;
+      }
 
-      const { bidId, psbtBid, psbtBid2, psbtSettle, bidSignIndexes, networkFee } = bidData;
+      const { psbtB64, buyerInputIndexes, networkFee } = psbtData;
 
-      // Update network fee display
+      // Update fee display
       if (networkFee) {
         const netFeeEl = document.getElementById('bnNetworkFee');
         const totalEl  = document.getElementById('bnTotalVal');
@@ -371,42 +705,43 @@ async function openBuyModal({ name, auctionId, priceSats }) {
         const total = priceSats + feeSats + networkFee;
         if (totalEl) totalEl.textContent = _bmFmtBtc(total);
         _bmGetBtcUsd().then(rate => {
-          if (usdEl) usdEl.textContent = '≈ ' + _bmFmtUsd(total, rate);
+          if (usdEl) usdEl.textContent = 'approx. ' + _bmFmtUsd(total, rate);
         });
       }
 
-      // ── Step 4: Sign original UniSat PSBT ───────────────────────────────
-      // Fee injection via PSBT modification is skipped — UniSat validates its
-      // own PSBTs and rejects any that have been modified externally.
-      // Platform fee is collected separately via the listing flow.
-      stepEl.textContent = 'Step 4 of 4';
-      const psbtToSign = psbtBid;
-
-      // ── Step 5: Buyer signs ───────────────────────────────────────────────
+      // ── Step 4: Buyer signs their inputs ─────────────────────────────────
       btn.textContent = 'Sign in wallet...';
       _bmSetStatus(status, 'info', 'Check your wallet — a signature request is waiting.');
       stepEl.textContent = 'Step 4 of 4';
 
-      const signedPsbt = await _bmSignPsbt(wallet, psbtToSign, bidSignIndexes || [], buyerPubkey);
+      const signedPsbtB64 = await _bmSignPsbt(wallet, psbtB64, buyerInputIndexes, buyerAddress, buyerPubkey);
 
-      // ── Broadcast via UniSat ──────────────────────────────────────────────
+      // ── Broadcast ─────────────────────────────────────────────────────────
       btn.textContent = 'Broadcasting...';
       _bmSetStatus(status, 'info', 'Broadcasting to Bitcoin network...');
       stepEl.textContent = '';
 
-      const confirmData = await _bmUnisat(
-        '/v3/market/domain/auction/confirm_bid',
-        {
-          auctionId,
-          bidId,
-          psbtBid: signedPsbt,
-          psbtBid2: psbtBid2 || '',
-          psbtSettle: psbtSettle || '',
-          fromBase64: false,
-        }
-      );
+      // Convert signed PSBT to raw tx hex for mempool.space broadcast
+      // When autoFinalized: true, UniSat returns a complete signed PSBT that
+      // we can extract the raw tx from. We send psbt hex to our worker
+      // which finalizes and broadcasts.
+      const broadcastRes = await fetch(`${MARKET_API_BM}/api/psbt/broadcast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // Pass the raw signed PSBT — worker will finalize and extract tx hex
+          txHex: signedPsbtB64,
+          name,
+          isPsbt: true,
+        }),
+      });
+      const broadcastData = await broadcastRes.json();
 
-      const txid = confirmData.txid || confirmData.bidTxid || '';
+      if (!broadcastData.ok) {
+        throw new Error(broadcastData.error || 'Broadcast failed');
+      }
+
+      const txid = broadcastData.txid || '';
       _bmSetStatus(status, 'success',
         `Purchase complete. ${name} is now yours.` +
         (txid ? `<div class="bn-modal__txid"><a href="https://mempool.space/tx/${txid}" target="_blank" rel="noopener">${txid}</a></div>` : '')
@@ -418,7 +753,6 @@ async function openBuyModal({ name, auctionId, priceSats }) {
     } catch (e) {
       const msg = e.message || String(e);
       stepEl.textContent = '';
-      // True user cancellation — wallet dismissed by user
       if (/user reject|user cancel|user denied|user dismissed/i.test(msg)) {
         _bmSetStatus(status, 'info', 'Signature cancelled.');
       } else {

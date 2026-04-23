@@ -138,19 +138,43 @@ async function fetchRecentSales(limit = 10) {
 }
 
 // Returns active listings array for the explore grid
-async function fetchListings({ domainType = null, minLength = null, maxLength = null, page = 0, pageSize = 20 } = {}) {
-  const filter = { nftType: 'domain' };
-  if (domainType) filter.domainType = domainType;
-  if (minLength)  filter.domainMinLength = minLength;
-  if (maxLength)  filter.domainMaxLength = maxLength;
-  const data = await unisatPost('/v3/market/domain/auction/list', {
-    filter,
-    sort:  { unitPrice: 1 },
-    start: page * pageSize,
-    limit: pageSize,
-  });
-  if (!data || !data.list) return null;
-  return { list: data.list, total: data.total };
+async function fetchListings({ domainType = null, minLength = null, maxLength = null, page = 0, pageSize = 20, sort = 'price_asc' } = {}) {
+  // Own-PSBT marketplace: fetch from our KV worker instead of UniSat
+  try {
+    const params = new URLSearchParams({
+      sort,
+      limit: String(pageSize),
+      ...(domainType ? { tld: domainType } : {}),
+    });
+    const res = await fetch(`${MARKET_API}/api/market/listings?${params}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.ok || !data.listings) return null;
+    // Map to shape expected by unisatListingToCard + renderListings
+    // { name, priceSats, feeSats, sellerAddress, inscriptionId, inscriptionUtxo, createdAt }
+    const mapped = data.listings.filter(l => {
+      if (!l.name) return false;
+      const base = getBase(l.name);
+      if (minLength && base.length < minLength) return false;
+      if (maxLength && base.length > maxLength) return false;
+      return true;
+    }).slice(page * pageSize, (page + 1) * pageSize).map(l => ({
+      name:          l.name,
+      price:         l.priceSats,
+      priceSats:     l.priceSats,
+      feeSats:       l.feeSats,
+      inscriptionId: l.inscriptionId,
+      address:       l.sellerAddress,
+      auctionId:     null,  // no UniSat auction ID
+      bnrp:          null,
+    }));
+    return { list: mapped, total: data.total };
+  } catch (e) {
+    console.warn('fetchListings error:', e.message);
+    return null;
+  }
 }
 
 // Derive 24h volume from domain_types data
@@ -339,28 +363,16 @@ function buildNameCard(data) {
 function _openCardBuy(btn) {
   const name = btn.dataset.name;
   const priceSats = parseInt(btn.dataset.price, 10);
-  const auctionId = btn.dataset.auction;
   if (!name || !priceSats) return;
 
-  // If we already have auctionId, open modal directly
-  if (auctionId && typeof window.openBuyModal === 'function') {
-    window.openBuyModal({ name, auctionId, priceSats });
+  // Open buy modal directly — modal fetches listing PSBT from our worker
+  if (typeof window.openBuyModal === 'function') {
+    window.openBuyModal({ name, priceSats });
     return;
   }
 
-  // Otherwise fetch from market worker first
-  btn.textContent = '...';
-  fetch(`${MARKET_API}/api/listing?name=${encodeURIComponent(name)}`, { signal: AbortSignal.timeout(6000) })
-    .then(r => r.json())
-    .then(d => {
-      if (d.ok && d.listed && typeof window.openBuyModal === 'function') {
-        window.openBuyModal({ name, auctionId: d.auctionId, priceSats: d.priceSats });
-      } else {
-        // Fallback: go to name profile
-        location.href = `./name.html?name=${encodeURIComponent(name)}`;
-      }
-    })
-    .catch(() => { location.href = `./name.html?name=${encodeURIComponent(name)}`; });
+  // Fallback: go to name profile
+  location.href = `./name.html?name=${encodeURIComponent(name)}`;
 }
 
 function computeBadges(data) {
@@ -944,7 +956,7 @@ async function initBuyBtn(name, inscId) {
 
     if (data.ok && data.listed) {
       // Name is listed -- wire native buy modal
-      const { priceSats, feeSats, totalSats, auctionId } = data;
+      const { priceSats, feeSats, totalSats } = data;
       if (listingPriceEl) {
         listingPriceEl.innerHTML = formatSats(priceSats) + '<span class="listing-usd"></span>';
         getBtcUsd().then(r => { const el = qs('.listing-usd'); if (el) el.textContent = ' · ' + formatUsd(priceSats, r); });
@@ -954,13 +966,13 @@ async function initBuyBtn(name, inscId) {
       }
       window._profileListed = true;
       window._profileListedPrice = formatSats(priceSats);
-      window._profileListedAuctionId = auctionId;
+
       buyBtn.textContent = `Buy for ${formatSats(totalSats)}`;
       buyBtn.onclick = (e) => {
         e.preventDefault();
         // openBuyModal is loaded via buy-modal.js module
         if (typeof window.openBuyModal === 'function') {
-          window.openBuyModal({ name, auctionId, priceSats });
+          window.openBuyModal({ name, priceSats });
         } else {
           window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
         }
