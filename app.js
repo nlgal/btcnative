@@ -5,7 +5,7 @@
 'use strict';
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const BNRP_API        = 'https://bnrp.name/api';
+const BNRP_API        = 'https://api.bnrp.name/v1';
 const UNISAT_API      = 'https://open-api.unisat.io';
 const UNISAT_API_KEY  = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
 const SUPPORTED_TLDS  = ['.btc', '.sats', '.x', '.ord', '.gm', '.xbt', '.sat', '.unisat', '.fb'];
@@ -260,41 +260,61 @@ function scoreColor(s) {
 }
 
 // ── BNRP resolve ──────────────────────────────────────────────────────────────
+// Normalizes api.bnrp.name/v1 response to the internal shape used throughout app.js:
+// { name, inscriptionId, address, records: { avatar, display, description, url, com.twitter, ... } }
 async function resolveName(name) {
-  const data = await fetchJson(`${BNRP_API}/resolve?domain=${encodeURIComponent(name)}`);
-  return data;
+  try {
+    const data = await fetchJson(`${BNRP_API}/resolve/${encodeURIComponent(name)}`);
+    if (!data || !data.name) return null;
+    // Normalize to internal shape
+    const profile = data.profile || {};
+    const records = {};
+    if (profile.avatar)        records.avatar       = profile.avatar;
+    if (profile.display)       records.display      = profile.display;
+    if (profile.description)   records.description  = profile.description;
+    if (profile.url)           records.url          = profile.url;
+    if (profile['com.twitter']) records['com.twitter'] = profile['com.twitter'];
+    if (profile['com.github'])  records['com.github']  = profile['com.github'];
+    return {
+      name:          data.name,
+      inscriptionId: data.inscription_id || null,
+      address:       data.owner || null,
+      owner:         data.owner || null,
+      records,
+    };
+  } catch { return null; }
 }
 async function resolveSnsDomain(name) {
-  const data = await fetchJson(`${BNRP_API}/sns?name=${encodeURIComponent(name)}`);
-  return data;
+  // Alias — same endpoint handles all BNRP TLDs
+  return resolveName(name);
 }
 
-// Avatar proxy
+// Avatar URL: bare inscription id or ord: prefix → static.unisat.space CDN
 function resolveAvatarUrl(avatarField) {
   if (!avatarField) return null;
   if (avatarField.startsWith('ord:')) {
-    const id = avatarField.slice(4);
-    return `${BNRP_API}/content?id=${id}`;
+    return `https://static.unisat.space/content/${avatarField.slice(4)}`;
   }
   if (avatarField.startsWith('http')) return avatarField;
   // bare inscription id
   if (/^[a-f0-9]{64}i\d+$/.test(avatarField)) {
-    return `${BNRP_API}/content?id=${avatarField}`;
+    return `https://static.unisat.space/content/${avatarField}`;
   }
   return null;
 }
 
-function initAvatar(el, avatarField, fallbackText) {
+function initAvatar(el, avatarField, _fallbackText) {
+  // No letter initials — gradient background is set by caller; just inject image if available
   const url = resolveAvatarUrl(avatarField);
   if (url) {
     const img = document.createElement('img');
-    img.alt = fallbackText || '';
-    img.onerror = () => { el.innerHTML = fallbackText || '?'; };
+    img.alt = '';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;';
+    img.onerror = () => { /* image failed — gradient fallback already in place, no initials */ };
     img.onload  = () => { el.innerHTML = ''; el.appendChild(img); };
     img.src = url;
-  } else {
-    el.textContent = fallbackText || '?';
   }
+  // no url — leave gradient background as-is
 }
 
 // ── Deterministic gradient avatar ────────────────────────────────────────────
@@ -790,19 +810,10 @@ async function initProfilePage() {
   qs('#profileSkeleton').style.display = 'none';
 
   if (!data) {
-    // If we got inscription data from API (name exists on-chain even without BNRP records),
-    // use inscription data to show a minimal profile
-    if (liveData && liveData.data && liveData.data.address) {
-      // Build minimal profile from inscription info
-      const inscData = liveData.data;
-      const minimalData = {
-        name,
-        inscriptionId: inscData.inscriptionId,
-        address: inscData.address,
-        records: {},
-      };
-      renderMinimalProfile(name, minimalData);
-      initProfileTabData(name, minimalData);
+    // resolveName returned null (name not in BNRP) — show minimal profile without records
+    if (liveData && liveData.address) {
+      renderMinimalProfile(name, liveData);
+      initProfileTabData(name, liveData);
       return;
     }
     showProfileError(); return;
@@ -816,7 +827,6 @@ async function initProfilePage() {
   // Fill profile card
   const base    = getBase(name);
   const tld     = getTld(name);
-  const initial = base[0] ? base[0].toUpperCase() : '?';
   const records = (resolvedData && resolvedData.records) || {};
   const score   = calcScore({ name, bnrp: { records } });
 
@@ -3049,19 +3059,10 @@ async function initProfilePageMVP() {
   qs('#profileSkeleton').style.display = 'none';
 
   if (!data) {
-    // If we got inscription data from API (name exists on-chain even without BNRP records),
-    // use inscription data to show a minimal profile
-    if (liveData && liveData.data && liveData.data.address) {
-      // Build minimal profile from inscription info
-      const inscData = liveData.data;
-      const minimalData = {
-        name,
-        inscriptionId: inscData.inscriptionId,
-        address: inscData.address,
-        records: {},
-      };
-      renderMinimalProfile(name, minimalData);
-      initProfileTabData(name, minimalData);
+    // resolveName returned null (name not in BNRP) — show minimal profile without records
+    if (liveData && liveData.address) {
+      renderMinimalProfile(name, liveData);
+      initProfileTabData(name, liveData);
       return;
     }
     showProfileError(); return;
@@ -3073,7 +3074,6 @@ async function initProfilePageMVP() {
 
   const base    = getBase(name);
   const tld     = getTld(name);
-  const initial = base[0] ? base[0].toUpperCase() : '?';
   const records = (resolvedData && resolvedData.records) || {};
   const score   = calcScore({ name, bnrp: { records } });
 

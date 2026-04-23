@@ -352,9 +352,15 @@ async function _bmBuildCombinedPsbt({
   const buyerScript  = toScript(buyerAddress);
   const feeScript    = toScript(feeAddress);
 
-  // output[2] MUST match what seller signed byte-for-byte
+  // output[2] MUST match what seller signed byte-for-byte.
+  // If seller PSBT has no output (new-style listing from sell.html), fall back to declared
+  // priceSats + sellerAddress — seller’s SIGHASH_SINGLE will still validate correctly because
+  // a SIGHASH_SINGLE on an input with no corresponding output is effectively SIGHASH_NONE for that input.
   const sellerOutputAmount = sellerCommittedOutput ? sellerCommittedOutput.amount : priceSats;
   const sellerOutputScript = sellerCommittedOutput ? sellerCommittedOutput.script : sellerScript;
+  if (!sellerCommittedOutput) {
+    console.log('[buy-modal] No output in seller PSBT — using declared price/address fallback:', priceSats, sellerAddress);
+  }
 
   // ── Step 3: Fee + UTXO selection ───────────────────────────────────────────────────────────────────────────────────────────────
   const dummyTotal = dummyUtxos.reduce((s, u) => s + u.value, 0);

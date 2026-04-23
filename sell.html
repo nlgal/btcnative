@@ -907,9 +907,9 @@ async function lookupName() {
 
   try {
     // 1. Resolve inscription via BNRP
-    const bnrpRes = await fetch(`https://bnrp.name/api/resolve?domain=${encodeURIComponent(name)}`);
+    const bnrpRes = await fetch(`https://api.bnrp.name/v1/resolve/${encodeURIComponent(name)}`);
     const bnrpData = await bnrpRes.json();
-    const inscId = bnrpData?.inscriptionId || bnrpData?.data?.inscriptionId;
+    const inscId = bnrpData?.inscription_id || bnrpData?.inscriptionId;
 
     if (!inscId) {
       setStatus(statusEl, 'error', `Could not find inscription for <strong>${name}</strong>. Make sure it is a valid Bitcoin name.`);
@@ -924,10 +924,10 @@ async function lookupName() {
     // 2. Show preview
     document.getElementById('previewName').textContent = name;
     document.getElementById('previewInscId').textContent = inscId.slice(0, 14) + '...' + inscId.slice(-6);
-    const avatar = bnrpData?.records?.avatar || bnrpData?.data?.records?.avatar;
+    const avatar = bnrpData?.profile?.avatar || bnrpData?.records?.avatar;
     if (avatar && avatar.startsWith('ord:')) {
       const avatarInscId = avatar.replace('ord:', '');
-      document.getElementById('previewAvatar').src = `https://ordinals.com/content/${avatarInscId}`;
+      document.getElementById('previewAvatar').src = `https://static.unisat.space/content/${avatarInscId}`;
     }
     document.getElementById('namePreview').style.display = 'block';
 
@@ -978,7 +978,7 @@ async function lookupName() {
         setStatus(statusEl, 'info', 'Checking wallet ownership...');
         try {
           const walletAddress = await getWalletAddress(wallet);
-          const ownerAddress = bnrpData?.data?.address || bnrpData?.address || null;
+          const ownerAddress = bnrpData?.owner || bnrpData?.address || null;
           if (ownerAddress && walletAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
             setStatus(statusEl, 'error', `This name is owned by <code>${ownerAddress.slice(0,10)}...${ownerAddress.slice(-6)}</code>. Your wallet (<code>${walletAddress.slice(0,10)}...${walletAddress.slice(-6)}</code>) does not own it.`);
             btn.disabled = false;

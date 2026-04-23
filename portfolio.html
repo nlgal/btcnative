@@ -711,9 +711,9 @@ async function startLookup() {
     btn.disabled = true;
     btn.textContent = 'Resolving...';
     try {
-      const res = await fetch(`https://bnrp.name/api/resolve?domain=${encodeURIComponent(addr)}`);
+      const res = await fetch(`https://api.bnrp.name/v1/resolve/${encodeURIComponent(addr)}`);
       const data = await res.json();
-      const owner = data?.address || data?.data?.address || data?.owner;
+      const owner = data?.owner || data?.address;
       if (owner) {
         document.getElementById('addrInput').value = owner;
         addr = owner;
@@ -846,10 +846,10 @@ async function fetchListingData() {
         }
 
         // Check BNRP identity
-        const bnrpRes = await fetch(`https://bnrp.name/api/resolve?domain=${encodeURIComponent(name)}`);
+        const bnrpRes = await fetch(`https://api.bnrp.name/v1/resolve/${encodeURIComponent(name)}`);
         const bnrpData = await bnrpRes.json();
         if (nameObj) {
-          const records = bnrpData?.records || bnrpData?.data?.records;
+          const records = bnrpData?.profile || bnrpData?.records;
           nameObj.hasBnrp = !!(records && (records.avatar || records.display || records.url));
           nameObj.avatar = records?.avatar;
           nameObj.display = records?.display;
@@ -911,23 +911,20 @@ function renderGrid() {
 }
 
 function renderCard(n) {
+  // Avatar: use static.unisat.space CDN (faster than ordinals.com)
   const avatarSrc = n.avatar && n.avatar.startsWith('ord:')
-    ? `https://ordinals.com/content/${n.avatar.replace('ord:', '')}`
+    ? `https://static.unisat.space/content/${n.avatar.replace('ord:', '')}`
     : '';
   const inscShort = n.inscriptionId
     ? n.inscriptionId.slice(0, 10) + '...' + n.inscriptionId.slice(-6)
     : '';
 
-  // Deterministic gradient avatar fallback
-  const grad = (typeof nameGradient === 'function') ? nameGradient(n.name) : { from: '#f7931a', to: '#c0620a', text: '#fff' };
-  const rawInitial = n.name ? n.name[0].toUpperCase() : '?';
-  const initial = /[A-Z]/i.test(rawInitial) ? rawInitial : '₿';
-  const avatarStyle = !avatarSrc
-    ? `background:linear-gradient(135deg,${grad.from},${grad.to});color:${grad.text};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;`
+  // Deterministic gradient — NO letter initials
+  const grad = (typeof nameGradient === 'function') ? nameGradient(n.name) : { from: '#f7931a', to: '#c0620a' };
+  const avatarGradStyle = `background:linear-gradient(135deg,${grad.from},${grad.to});`;
+  const avatarContent = avatarSrc
+    ? `<img src="${avatarSrc}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;" onerror="this.style.display='none';" />`
     : '';
-  const avatarContent = !avatarSrc
-    ? `<span style="pointer-events:none;">${initial}</span>`
-    : `<img src="${avatarSrc}" alt="${n.display || n.name}" loading="lazy" onerror="this.parentElement.innerHTML='<span style=\'pointer-events:none;\'>${initial}</span>';this.parentElement.style.cssText='${avatarStyle}';" />`;
 
   const priceHtml = n.listed && n.priceSats
     ? `<div class="port-card__price">
@@ -945,7 +942,7 @@ function renderCard(n) {
 
   return `<a class="port-card" href="./name.html?name=${encodedName}" title="${n.name}">
     <div class="port-card__header">
-      <div class="port-card__avatar" style="${avatarStyle}">
+      <div class="port-card__avatar" style="${avatarGradStyle}">
         ${avatarContent}
       </div>
       <div style="min-width:0;">
