@@ -278,6 +278,93 @@
     .sell-empty svg { margin-bottom: var(--space-4); opacity: 0.4; }
     .sell-empty h3 { color: var(--color-text-muted); font-size: var(--text-base); margin-bottom: var(--space-2); }
     .sell-empty p { font-size: var(--text-sm); max-width: 36ch; margin: 0 auto var(--space-6); }
+
+    /* Your names section */
+    .your-names {
+      margin-top: var(--space-5);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--color-divider);
+    }
+    .your-names__label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-text-faint);
+      margin-bottom: var(--space-3);
+    }
+    .your-names__grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+    .your-name-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 5px var(--space-3);
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--color-text);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      line-height: 1;
+    }
+    .your-name-pill:hover {
+      border-color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-offset));
+      color: var(--color-primary);
+    }
+    .your-name-pill__avatar {
+      width: 16px;
+      height: 16px;
+      border-radius: var(--radius-full);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: 700;
+      color: #000;
+      overflow: hidden;
+    }
+    /* Skeleton pills */
+    .your-name-pill--skel {
+      width: 80px;
+      height: 28px;
+      border-radius: var(--radius-full);
+      border: none;
+      cursor: default;
+    }
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position:  200% 0; }
+    }
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        var(--color-surface-offset) 25%,
+        var(--color-surface-dynamic) 50%,
+        var(--color-surface-offset) 75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+    /* Connect-wallet prompt */
+    .your-names__connect {
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      font-style: italic;
+    }
+    /* Empty names */
+    .your-names__empty {
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+    }
   </style>
 </head>
 <body>
@@ -368,6 +455,12 @@
             <div class="name-preview__status" id="previewStatus">—</div>
           </div>
           <p class="sell-wallet-note" id="ownershipNote" style="margin-top:var(--space-2); min-height:1.2em;"></p>
+        </div>
+
+        <!-- Your names: populated from wallet -->        
+        <div class="your-names" id="yourNamesSection" style="display:none;">
+          <div class="your-names__label">Your names</div>
+          <div class="your-names__grid" id="yourNamesGrid"></div>
         </div>
 
         <button class="sell-cta" id="lookupBtn" style="margin-top:var(--space-4);">Check name</button>
@@ -910,6 +1003,96 @@ async function delistName() {
   if (name) {
     document.getElementById('sellNameInput').value = name;
     lookupName();
+  }
+})();
+
+// ── Your names: wallet population ──────────────────────────────────────────────
+(async function initYourNames() {
+  const section  = document.getElementById('yourNamesSection');
+  const grid     = document.getElementById('yourNamesGrid');
+
+  // Helper: gradient same as app.js nameGradient()
+  function pillGradient(name) {
+    if (typeof nameGradient === 'function') return nameGradient(name);
+    // Fallback inline if nameGradient somehow not available
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    const hue = h % 360;
+    return `linear-gradient(135deg, hsl(${hue},60%,42%), hsl(${(hue+40)%360},55%,58%))`;
+  }
+
+  function isNumericName(name) {
+    const bare = name.split('.')[0];
+    return /^\d+$/.test(bare);
+  }
+
+  // Show skeleton
+  function showSkeleton() {
+    section.style.display = 'block';
+    grid.innerHTML = [1,2,3,4].map(() =>
+      `<div class="your-name-pill your-name-pill--skel skeleton"></div>`
+    ).join('');
+  }
+
+  // Show connect prompt
+  function showConnectPrompt() {
+    section.style.display = 'block';
+    grid.innerHTML = `<span class="your-names__connect">Connect your wallet to see your names here.</span>`;
+  }
+
+  // Show empty state
+  function showEmpty() {
+    section.style.display = 'block';
+    grid.innerHTML = `<span class="your-names__empty">No listable names found in this wallet.</span>`;
+  }
+
+  // Render pills
+  function renderPills(names) {
+    if (!names.length) { showEmpty(); return; }
+    section.style.display = 'block';
+    grid.innerHTML = names.map(n => {
+      const grad = pillGradient(n.name);
+      const initial = isNumericName(n.name) ? '\u20BF' : n.name[0].toUpperCase();
+      return `<button class="your-name-pill" data-name="${n.name}" title="${n.name}">
+        <span class="your-name-pill__avatar" style="background:${grad};">${initial}</span>
+        ${n.name}
+      </button>`;
+    }).join('');
+    // Click: fill input + trigger lookup
+    grid.querySelectorAll('.your-name-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('sellNameInput').value = btn.dataset.name;
+        document.getElementById('sellNameInput').focus();
+        lookupName();
+      });
+    });
+  }
+
+  // Wait a tick so wallet extensions have time to inject
+  await new Promise(r => setTimeout(r, 600));
+
+  const wallet = detectWallet();
+  if (!wallet) {
+    showConnectPrompt();
+    return;
+  }
+
+  showSkeleton();
+
+  try {
+    const address = await getWalletAddress(wallet);
+    const res = await fetch(`${MARKET_API}/api/names?address=${encodeURIComponent(address)}`, {
+      signal: AbortSignal.timeout(60000),
+    });
+    if (!res.ok) throw new Error('Worker error');
+    const data = await res.json();
+    if (!data.ok || !Array.isArray(data.names)) throw new Error('Bad response');
+    // Filter out re-inscriptions — can't list them
+    const listable = data.names.filter(n => !n.isReInscription);
+    renderPills(listable);
+  } catch (err) {
+    // Silently collapse the section on error — don't block the sell flow
+    section.style.display = 'none';
   }
 })();
 </script>
