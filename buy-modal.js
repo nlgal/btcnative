@@ -8,17 +8,17 @@
  *   3. Build combined PSBT:
  *        input[0]  = inscription UTXO (already signed by seller in stored PSBT)
  *        input[1+] = buyer funding UTXOs (buyer signs SIGHASH_ALL)
- *        output[0] = seller address, priceSats (from seller PSBT)
- *        output[1] = buyer address, inscriptionDust (546 sats — inscription delivery)
+ *        output[0] = buyer address, 546 sats (inscription lands here — SIGHASH_SINGLE target)
+ *        output[1] = seller address, priceSats
  *        output[2] = fee address, feeSats (1% platform fee)
  *        output[3] = buyer change address, changeSats
  *   4. wallet.signPsbt — buyer signs their inputs (SIGHASH_ALL)
  *   5. POST /api/psbt/broadcast — finalize + broadcast to mempool.space
  *
  * SIGHASH_SINGLE|ANYONECANPAY means seller's signature commits to:
- *   - Their inscription input
- *   - output[0] (their payment)
- * ...and nothing else. So buyer can freely add inputs + outputs.
+ *   - Their inscription input only (no outputs -- seller PSBT has no outputs)
+ * SIGHASH_SINGLE pairs input[0] with output[0], so inscription lands at output[0].
+ * Buyer sets output[0] = their own address, so they receive the inscription.
  *
  * Buyer's SIGHASH_ALL commits to the entire transaction including fee output,
  * so the fee cannot be stripped without invalidating the buyer's signature.
@@ -353,10 +353,14 @@ async function _bmBuildCombinedPsbt({
     });
   }
 
-  // output[0]: seller receives price
-  tx.addOutput({ script: sellerScript, amount: BigInt(priceSats) });
-  // output[1]: buyer receives inscription (dust)
+  // SIGHASH_SINGLE|ACP rule: input[0] commits to output[0].
+  // The inscription UTXO is input[0], so it MUST land at output[0].
+  // output[0] must be the buyer's inscription delivery address.
+
+  // output[0]: buyer receives inscription (SIGHASH_SINGLE target — inscription lands here)
   tx.addOutput({ script: buyerScript, amount: BigInt(INSCRIPTION_DUST) });
+  // output[1]: seller receives price
+  tx.addOutput({ script: sellerScript, amount: BigInt(priceSats) });
   // output[2]: platform fee
   tx.addOutput({ script: feeScript, amount: BigInt(feeSats) });
   // output[3]: change (only if worth sending)

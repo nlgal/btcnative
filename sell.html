@@ -728,17 +728,22 @@ async function fetchInscriptionUtxo(inscriptionId, sellerAddress) {
 /**
  * Build and sign a seller PSBT using SIGHASH_SINGLE|ANYONECANPAY.
  *
- * PSBT structure:
+ * SIGHASH_SINGLE means the seller's signature pairs input[0] with output[0].
+ * If the seller includes output[0], the inscription transfers there -- to the seller.
+ * Correct fix: seller PSBT has NO outputs. The buyer builds all outputs.
+ *
+ * Seller PSBT (stored in KV):
  *   input[0]  = inscription UTXO (seller signs SIGHASH_SINGLE|ANYONECANPAY = 0x83)
- *   output[0] = seller address, priceSats  (paired with input[0] by SIGHASH_SINGLE)
+ *   (no outputs)
  *
- * The buyer will later add:
- *   input[1..] = buyer's funding UTXOs  (SIGHASH_ALL)
- *   output[1]  = buyer's address (inscription delivery)
- *   output[2]  = fee address, feeSats
- *   output[3]  = buyer's change address, changeSats
+ * Buyer builds the combined PSBT:
+ *   input[0]  = inscription UTXO (seller's signed input)
+ *   input[1+] = buyer funding UTXOs (SIGHASH_ALL)
+ *   output[0] = buyer address, 546 sats  (inscription lands here via SIGHASH_SINGLE)
+ *   output[1] = seller address, priceSats
+ *   output[2] = fee address, feeSats
+ *   output[3] = buyer change address, changeSats
  *
- * We build PSBT as raw bytes (version 0), base64-encode, then ask wallet to sign.
  * Returns signed PSBT hex string.
  */
 async function buildAndSignListingPsbt(wallet, inscUtxo, sellerAddress, priceSats) {
@@ -770,8 +775,11 @@ async function buildAndSignListingPsbt(wallet, inscUtxo, sellerAddress, priceSat
     sighashType:    SigHash.SINGLE_ANYONECANPAY,  // 0x83 = 131
   });
 
-  // output[0]: seller receives priceSats (paired with input[0] by SIGHASH_SINGLE)
-  tx.addOutputAddress(sellerAddress, BigInt(priceSats), NETWORK);
+  // NO outputs in seller PSBT.
+  // SIGHASH_SINGLE binds input[0] to output[0]. If we add output[0] here,
+  // the inscription would transfer to that address (the seller). Correct model:
+  // seller signs only the input; buyer builds all outputs including output[0]
+  // which is the buyer's inscription delivery address.
 
   // Serialize to base64 for wallet signing
   const psbtB64 = base64.encode(tx.toPSBT());
