@@ -1,40 +1,49 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" aria-label="BTC Native icon">
   <defs>
-    <linearGradient id="btcGrad" x1="30" y1="20" x2="90" y2="100" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="30" y1="15" x2="85" y2="105" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#FFB100"/>
       <stop offset="100%" stop-color="#FF8A00"/>
     </linearGradient>
   </defs>
 
   <!-- Pixel dispersion — upper-left scatter -->
-  <rect x="14" y="8"  width="10" height="10" rx="2" fill="url(#btcGrad)"/>
-  <rect x="27" y="5"  width="8"  height="8"  rx="1.5" fill="url(#btcGrad)"/>
-  <rect x="38" y="9"  width="9"  height="9"  rx="2" fill="url(#btcGrad)"/>
-  <rect x="10" y="22" width="8"  height="8"  rx="1.5" fill="url(#btcGrad)" opacity="0.85"/>
-  <rect x="22" y="19" width="7"  height="7"  rx="1.5" fill="url(#btcGrad)" opacity="0.7"/>
-  <rect x="16" y="34" width="6"  height="6"  rx="1" fill="url(#btcGrad)" opacity="0.55"/>
-  <rect x="29" y="29" width="5"  height="5"  rx="1" fill="url(#btcGrad)" opacity="0.45"/>
-  <rect x="10" y="36" width="4"  height="4"  rx="1" fill="url(#btcGrad)" opacity="0.35"/>
+  <rect x="12" y="6"  width="12" height="12" rx="2.2" fill="url(#g)"/>
+  <rect x="27" y="4"  width="10" height="10" rx="1.8" fill="url(#g)"/>
+  <rect x="40" y="8"  width="10" height="10" rx="2"   fill="url(#g)"/>
+  <rect x="8"  y="21" width="9"  height="9"  rx="1.8" fill="url(#g)" opacity="0.82"/>
+  <rect x="21" y="18" width="8"  height="8"  rx="1.5" fill="url(#g)" opacity="0.65"/>
+  <rect x="14" y="33" width="7"  height="7"  rx="1.4" fill="url(#g)" opacity="0.48"/>
+  <rect x="26" y="28" width="6"  height="6"  rx="1.2" fill="url(#g)" opacity="0.38"/>
+  <rect x="8"  y="36" width="5"  height="5"  rx="1"   fill="url(#g)" opacity="0.28"/>
 
-  <!-- Outer ring arc (top-right, broken) -->
-  <path d="M 68 15 A 44 44 0 0 1 110 62" stroke="url(#btcGrad)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.9"/>
-  <!-- Inner ring arc (bottom) -->
-  <path d="M 22 72 A 40 40 0 0 0 98 72" stroke="url(#btcGrad)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.7"/>
-  <!-- Small top break arc -->
-  <path d="M 55 17 A 44 44 0 0 1 62 17" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- Outer orbit arc — broken at top-left -->
+  <path d="M 63 13 A 47 47 0 1 1 19 82" stroke="url(#g)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <!-- White highlight arc — short gap at top -->
+  <path d="M 49 14 A 47 47 0 0 1 63 13" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <!-- Inner concentric arc — partial lower sweep -->
+  <path d="M 30 87 A 36 36 0 0 0 90 87" stroke="url(#g)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.6"/>
 
-  <!-- ₿ symbol -->
+  <!--
+    ₿ symbol — centered in circle
+    Circle center ~(60,60), radius ~47
+    B occupies roughly x:47–91, y:27–93
+    Stem: x48–57, full height
+    Upper bump: y28–56 (height 28)
+    Lower bump: y56–88 (height 32, slightly taller per Bitcoin logo)
+    Top tick: narrow stubs at y28 protrude left of stem
+    Bottom tick: narrow stubs at y88
+    Mid tick: narrow stubs at y54–58
+  -->
   <!-- Vertical stem -->
-  <rect x="47" y="30" width="7" height="56" rx="2" fill="url(#btcGrad)"/>
-  <!-- Top serif -->
-  <rect x="44" y="28" width="13" height="7" rx="2" fill="url(#btcGrad)"/>
-  <!-- Bottom serif -->
-  <rect x="44" y="80" width="13" height="7" rx="2" fill="url(#btcGrad)"/>
-  <!-- Upper bump -->
-  <path d="M54 30 Q76 30 76 43 Q76 56 54 56 Z" fill="url(#btcGrad)"/>
-  <!-- Lower bump (slightly wider) -->
-  <path d="M54 56 Q80 56 80 69 Q80 82 54 82 Z" fill="url(#btcGrad)"/>
-  <!-- Upper horizontal serifs on ₿ top prongs -->
-  <rect x="47" y="35" width="5" height="5" rx="1" fill="url(#btcGrad)"/>
-  <rect x="47" y="72" width="5" height="5" rx="1" fill="url(#btcGrad)"/>
+  <rect x="48" y="28" width="8" height="62" rx="1.5" fill="url(#g)"/>
+  <!-- Top stub (protrudes left only, small) -->
+  <rect x="42" y="28" width="14" height="6.5" rx="2" fill="url(#g)"/>
+  <!-- Bottom stub -->
+  <rect x="42" y="83.5" width="14" height="6.5" rx="2" fill="url(#g)"/>
+  <!-- Mid stub — the ₿ double-bar between bumps -->
+  <rect x="42" y="53" width="14" height="6" rx="2" fill="url(#g)"/>
+  <!-- Upper D-bump -->
+  <path d="M 52 28 L 67 28 Q 84 28 84 42 Q 84 56 67 56 L 52 56 Z" fill="url(#g)"/>
+  <!-- Lower D-bump (slightly wider/taller) -->
+  <path d="M 52 56 L 69 56 Q 88 56 88 70 Q 88 84 69 84 L 52 84 Z" fill="url(#g)"/>
 </svg>
