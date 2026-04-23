@@ -264,7 +264,22 @@ function scoreColor(s) {
 // { name, inscriptionId, address, records: { avatar, display, description, url, com.twitter, ... } }
 async function resolveName(name) {
   try {
-    const data = await fetchJson(`${BNRP_API}/resolve/${encodeURIComponent(name)}`);
+    // Use a longer timeout than fetchJson's 4s — BNRP worker makes multiple upstream
+    // calls (UniSat, ordinals.com) and can take 8-12s on cold starts.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    let data;
+    try {
+      const res = await fetch(`${BNRP_API}/resolve/${encodeURIComponent(name)}`, {
+        headers: { Accept: 'application/json' },
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) return null;
+      data = await res.json();
+    } finally {
+      clearTimeout(timer);
+    }
     if (!data || !data.name) return null;
     // Normalize to internal shape
     const profile = data.profile || {};
@@ -786,6 +801,19 @@ async function initProfilePage() {
   const bc = qs('#breadcrumbName');
   if (bc) bc.textContent = name;
 
+  // Show a subtle "still resolving" hint after 5s so users know it's working
+  // (BNRP worker can take 8-12s on cold upstream calls)
+  const slowTimer = setTimeout(() => {
+    const sk = qs('#profileSkeleton');
+    if (sk && sk.style.display !== 'none') {
+      const hint = document.createElement('p');
+      hint.id = 'profileSlowHint';
+      hint.style.cssText = 'text-align:center;font-size:var(--text-xs);color:var(--color-text-faint);margin-top:var(--space-4);';
+      hint.textContent = 'Resolving on-chain data…';
+      sk.appendChild(hint);
+    }
+  }, 5000);
+
   // Resolve (try live API, fall back to seed data if unavailable)
   const SEED_PROFILES = {
     'trump.btc': {
@@ -802,6 +830,7 @@ async function initProfilePage() {
     }
   };
   const liveData = await resolveName(name);
+  clearTimeout(slowTimer);
   // resolveName returns BNRP identity records (name+records) or raw inscription data (no records)
   // We only use liveData if it has actual identity records or a name field
   const hasIdentity = liveData && (liveData.name || (liveData.records && Object.keys(liveData.records).length));
@@ -3035,6 +3064,18 @@ async function initProfilePageMVP() {
   const navSearch  = qs('#navSearch');
   const navResults = qs('#navResults');
   if (navSearch) initSearchInput(navSearch, navResults);
+
+  // Slow-resolve hint after 5s (BNRP worker cold starts can take 8-12s)
+  const slowTimer = setTimeout(() => {
+    const sk = qs('#profileSkeleton');
+    if (sk && sk.style.display !== 'none') {
+      const hint = document.createElement('p');
+      hint.id = 'profileSlowHint';
+      hint.style.cssText = 'text-align:center;font-size:var(--text-xs);color:var(--color-text-faint);margin-top:var(--space-4);';
+      hint.textContent = 'Resolving on-chain data…';
+      sk.appendChild(hint);
+    }
+  }, 5000);
 
   const SEED_PROFILES = {
     'trump.btc': {
