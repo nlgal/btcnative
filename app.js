@@ -287,7 +287,8 @@ function buildNameCard(data) {
   const { name, bnrp, address, inscriptionId, price, score, auctionId } = data;
   const base = getBase(name);
   const tld  = getTld(name);
-  const initial = base[0] ? base[0].toUpperCase() : '?';
+  const rawInit = base[0] ? base[0].toUpperCase() : '?';
+  const initial = /[A-Z]/i.test(rawInit) ? rawInit : '\u20BF';
   const s = score || calcScore(data);
   const avatarField = bnrp && bnrp.records && bnrp.records.avatar;
   const displayName = bnrp && bnrp.records && bnrp.records.display;

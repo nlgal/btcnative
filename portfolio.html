@@ -825,7 +825,8 @@ function renderCard(n) {
 
   // Deterministic gradient avatar fallback
   const grad = (typeof nameGradient === 'function') ? nameGradient(n.name) : { from: '#f7931a', to: '#c0620a', text: '#fff' };
-  const initial = n.name ? n.name[0].toUpperCase() : '?';
+  const rawInitial = n.name ? n.name[0].toUpperCase() : '?';
+  const initial = /[A-Z]/i.test(rawInitial) ? rawInitial : '₿';
   const avatarStyle = !avatarSrc
     ? `background:linear-gradient(135deg,${grad.from},${grad.to});color:${grad.text};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;`
     : '';
@@ -953,7 +954,8 @@ async function loadMyNames(address) {
 
       const base    = fullName.includes('.') ? fullName.split('.').slice(0, -1).join('.') : fullName;
       const tld     = fullName.includes('.') ? '.' + fullName.split('.').pop() : '';
-      const initial = base[0] ? base[0].toUpperCase() : '?';
+      const rawInit = base[0] ? base[0].toUpperCase() : '?';
+      const initial = /[A-Z]/i.test(rawInit) ? rawInit : '\u20BF';
 
       // Deterministic gradient avatar (nameGradient defined in app.js, loaded first)
       const grad = (typeof nameGradient === 'function') ? nameGradient(fullName) : { from: '#f7931a', to: '#c0620a', text: '#000' };
