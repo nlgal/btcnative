@@ -323,6 +323,14 @@ async function _bmBuildCombinedPsbt({
   const buyerScript  = toScript(buyerAddress);
   const feeScript    = toScript(feeAddress);
 
+  // x-only buyer pubkey for PSBT_IN_TAP_INTERNAL_KEY (0x17)
+  // scure writes 0x17 automatically when tapInternalKey is passed to addInput
+  let buyerXOnly = buyerScript.slice(2); // 32 bytes from OP_1 OP_PUSH32 <key>
+  if (buyerPubkey) {
+    const pkHex = buyerPubkey.length === 66 ? buyerPubkey.slice(2) : buyerPubkey;
+    buyerXOnly = _bmHexToBytes(pkHex);
+  }
+
   const tx = new Transaction({ allowUnknownOutputs: true });
 
   // input[0]: seller's inscription UTXO (SIGHASH_SINGLE|ANYONECANPAY — already signed)
@@ -335,12 +343,14 @@ async function _bmBuildCombinedPsbt({
   });
 
   // input[1..N]: buyer funding UTXOs
+  // tapInternalKey -> scure writes PSBT_IN_TAP_INTERNAL_KEY (0x17), required by UniSat
   for (const u of selectedUtxos) {
     tx.addInput({
-      txid:        u.txid,
-      index:       u.vout,
-      sequence:    0xfffffffd,
-      witnessUtxo: { script: buyerScript, amount: BigInt(u.value) },
+      txid:           u.txid,
+      index:          u.vout,
+      sequence:       0xfffffffd,
+      witnessUtxo:    { script: buyerScript, amount: BigInt(u.value) },
+      tapInternalKey: buyerXOnly,
     });
   }
 
@@ -355,50 +365,21 @@ async function _bmBuildCombinedPsbt({
     tx.addOutput({ script: buyerScript, amount: BigInt(changeSats) });
   }
 
-  // ── Step 4: Inject entries into PSBT input maps ───────────────────────────
-  // @scure builds the PSBT without:
-  //   - input 0: PSBT_IN_TAP_KEY_SIG (0x13) — seller's Schnorr sig
-  //   - input 1..N: PSBT_IN_TAP_INTERNAL_KEY (0x16) — buyer's x-only pubkey
-  // UniSat needs 0x16 to know which key to use for Taproot key-path signing.
+  // ── Step 4: Inject seller Taproot sig into input 0 ───────────────────────
+  // @scure can't sign input 0 (no seller key). Inject PSBT_IN_TAP_KEY_SIG (0x13)
+  // before input 0's map separator.
   const rawPsbt = tx.toPSBT();
-  const rv = new DataView(rawPsbt.buffer, rawPsbt.byteOffset);
 
-  // Build entries to inject
-  const sigEntry = _bmConcat(
-    new Uint8Array([0x01, 0x13]),
-    _bmWriteVarint(sellerSig.length), sellerSig
-  );
-
-  // buyer x-only pubkey (32 bytes) for PSBT_IN_TAP_INTERNAL_KEY (0x16)
-  // buyerPubkey is either 64-char hex (x-only) or 66-char (compressed, drop leading 02/03)
-  let buyerKeyBytes = null;
-  if (buyerPubkey) {
-    const pkHex = buyerPubkey.length === 66 ? buyerPubkey.slice(2) : buyerPubkey;
-    buyerKeyBytes = _bmHexToBytes(pkHex); // 32 bytes
-  }
-  const tapKeyEntry = buyerKeyBytes ? _bmConcat(
-    new Uint8Array([0x01, 0x16]),
-    _bmWriteVarint(buyerKeyBytes.length), buyerKeyBytes
-  ) : null;
-
-  // Inject entries into each input map before its separator.
-  // Re-parse after each injection since offsets shift.
-  // injectBeforeInputSep(psbt, targetInputIndex, entryBytes) -> new psbt
   function injectBeforeInputSep(psbtArr, targetInput, entry) {
     const view = new DataView(psbtArr.buffer, psbtArr.byteOffset);
     let o = 5;
-    // skip global
     while (o < psbtArr.length) { const kl=psbtArr[o]; if(kl===0){o++;break;} o+=1+kl; const{value:vl,length:vls}=_bmReadVarint(view,o); o+=vls+vl; }
-    // skip input maps 0..targetInput-1
     for (let i = 0; i < targetInput; i++) {
       while (o < psbtArr.length) { const kl=psbtArr[o]; if(kl===0){o++;break;} o+=1+kl; const{value:vl,length:vls}=_bmReadVarint(view,o); o+=vls+vl; }
     }
-    // scan to targetInput's separator
     while (o < psbtArr.length) {
       const kl = psbtArr[o];
-      if (kl === 0x00) {
-        return _bmConcat(psbtArr.slice(0, o), entry, psbtArr.slice(o));
-      }
+      if (kl === 0x00) return _bmConcat(psbtArr.slice(0, o), entry, psbtArr.slice(o));
       o += 1 + kl;
       const { value: vl, length: vls } = _bmReadVarint(view, o);
       o += vls + vl;
@@ -406,15 +387,11 @@ async function _bmBuildCombinedPsbt({
     throw new Error('Separator not found for input ' + targetInput);
   }
 
-  let combined = rawPsbt;
-  // Inject seller sig into input 0
-  combined = injectBeforeInputSep(combined, 0, sigEntry);
-  // Inject tap internal key into each buyer input
-  if (tapKeyEntry) {
-    for (let i = 1; i <= selectedUtxos.length; i++) {
-      combined = injectBeforeInputSep(combined, i, tapKeyEntry);
-    }
-  }
+  const sigEntry = _bmConcat(
+    new Uint8Array([0x01, 0x13]),
+    _bmWriteVarint(sellerSig.length), sellerSig
+  );
+  const combined = injectBeforeInputSep(rawPsbt, 0, sigEntry);
 
   const psbtB64 = _bmBytesToB64(combined);
   const buyerInputIndexes = selectedUtxos.map((_, i) => i + 1);
