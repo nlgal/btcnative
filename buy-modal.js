@@ -1,35 +1,36 @@
 /**
- * btcnative Buy Modal v2.0
- * Own-PSBT buyer flow — fully independent of UniSat settlement.
+ * btcnative Buy Modal v3.0
+ * 2-Dummy UTXO atomic swap — compatible with UniSat SIGHASH_SINGLE|ACP listings.
  *
- * Flow:
- *   1. GET  /api/psbt/listing   — fetch seller's signed SIGHASH_SINGLE|ANYONECANPAY PSBT
- *   2. wallet.getBitcoinUtxos() — get buyer's available UTXOs
- *   3. Build combined PSBT:
- *        input[0]  = inscription UTXO (already signed by seller in stored PSBT)
- *        input[1+] = buyer funding UTXOs (buyer signs SIGHASH_ALL)
- *        output[0] = buyer address, 546 sats (inscription lands here — SIGHASH_SINGLE target)
- *        output[1] = seller address, priceSats
- *        output[2] = fee address, feeSats (1% platform fee)
- *        output[3] = buyer change address, changeSats
- *   4. wallet.signPsbt — buyer signs their inputs (SIGHASH_ALL)
- *   5. POST /api/psbt/broadcast — finalize + broadcast to mempool.space
+ * The "2-dummy UTXO" algorithm (used by major ordinals marketplaces):
  *
- * SIGHASH_SINGLE|ANYONECANPAY means seller's signature commits to:
- *   - Their inscription input only (no outputs -- seller PSBT has no outputs)
- * SIGHASH_SINGLE pairs input[0] with output[0], so inscription lands at output[0].
- * Buyer sets output[0] = their own address, so they receive the inscription.
+ *   input[0]  = buyer dummy UTXO #1  (~600 sats, buyer signs SIGHASH_ALL)
+ *   input[1]  = buyer dummy UTXO #2  (~600 sats, buyer signs SIGHASH_ALL)
+ *   input[2]  = inscription UTXO     (seller-signed SIGHASH_SINGLE|ACP)
+ *   input[3+] = buyer payment UTXOs  (buyer signs SIGHASH_ALL)
  *
- * Buyer's SIGHASH_ALL commits to the entire transaction including fee output,
- * so the fee cannot be stripped without invalidating the buyer's signature.
+ *   output[0] = buyer address, dummy1+dummy2+inscrOffset sats  (dummy return)
+ *   output[1] = buyer address, ORDINALS_POSTAGE sats            (inscription lands HERE)
+ *   output[2] = seller address, priceSats                       (what seller sig commits to)
+ *   output[3] = fee address, feeSats
+ *   output[4] = buyer change address, changeSats
+ *
+ * Why this works:
+ *   SIGHASH_SINGLE pairs input[i] with output[i].
+ *   Seller's inscription is input[2] → seller sig commits to output[2] = seller payment.
+ *   The inscription sat (at pool position dummy1+dummy2+offset) lands in output[1] = buyer. ✓
+ *   Seller sig is valid because output[2] matches what seller signed exactly. ✓
  */
 
 const UNISAT_BASE_BM = 'https://open-api.unisat.io';
 const UNISAT_KEY_BM  = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
 const MARKET_API_BM  = 'https://btcnative-market.galanin.workers.dev';
 
-const INSCRIPTION_DUST = 546; // sats for inscription delivery output
-const FEE_RATE_FALLBACK = 6;  // sat/vbyte fallback
+const INSCRIPTION_DUST    = 546;   // sats for inscription delivery output
+const ORDINALS_POSTAGE    = 10000; // sats for inscription receive output (ordinals standard)
+const DUMMY_UTXO_VALUE    = 600;   // sats per dummy UTXO
+const DUMMY_UTXO_MAX      = 1200;  // max value for a UTXO to be a valid dummy
+const FEE_RATE_FALLBACK   = 6;     // sat/vbyte fallback
 
 // ── Formatting ────────────────────────────────────────────────────────────────
 let _bmBtcUsd = null;
@@ -197,16 +198,17 @@ async function _bmGetPubkey(wallet, address) {
 
 /**
  * Get buyer's UTXOs.
- * UniSat provides getBitcoinUtxos() which returns confirmed + unconfirmed UTXOs.
- * Xverse requires fetching from mempool.space.
+ * Returns { dummyUtxos, paymentUtxos } where dummyUtxos are small UTXOs
+ * (580-1200 sats) used for the 2-dummy offset algorithm.
+ * Excludes the inscription UTXO itself from both lists.
  */
-async function _bmGetUtxos(wallet, address) {
+async function _bmGetUtxos(wallet, address, excludeUtxo) {
+  let all = [];
   if (wallet.type === 'unisat') {
     try {
       const utxos = await wallet.api.getBitcoinUtxos();
-      // UniSat returns [{ txid, vout, satoshis }]
       if (utxos && utxos.length > 0) {
-        return utxos.map(u => ({
+        all = utxos.map(u => ({
           txid:  u.txid,
           vout:  u.vout,
           value: u.satoshis || u.value || u.amount,
@@ -214,29 +216,61 @@ async function _bmGetUtxos(wallet, address) {
       }
     } catch (_) { /* fall through to mempool */ }
   }
-  // Fallback: mempool.space
-  const res = await fetch(`https://mempool.space/api/address/${encodeURIComponent(address)}/utxo`, {
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw new Error('Could not fetch UTXOs — try again');
-  const utxos = await res.json();
-  // Filter to confirmed UTXOs only for safety
-  return utxos.filter(u => u.status?.confirmed).map(u => ({
-    txid:  u.txid,
-    vout:  u.vout,
-    value: u.value,
-  }));
+  if (!all.length) {
+    // Fallback: mempool.space
+    const res = await fetch(`https://mempool.space/api/address/${encodeURIComponent(address)}/utxo`, {
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error('Could not fetch UTXOs — try again');
+    const utxos = await res.json();
+    all = utxos.filter(u => u.status?.confirmed).map(u => ({
+      txid:  u.txid,
+      vout:  u.vout,
+      value: u.value,
+    }));
+  }
+
+  // Exclude the inscription UTXO
+  if (excludeUtxo) {
+    all = all.filter(u => !(u.txid === excludeUtxo.txid && u.vout === excludeUtxo.vout));
+  }
+
+  // Sort descending by value
+  all.sort((a, b) => b.value - a.value);
+
+  // Dummy UTXOs: small UTXOs in range [546, DUMMY_UTXO_MAX]
+  const dummyUtxos    = all.filter(u => u.value >= 546 && u.value <= DUMMY_UTXO_MAX);
+  // Payment UTXOs: larger UTXOs for funding (exclude those used as dummy)
+  const dummySet      = new Set(dummyUtxos.slice(0, 2).map(u => u.txid + ':' + u.vout));
+  const paymentUtxos  = all.filter(u => u.value > DUMMY_UTXO_MAX && !dummySet.has(u.txid + ':' + u.vout));
+
+  return { all, dummyUtxos, paymentUtxos };
 }
 
-// ── PSBT construction ─────────────────────────────────────────────────────────
+// ── PSBT construction ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Parse the seller's SIGHASH_SINGLE|ANYONECANPAY PSBT and extract:
- * - The inscription input (txid, vout, value, scriptPubKey)
- * - The seller payment output (address/script, value)
- * - The raw bytes of the partial signature for input 0
+ * Build combined PSBT using the 2-dummy UTXO algorithm.
  *
- * Then build a new combined PSBT with buyer inputs/outputs appended.
+ * The seller\'s PSBT (signed with SIGHASH_SINGLE|ACP by UniSat wallet) has:
+ *   input[0] = inscription UTXO, output[0] = seller payment
+ *   Seller sig commits to: input[0] → output[0] (exact amount + script bytes)
+ *
+ * In the COMBINED PSBT, seller\'s input becomes input[2] (after 2 buyer dummies).
+ * SIGHASH_SINGLE pairs input[2] → output[2], so output[2] must match seller\'s signed output.
+ * The 2 dummy UTXOs push the inscription sat offset forward so it lands at output[1] = buyer.
+ *
+ * Layout:
+ *   input[0]  = buyer dummy UTXO #1  (buyer signs SIGHASH_ALL)
+ *   input[1]  = buyer dummy UTXO #2  (buyer signs SIGHASH_ALL)
+ *   input[2]  = inscription UTXO     (seller signed SIGHASH_SINGLE|ACP)
+ *   input[3+] = buyer payment UTXOs  (buyer signs SIGHASH_ALL)
+ *
+ *   output[0] = buyer address, dummy1+dummy2 sats  (dummy return, NO inscription sat)
+ *   output[1] = buyer address, ORDINALS_POSTAGE    (inscription sat LANDS HERE ✓)
+ *   output[2] = seller address, priceSats          (MUST match seller sig ✓)
+ *   output[3] = fee address, feeSats
+ *   output[4] = buyer change, changeSats
  *
  * Returns { psbtB64, buyerInputIndexes } for wallet signing.
  */
@@ -245,35 +279,59 @@ async function _bmBuildCombinedPsbt({
   inscriptionUtxo,   // { txid, vout, value }
   sellerAddress,
   priceSats,
-  buyerUtxos,        // array of { txid, vout, value }
+  dummyUtxos,        // exactly 2 x { txid, vout, value } — small buyer UTXOs
+  paymentUtxos,      // array of { txid, vout, value } — buyer payment UTXOs
   buyerAddress,
-  buyerPubkey,       // full compressed pubkey hex (66 chars) — x-only derived internally for tapInternalKey
+  buyerPubkey,       // full compressed pubkey hex (66 chars)
   feeAddress,
   feeSats,
   feeRate,
 }) {
-  // Load @scure/btc-signer for proper PSBT construction
   const { Transaction, OutScript, Address, NETWORK, SigHash } = await import('https://esm.sh/@scure/btc-signer@1.4.0');
   const { hex: scureHex, base64: scureBase64 } = await import('https://esm.sh/@scure/base@1.2.1');
 
-  // ── Step 1: Extract seller Taproot sig from stored PSBT ──────────────────
+  // ── Step 1: Parse seller PSBT ───────────────────────────────────────────────────────────────────────────────────────────────
   const sellerPsbt = _bmHexToBytes(sellerPsbtHex);
   const sellerView = new DataView(sellerPsbt.buffer, sellerPsbt.byteOffset);
 
   if (sellerView.getUint32(0) !== 0x70736274 || sellerPsbt[4] !== 0xff)
     throw new Error('Invalid seller PSBT format');
 
-  // Skip global map
+  // Parse global map — extract unsigned_tx to get seller\'s committed output[0]
   let off = 5;
+  let sellerCommittedOutput = null;
   while (off < sellerPsbt.length) {
     const kl = sellerPsbt[off];
     if (kl === 0x00) { off++; break; }
+    const kt = sellerPsbt[off + 1];
     off += 1 + kl;
     const { value: vl, length: vls } = _bmReadVarint(sellerView, off);
+    const val = sellerPsbt.slice(off + vls, off + vls + vl);
     off += vls + vl;
+    if (kt === 0x00 && kl === 1) {
+      // PSBT_GLOBAL_UNSIGNED_TX — find output[0] (what seller\'s SIGHASH_SINGLE committed to)
+      const txView = new DataView(val.buffer, val.byteOffset);
+      let txOff = 4; // skip version
+      const { value: inCount, length: icLen } = _bmReadVarint(txView, txOff);
+      txOff += icLen;
+      for (let i = 0; i < inCount; i++) {
+        const { value: sl, length: sls } = _bmReadVarint(txView, txOff + 36);
+        txOff += 40 + sls + sl;
+      }
+      const { value: outCount, length: ocLen } = _bmReadVarint(txView, txOff);
+      txOff += ocLen;
+      if (outCount > 0) {
+        const lo = txView.getUint32(txOff, true);
+        const hi = txView.getUint32(txOff + 4, true);
+        const amount = lo + hi * 0x100000000;
+        const { value: scriptLen, length: slLen } = _bmReadVarint(txView, txOff + 8);
+        const script = val.slice(txOff + 8 + slLen, txOff + 8 + slLen + scriptLen);
+        sellerCommittedOutput = { amount, script };
+      }
+    }
   }
 
-  // Parse input 0 map — find tap_key_sig (0x13) or partial_sig (0x02)
+  // Parse input[0] map — find TAP_KEY_SIG (0x13) or partial_sig (0x02)
   let sellerSig = null;
   while (off < sellerPsbt.length) {
     const kl = sellerPsbt[off];
@@ -288,17 +346,27 @@ async function _bmBuildCombinedPsbt({
 
   if (!sellerSig) throw new Error('Seller PSBT does not contain a partial signature. Was it signed?');
 
-  // ── Step 2: Fee + UTXO selection ─────────────────────────────────────────
-  const numInputs  = 1 + buyerUtxos.length;
-  const numOutputs = 4;
+  // ── Step 2: Determine seller output for output[2] ──────────────────────────────────────────────────
+  const toScript = addr => OutScript.encode(Address(NETWORK).decode(addr));
+  const sellerScript = toScript(sellerAddress);
+  const buyerScript  = toScript(buyerAddress);
+  const feeScript    = toScript(feeAddress);
+
+  // output[2] MUST match what seller signed byte-for-byte
+  const sellerOutputAmount = sellerCommittedOutput ? sellerCommittedOutput.amount : priceSats;
+  const sellerOutputScript = sellerCommittedOutput ? sellerCommittedOutput.script : sellerScript;
+
+  // ── Step 3: Fee + UTXO selection ───────────────────────────────────────────────────────────────────────────────────────────────
+  const dummyTotal = dummyUtxos.reduce((s, u) => s + u.value, 0);
+  const numInputs  = 2 + 1 + paymentUtxos.length;
+  const numOutputs = 5;
   const estVbytes  = 10 + 68 * numInputs + 43 * numOutputs;
   const networkFee = Math.ceil(estVbytes * feeRate);
 
-  const totalNeeded = priceSats + feeSats + INSCRIPTION_DUST + networkFee;
-  let selectedUtxos = [], selectedTotal = 0;
-  for (const u of [...buyerUtxos].sort((a, b) => b.value - a.value)) {
-    if (u.txid === inscriptionUtxo.txid && u.vout === inscriptionUtxo.vout) continue;
-    selectedUtxos.push(u);
+  const totalNeeded = sellerOutputAmount + feeSats + ORDINALS_POSTAGE + networkFee;
+  let selectedPayment = [], selectedTotal = 0;
+  for (const u of paymentUtxos) {
+    selectedPayment.push(u);
     selectedTotal += u.value;
     if (selectedTotal >= totalNeeded) break;
   }
@@ -307,24 +375,16 @@ async function _bmBuildCombinedPsbt({
     const shortfall = totalNeeded - selectedTotal;
     throw new Error(
       `Insufficient balance. Need ${_bmFmtBtc(totalNeeded)} total ` +
-      `(${_bmFmtBtc(priceSats)} price + ${_bmFmtBtc(feeSats)} fee + network fees), ` +
-      `but wallet only has ${_bmFmtBtc(selectedTotal)} in confirmed UTXOs. ` +
+      `(${_bmFmtBtc(sellerOutputAmount)} price + ${_bmFmtBtc(feeSats)} fee + network fees), ` +
+      `but wallet only has ${_bmFmtBtc(selectedTotal + dummyTotal)} available. ` +
       `Short by ${_bmFmtBtc(shortfall)}.`
     );
   }
 
-  const changeSats = selectedTotal - priceSats - feeSats - INSCRIPTION_DUST - networkFee;
+  const changeSats = selectedTotal - sellerOutputAmount - feeSats - ORDINALS_POSTAGE - networkFee;
 
-  // ── Step 3: Build combined PSBT with @scure/btc-signer ───────────────────
-  const toScript = addr => OutScript.encode(Address(NETWORK).decode(addr));
-
-  const sellerScript = toScript(sellerAddress);
-  const buyerScript  = toScript(buyerAddress);
-  const feeScript    = toScript(feeAddress);
-
-  // x-only buyer pubkey for PSBT_IN_TAP_INTERNAL_KEY (0x17)
-  // scure writes 0x17 automatically when tapInternalKey is passed to addInput
-  let buyerXOnly = buyerScript.slice(2); // 32 bytes from OP_1 OP_PUSH32 <key>
+  // ── Step 4: Build combined PSBT ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  let buyerXOnly = buyerScript.slice(2);
   if (buyerPubkey) {
     const pkHex = buyerPubkey.length === 66 ? buyerPubkey.slice(2) : buyerPubkey;
     buyerXOnly = _bmHexToBytes(pkHex);
@@ -332,45 +392,39 @@ async function _bmBuildCombinedPsbt({
 
   const tx = new Transaction({ allowUnknownOutputs: true });
 
-  // input[0]: seller's inscription UTXO (SIGHASH_SINGLE|ANYONECANPAY — already signed)
-  tx.addInput({
-    txid:        inscriptionUtxo.txid,
-    index:       inscriptionUtxo.vout,
-    sequence:    0xfffffffd,
-    witnessUtxo: { script: sellerScript, amount: BigInt(inscriptionUtxo.value) },
-    sighashType: SigHash.SINGLE_ANYONECANPAY,
-  });
+  // input[0]: buyer dummy UTXO #1
+  tx.addInput({ txid: dummyUtxos[0].txid, index: dummyUtxos[0].vout, sequence: 0xfffffffd,
+    witnessUtxo: { script: buyerScript, amount: BigInt(dummyUtxos[0].value) }, tapInternalKey: buyerXOnly });
 
-  // input[1..N]: buyer funding UTXOs
-  // tapInternalKey -> scure writes PSBT_IN_TAP_INTERNAL_KEY (0x17), required by UniSat
-  for (const u of selectedUtxos) {
-    tx.addInput({
-      txid:           u.txid,
-      index:          u.vout,
-      sequence:       0xfffffffd,
-      witnessUtxo:    { script: buyerScript, amount: BigInt(u.value) },
-      tapInternalKey: buyerXOnly,
-    });
+  // input[1]: buyer dummy UTXO #2
+  tx.addInput({ txid: dummyUtxos[1].txid, index: dummyUtxos[1].vout, sequence: 0xfffffffd,
+    witnessUtxo: { script: buyerScript, amount: BigInt(dummyUtxos[1].value) }, tapInternalKey: buyerXOnly });
+
+  // input[2]: inscription UTXO — SIGHASH_SINGLE|ACP, already signed by seller
+  tx.addInput({ txid: inscriptionUtxo.txid, index: inscriptionUtxo.vout, sequence: 0xfffffffd,
+    witnessUtxo: { script: sellerOutputScript, amount: BigInt(inscriptionUtxo.value) },
+    sighashType: SigHash.SINGLE_ANYONECANPAY });
+
+  // input[3..N]: buyer payment UTXOs
+  for (const u of selectedPayment) {
+    tx.addInput({ txid: u.txid, index: u.vout, sequence: 0xfffffffd,
+      witnessUtxo: { script: buyerScript, amount: BigInt(u.value) }, tapInternalKey: buyerXOnly });
   }
 
-  // SIGHASH_SINGLE|ACP rule: input[0] commits to output[0].
-  // The inscription UTXO is input[0], so it MUST land at output[0].
-  // output[0] must be the buyer's inscription delivery address.
-
-  // output[0]: buyer receives inscription (SIGHASH_SINGLE target — inscription lands here)
-  tx.addOutput({ script: buyerScript, amount: BigInt(INSCRIPTION_DUST) });
-  // output[1]: seller receives price
-  tx.addOutput({ script: sellerScript, amount: BigInt(priceSats) });
-  // output[2]: platform fee
+  // output[0]: dummy return (sats 0..dummyTotal-1, NO inscription sat)
+  tx.addOutput({ script: buyerScript, amount: BigInt(dummyTotal) });
+  // output[1]: inscription delivery (inscription sat at pool pos dummyTotal lands here ✓)
+  tx.addOutput({ script: buyerScript, amount: BigInt(ORDINALS_POSTAGE) });
+  // output[2]: seller payment (MUST match seller\'s signed output[0] exactly ✓)
+  tx.addOutput({ script: sellerOutputScript, amount: BigInt(sellerOutputAmount) });
+  // output[3]: platform fee
   tx.addOutput({ script: feeScript, amount: BigInt(feeSats) });
-  // output[3]: change (only if worth sending)
+  // output[4]: change
   if (changeSats > 546) {
     tx.addOutput({ script: buyerScript, amount: BigInt(changeSats) });
   }
 
-  // ── Step 4: Inject seller Taproot sig into input 0 ───────────────────────
-  // @scure can't sign input 0 (no seller key). Inject PSBT_IN_TAP_KEY_SIG (0x13)
-  // before input 0's map separator.
+  // ── Step 5: Inject seller TAP_KEY_SIG into input[2] ──────────────────────────────────────────────────
   const rawPsbt = tx.toPSBT();
 
   function injectBeforeInputSep(psbtArr, targetInput, entry) {
@@ -390,16 +444,15 @@ async function _bmBuildCombinedPsbt({
     throw new Error('Separator not found for input ' + targetInput);
   }
 
-  const sigEntry = _bmConcat(
-    new Uint8Array([0x01, 0x13]),
-    _bmWriteVarint(sellerSig.length), sellerSig
-  );
-  const combined = injectBeforeInputSep(rawPsbt, 0, sigEntry);
+  const sigEntry = _bmConcat(new Uint8Array([0x01, 0x13]), _bmWriteVarint(sellerSig.length), sellerSig);
+  const combined = injectBeforeInputSep(rawPsbt, 2, sigEntry);
 
   const psbtB64 = _bmBytesToB64(combined);
-  const buyerInputIndexes = selectedUtxos.map((_, i) => i + 1);
+  // Buyer signs input[0], input[1] (dummies) + input[3..N] (payment). NOT input[2] (seller).
+  const buyerInputIndexes = [0, 1, ...selectedPayment.map((_, i) => i + 3)];
   return { psbtB64, psbtHex: _bmBytesToHex(combined), buyerInputIndexes, networkFee, changeSats: changeSats > 546 ? changeSats : 0 };
 }
+
 
 // ── Manual PSBT → raw tx extraction (fallback) ─────────────────────────────
 
@@ -732,9 +785,21 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
       btn.textContent = 'Loading UTXOs...';
       _bmSetStatus(status, 'info', 'Fetching your UTXOs...');
       stepEl.textContent = 'Step 2 of 4';
-      const buyerUtxos = await _bmGetUtxos(wallet, buyerAddress);
-      if (!buyerUtxos.length) {
+      const utxos = await _bmGetUtxos(wallet, buyerAddress, inscriptionUtxo);
+      if (!utxos.all.length) {
         _bmSetStatus(status, 'error', 'No confirmed UTXOs found in your wallet. Make sure you have BTC and try again.');
+        btn.disabled = false;
+        btn.textContent = 'Try again';
+        return;
+      }
+
+      // Need at least 2 small UTXOs (546–1200 sats) as dummy inputs.
+      // These are required so the seller's SIGHASH_SINGLE commitment lands on
+      // output[2] (matching what the seller signed) not output[0].
+      if (utxos.dummyUtxos.length < 2) {
+        _bmSetStatus(status, 'error',
+          'Your wallet needs at least 2 small UTXOs (546–1200 sats) as dummy inputs for Ordinal safety.<br><br>' +
+          'Send two small amounts (~600 sats each) to your Taproot address and wait for 1 confirmation, then try again.');
         btn.disabled = false;
         btn.textContent = 'Try again';
         return;
@@ -754,7 +819,8 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
           inscriptionUtxo,
           sellerAddress,
           priceSats,
-          buyerUtxos,
+          dummyUtxos:   utxos.dummyUtxos.slice(0, 2),
+          paymentUtxos: utxos.paymentUtxos,
           buyerAddress,
           buyerPubkey,
           feeAddress,
