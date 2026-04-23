@@ -863,9 +863,17 @@ async function buildAndSignListingPsbt(wallet, inscUtxo, sellerAddress, priceSat
   const utxoScript  = p2trScript(sellerAddress);  // P2TR output script of inscription UTXO
   const witnessUtxoVal = concat(utxoValue, writeVarint(utxoScript.length), utxoScript);
   const witnessUtxoKey = new Uint8Array([0x01, 0x01]); // key len=1, type=0x01
+
+  // PSBT_IN_SIGHASH_TYPE (key type 0x03) = SIGHASH_SINGLE|ANYONECANPAY (0x83)
+  // value is 4-byte LE uint32
+  const sighashTypeKey = new Uint8Array([0x01, 0x03]); // key len=1, type=0x03
+  const sighashTypeVal = new Uint8Array([0x83, 0x00, 0x00, 0x00]); // 131 LE
+
   const inputMap = concat(
     witnessUtxoKey,
     writeVarint(witnessUtxoVal.length), witnessUtxoVal,
+    sighashTypeKey,
+    writeVarint(sighashTypeVal.length), sighashTypeVal,
     new Uint8Array([0x00])                              // end input map
   );
 
