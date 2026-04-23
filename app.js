@@ -260,9 +260,31 @@ function initAvatar(el, avatarField, fallbackText) {
   }
 }
 
+// ── Deterministic gradient avatar ────────────────────────────────────────────
+// Generates a consistent HSL gradient for a name string — same as ENS approach.
+function nameGradient(name) {
+  if (!name) return { from: '#f7931a', to: '#c0620a', text: '#000' };
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = ((hash << 5) - hash) + name.charCodeAt(i);
+    hash |= 0;
+  }
+  const hue1  = Math.abs(hash) % 360;
+  const hue2  = (hue1 + 40) % 360;
+  // Avoid near-white backgrounds by clamping saturation/lightness
+  const sat   = 55 + (Math.abs(hash >> 8) % 30);  // 55-85%
+  const light = 38 + (Math.abs(hash >> 4) % 18);  // 38-56%
+  const text  = light > 50 ? '#000' : '#fff';
+  return {
+    from: `hsl(${hue1},${sat}%,${light}%)`,
+    to:   `hsl(${hue2},${sat}%,${light - 8}%)`,
+    text,
+  };
+}
+
 // ── Name card builder ─────────────────────────────────────────────────────────
 function buildNameCard(data) {
-  const { name, bnrp, address, inscriptionId, price, score } = data;
+  const { name, bnrp, address, inscriptionId, price, score, auctionId } = data;
   const base = getBase(name);
   const tld  = getTld(name);
   const initial = base[0] ? base[0].toUpperCase() : '?';
@@ -270,13 +292,17 @@ function buildNameCard(data) {
   const avatarField = bnrp && bnrp.records && bnrp.records.avatar;
   const displayName = bnrp && bnrp.records && bnrp.records.display;
 
+  // Deterministic gradient for avatar fallback
+  const grad = nameGradient(name);
+  const gradStyle = `background:linear-gradient(135deg,${grad.from},${grad.to});color:${grad.text};`;
+
   const card = document.createElement('a');
   card.className = 'name-card';
   card.href = `./name.html?name=${encodeURIComponent(name)}`;
   card.innerHTML = `
     <div class="name-card__score">${s}</div>
     <div class="name-card__header">
-      <div class="name-card__avatar" data-avatar="${avatarField || ''}" data-initial="${initial}">${initial}</div>
+      <div class="name-card__avatar" data-avatar="${avatarField || ''}" data-initial="${initial}" style="${gradStyle}">${initial}</div>
       <div>
         <div class="name-card__name">${base}<span style="color:var(--color-primary);">${tld}</span></div>
         ${displayName ? `<div style="font-size:10px;color:var(--color-text-faint);">${displayName}</div>` : ''}
@@ -285,6 +311,7 @@ function buildNameCard(data) {
     </div>
     <div class="name-card__badges"></div>
     ${price ? `<div class="name-card__price">${formatSats(price)}<span class="name-card__usd"></span></div>` : ''}
+    ${price ? `<button class="name-card__buy-btn" data-name="${name}" data-auction="${data.auctionId || ''}" data-price="${price}" onclick="event.preventDefault();event.stopPropagation();_openCardBuy(this);">Buy</button>` : ''}
   `;
 
   // async USD price
@@ -295,7 +322,7 @@ function buildNameCard(data) {
     });
   }
 
-  // async avatar
+  // async avatar — if available, overrides gradient
   const avatarEl = card.querySelector('.name-card__avatar');
   if (avatarField) initAvatar(avatarEl, avatarField, initial);
 
@@ -310,6 +337,34 @@ function buildNameCard(data) {
   });
 
   return card;
+}
+
+// Buy button handler for name cards on explore/index grids
+function _openCardBuy(btn) {
+  const name = btn.dataset.name;
+  const priceSats = parseInt(btn.dataset.price, 10);
+  const auctionId = btn.dataset.auction;
+  if (!name || !priceSats) return;
+
+  // If we already have auctionId, open modal directly
+  if (auctionId && typeof window.openBuyModal === 'function') {
+    window.openBuyModal({ name, auctionId, priceSats });
+    return;
+  }
+
+  // Otherwise fetch from market worker first
+  btn.textContent = '...';
+  fetch(`${MARKET_API}/api/listing?name=${encodeURIComponent(name)}`, { signal: AbortSignal.timeout(6000) })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok && d.listed && typeof window.openBuyModal === 'function') {
+        window.openBuyModal({ name, auctionId: d.auctionId, priceSats: d.priceSats });
+      } else {
+        // Fallback: go to name profile
+        location.href = `./name.html?name=${encodeURIComponent(name)}`;
+      }
+    })
+    .catch(() => { location.href = `./name.html?name=${encodeURIComponent(name)}`; });
 }
 
 function computeBadges(data) {
@@ -1318,6 +1373,7 @@ function unisatListingToCard(item) {
     inscriptionId: item.inscriptionId || null,
     address:       item.address || null,
     price:         item.price   || null,
+    auctionId:     item.auctionId || null,
     bnrp:          null,
   };
 }
@@ -1684,10 +1740,20 @@ function showSearchResult(data, name, resultsEl) {
 }
 
 function navigateToName(name) {
-  // Ensure TLD
+  // If name already has a supported TLD, go straight to profile page
   const hasTld = SUPPORTED_TLDS.some(tld => name.endsWith(tld));
-  const target = hasTld ? name : name + '.btc';
-  location.href = `./name.html?name=${encodeURIComponent(target)}`;
+  if (hasTld) {
+    location.href = `./name.html?name=${encodeURIComponent(name)}`;
+    return;
+  }
+  // Bare query (no TLD) with 2+ chars -> search results page
+  const trimmed = name.trim();
+  if (trimmed.length >= 2) {
+    location.href = `./explore.html?search=${encodeURIComponent(trimmed)}`;
+    return;
+  }
+  // Single char fallback -> append .btc
+  location.href = `./name.html?name=${encodeURIComponent(trimmed + '.btc')}`;
 }
 
 function setSearch(name) {
@@ -2926,8 +2992,89 @@ function shareProfile() {
 }
 
 // ── New explore init ──────────────────────────────────────────────────────────
+
+// ── Explore search results (called when ?search= param is present) ────────────
+async function _runExploreSearch(query) {
+  // Switch to listings tab so the grid container is visible
+  if (typeof switchTab === 'function') switchTab('listings');
+
+  const gridEl  = qs('#listingsGrid');
+  const countEl = qs('#listingCount');
+
+  if (gridEl) {
+    gridEl.innerHTML = Array(12).fill(0).map(() =>
+      `<div class="name-card skeleton" style="height:96px;border-radius:var(--radius-lg);"></div>`
+    ).join('');
+  }
+  if (countEl) countEl.textContent = `Searching "${query}"...`;
+
+  // Show a "Search results for X" heading if there's a page title area
+  const heroEl = qs('#exploreHero') || qs('.explore-hero') || qs('.page-hero');
+  if (heroEl) {
+    heroEl.innerHTML = `<h1 style="font-size:var(--text-2xl);font-weight:700;">Results for <em style="color:var(--color-primary);">${query}</em></h1>`;
+  }
+
+  // Fan out across all SEARCH_TLDS in parallel
+  const deduped = new Map();
+  const fetches = SEARCH_TLDS.map(tld => {
+    const domainType = tld.replace('.', '');
+    return fetchListings({ domainFuzzy: query, domainType, limit: 20 })
+      .then(res => {
+        if (res && res.list) {
+          res.list.forEach(item => {
+            const key = item.domain || item.name || JSON.stringify(item);
+            if (!deduped.has(key)) deduped.set(key, item);
+          });
+        }
+      })
+      .catch(() => {});
+  });
+
+  await Promise.all(fetches);
+
+  const cards = [...deduped.values()].map(unisatListingToCard);
+
+  if (gridEl) {
+    gridEl.innerHTML = '';
+    if (cards.length === 0) {
+      gridEl.innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:var(--space-12) 0;color:var(--color-text-faint);">
+          <div style="font-size:var(--text-xl);margin-bottom:var(--space-2);">No listings found</div>
+          <div style="font-size:var(--text-sm);">No marketplace listings match <strong>${query}</strong>. Try a different query.</div>
+        </div>`;
+    } else {
+      cards.forEach(c => gridEl.appendChild(buildNameCard(c)));
+    }
+  }
+
+  if (countEl) countEl.textContent = cards.length > 0 ? `${cards.length} results for "${query}"` : '';
+
+  LIVE_LISTINGS = cards;
+
+  // Hide load-more; results are complete
+  const loadBtn = qs('#loadMoreBtn');
+  if (loadBtn) loadBtn.style.display = 'none';
+
+  renderMarketIndexes();
+}
+
 async function initExplorePageMVP() {
   const params = new URLSearchParams(location.search);
+
+  // If ?search= param present, render a search-results grid and return early
+  const urlSearch = params.get('search') || '';
+  if (urlSearch) {
+    await _runExploreSearch(urlSearch);
+    // Still wire up nav search so user can search again
+    const navSearch  = qs('#navSearch');
+    const navResults = qs('#navResults');
+    if (navSearch) {
+      navSearch.value = urlSearch;
+      initSearchInput(navSearch, navResults);
+    }
+    return;
+  }
+
   const tab = params.get('tab') || 'categories';
   switchTab(tab);
 
