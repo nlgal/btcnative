@@ -204,13 +204,110 @@
 
     <!-- ── MARKET TAB ── -->
     <div id="tabMarket" class="tab-panel" style="display:none;">
-      <div style="padding-block:var(--space-8);">
-        <h2 style="font-family:var(--font-display); font-size:var(--text-lg); font-weight:700; margin-bottom:var(--space-6); color:var(--color-text);">Market Indexes</h2>
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:var(--space-4);" id="indexCards"></div>
-        <div style="border-top:1px solid var(--color-divider); padding-top:var(--space-8); margin-top:var(--space-8);">
-          <h2 style="font-family:var(--font-display); font-size:var(--text-lg); font-weight:700; margin-bottom:var(--space-6); color:var(--color-text);">Recent Sales</h2>
-          <div id="salesTable"></div>
+      <div style="padding-block:var(--space-6) var(--space-12);">
+
+        <!-- Stats strip -->
+        <div id="marketStatsStrip" style="
+          display:flex; gap:var(--space-4); flex-wrap:wrap;
+          margin-bottom:var(--space-8);
+          padding:var(--space-4) var(--space-5);
+          background:var(--color-surface-offset);
+          border:1px solid var(--color-border);
+          border-radius:var(--radius-lg);
+        ">
+          <div class="mkt-stat">
+            <span class="mkt-stat__label">24h Volume</span>
+            <span class="mkt-stat__val" id="mktVol24h">—</span>
+          </div>
+          <div class="mkt-stat__divider"></div>
+          <div class="mkt-stat">
+            <span class="mkt-stat__label">Active Listings</span>
+            <span class="mkt-stat__val" id="mktListings">—</span>
+          </div>
+          <div class="mkt-stat__divider"></div>
+          <div class="mkt-stat">
+            <span class="mkt-stat__label">Most Active TLD</span>
+            <span class="mkt-stat__val" id="mktTopTld">—</span>
+          </div>
+          <div class="mkt-stat__divider"></div>
+          <div class="mkt-stat">
+            <span class="mkt-stat__label">Last Sale</span>
+            <span class="mkt-stat__val" id="mktLastSale">—</span>
+          </div>
         </div>
+
+        <!-- Two-column layout: leaderboard + sales feed -->
+        <div class="two-col" style="display:grid; grid-template-columns:1fr 380px; gap:var(--space-8); align-items:start;">
+
+          <!-- TLD Leaderboard -->
+          <div>
+            <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:var(--space-4);">
+              <h2 style="font-family:var(--font-display); font-size:var(--text-base); font-weight:700; color:var(--color-text); margin:0;">TLD Markets</h2>
+              <span style="font-size:10px; color:var(--color-text-faint); font-family:var(--font-mono);">via UniSat · live</span>
+            </div>
+            <div id="tldLeaderboard"></div>
+          </div>
+
+          <!-- Live Sales Feed -->
+          <div>
+            <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:var(--space-4);">
+              <h2 style="font-family:var(--font-display); font-size:var(--text-base); font-weight:700; color:var(--color-text); margin:0;">Recent Sales</h2>
+              <span id="salesLiveTag" style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--color-text-faint);font-family:var(--font-mono);">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--color-success);animation:pulse 2s infinite;display:inline-block;"></span>live
+              </span>
+            </div>
+            <div id="salesFeed"></div>
+          </div>
+
+        </div>
+
+        <!-- Mobile stacking override -->
+        <style>
+          .mkt-stat { display:flex; flex-direction:column; gap:2px; }
+          .mkt-stat__label { font-size:10px; text-transform:uppercase; letter-spacing:0.07em; font-weight:600; color:var(--color-text-faint); }
+          .mkt-stat__val { font-family:var(--font-mono); font-size:var(--text-sm); font-weight:700; color:var(--color-text); }
+          .mkt-stat__divider { width:1px; background:var(--color-divider); align-self:stretch; }
+          @media (max-width: 900px) {
+            #tabMarket .two-col { grid-template-columns: 1fr !important; }
+            .mkt-stat__divider { display:none; }
+          }
+          .tld-row {
+            display:grid;
+            grid-template-columns: 28px 90px 1fr 1fr 60px;
+            align-items:center;
+            padding:var(--space-3) var(--space-4);
+            border-bottom:1px solid var(--color-divider);
+            gap:var(--space-3);
+            transition:background .12s;
+          }
+          .tld-row:last-child { border-bottom:none; }
+          .tld-row:hover { background:var(--color-surface-offset); border-radius:var(--radius-md); }
+          .tld-pill {
+            display:inline-flex; align-items:center; justify-content:center;
+            font-family:var(--font-mono); font-size:var(--text-xs); font-weight:700;
+            padding:3px 8px; border-radius:20px;
+            border:1px solid var(--color-border);
+            color:var(--color-text);
+            text-decoration:none;
+          }
+          .tld-pill:hover { border-color:var(--color-primary); color:var(--color-primary); }
+          .sale-item {
+            display:flex; align-items:center; justify-content:space-between;
+            padding:var(--space-3) 0;
+            border-bottom:1px solid var(--color-divider);
+            gap:var(--space-3);
+          }
+          .sale-item:last-child { border-bottom:none; }
+          .sale-name {
+            font-family:var(--font-mono); font-weight:700; font-size:var(--text-sm);
+            color:var(--color-text); text-decoration:none;
+          }
+          .sale-name:hover { color:var(--color-primary); }
+          .sale-price { font-family:var(--font-mono); font-size:var(--text-sm); color:var(--color-primary); font-weight:700; }
+          .sale-time { font-size:10px; color:var(--color-text-faint); font-family:var(--font-mono); white-space:nowrap; }
+          .sale-usd { font-size:10px; color:var(--color-text-faint); }
+        </style>
+
       </div>
     </div>
 

@@ -1561,172 +1561,198 @@ async function loadMore() {
   }
 }
 
-function buildIndexCard(name, value, desc, change, up) {
-  const card = document.createElement('div');
-  card.style.cssText = 'background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-5);';
-  const changeHtml = change
-    ? `<span style="font-size:var(--text-xs);font-family:var(--font-mono);padding:2px var(--space-2);border-radius:var(--radius-sm);font-weight:600;
-        color:${up ? 'var(--color-success)' : 'var(--color-error)'};
-        background:${up ? 'var(--color-success-dim)' : 'var(--color-error-dim)'}">${change}</span>`
-    : '<span style="font-size:var(--text-xs);color:var(--color-text-faint);">live</span>';
-  card.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
-      <span style="font-size:var(--text-sm);font-weight:700;font-family:var(--font-display);color:var(--color-text);">${name}</span>
-      ${changeHtml}
-    </div>
-    <div style="font-size:var(--text-xl);font-weight:800;font-family:var(--font-mono);color:var(--color-text);letter-spacing:-0.02em;margin-bottom:var(--space-2);">${value}</div>
-    <div style="font-size:var(--text-xs);color:var(--color-text-faint);">${desc}</div>
-  `;
-  return card;
-}
+// ── Market tab helpers ────────────────────────────────────────────────────────────────────────
 
-function buildSalesTable() {
-  const salesEl = qs('#salesTable');
-  if (!salesEl) return;
-  salesEl.innerHTML = `
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom:1px solid var(--color-divider);">
-            <th style="text-align:left;padding:var(--space-3) var(--space-4);font-size:var(--text-xs);color:var(--color-text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">Name</th>
-            <th style="text-align:right;padding:var(--space-3) var(--space-4);font-size:var(--text-xs);color:var(--color-text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">Price</th>
-            <th style="text-align:right;padding:var(--space-3) var(--space-4);font-size:var(--text-xs);color:var(--color-text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">Marketplace</th>
-            <th style="text-align:right;padding:var(--space-3) var(--space-4);font-size:var(--text-xs);color:var(--color-text-faint);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;">Time</th>
-          </tr>
-        </thead>
-        <tbody id="salesRows"></tbody>
-      </table>
-    </div>
-  `;
-}
+// TLD metadata for the leaderboard
+const TLD_META = {
+  btc:    { label: '.btc',    color: '#f7931a', browse: './explore.html?tld=btc' },
+  sats:   { label: '.sats',   color: '#9b72f5', browse: './explore.html?tld=sats' },
+  x:      { label: '.x',      color: '#1d9bf0', browse: './explore.html?tld=x' },
+  ord:    { label: '.ord',    color: '#e8622a', browse: './explore.html?tld=ord' },
+  xbt:    { label: '.xbt',    color: '#2dd4bf', browse: './explore.html?tld=xbt' },
+  gm:     { label: '.gm',     color: '#4ade80', browse: './explore.html?tld=gm' },
+  unisat: { label: '.unisat', color: '#f59e0b', browse: './explore.html?tld=unisat' },
+  sat:    { label: '.sat',    color: '#a78bfa', browse: './explore.html?tld=sat' },
+};
 
-function populateSalesRows(rows) {
-  const tbody = qs('#salesRows');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  rows.forEach(([name, price, mkt, time]) => {
-    const tr = document.createElement('tr');
-    tr.style.borderBottom = '1px solid var(--color-divider)';
-    tr.innerHTML = `
-      <td style="padding:var(--space-3) var(--space-4);">
-        <a href="./name.html?name=${encodeURIComponent(name)}" style="font-family:var(--font-mono);font-weight:600;font-size:var(--text-sm);color:var(--color-text);text-decoration:none;">${name}</a>
-      </td>
-      <td style="text-align:right;padding:var(--space-3) var(--space-4);font-family:var(--font-mono);font-size:var(--text-sm);color:var(--color-primary);font-weight:700;">${price}</td>
-      <td style="text-align:right;padding:var(--space-3) var(--space-4);font-size:var(--text-xs);color:var(--color-text-muted);">${mkt}</td>
-      <td style="text-align:right;padding:var(--space-3) var(--space-4);font-size:var(--text-xs);color:var(--color-text-faint);font-family:var(--font-mono);">${time}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function timeAgo(ts) {
-  if (!ts) return '';
-  // UniSat returns ms-epoch (>1e12); fallback for s-epoch values
-  const msEpoch = ts > 1e12 ? ts : ts * 1000;
-  const ms = Date.now() - msEpoch;
-  if (ms < 0) return 'just now';
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1)   return 'just now';
-  if (mins < 60)  return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24)   return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30)  return `${days}d ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo ago`;
-  return `${Math.floor(months / 12)}y ago`;
-}
-
-async function renderMarketIndexes() {
-  const el = qs('#indexCards');
+function renderTldLeaderboard(domainTypes, btcRate) {
+  const el = qs('#tldLeaderboard');
   if (!el) return;
 
-  // Fallback placeholders rendered immediately
-  const fallbackIndexes = [
-    { name: 'BTC Names Floor', value: '0.0008 BTC',   desc: 'Composite floor across all TLDs', change: null },
-    { name: '3L Club',         value: '0.0042 BTC',   desc: '.btc three-character floor',       change: null },
-    { name: '4L Club',         value: '0.00055 BTC',  desc: '.btc four-character floor',        change: null },
-    { name: '3-Digit Club',    value: '0.012 BTC',    desc: '000-999 numeric floor',            change: null },
-    { name: 'BNRP Active',     value: '0.00095 BTC',  desc: 'Names with BNRP records',          change: null },
-    { name: '.sats Floor',     value: '0.00022 BTC',  desc: 'Sats Names protocol floor',        change: null },
-  ];
-  fallbackIndexes.forEach(idx => el.appendChild(buildIndexCard(idx.name, idx.value, idx.desc, idx.change, true)));
+  // Sort by btcVolume desc, then by curPrice desc as tiebreak
+  const tlds = Object.entries(domainTypes || {})
+    .filter(([k]) => TLD_META[k])
+    .sort((a, b) => (b[1].btcVolume || 0) - (a[1].btcVolume || 0) || (b[1].curPrice || 0) - (a[1].curPrice || 0));
 
-  // Build sales table scaffold
-  buildSalesTable();
-  // Populate with fallback rows
-  populateSalesRows([
-    ['ord.ord',   '210K sats', 'UniSat',          '2h ago'],
-    ['123.btc',   '980K sats', 'UniSat',          '5h ago'],
-    ['gm.gm',     '88K sats',  'Ordinals Wallet', '8h ago'],
-    ['moon.sats', '45K sats',  'UniSat',          '12h ago'],
-    ['888.btc',   '2.1M sats', 'UniSat',          '1d ago'],
-  ]);
+  if (!tlds.length) {
+    el.innerHTML = '<div style="color:var(--color-text-faint);font-size:var(--text-sm);padding:var(--space-8) 0;text-align:center;">No market data available</div>';
+    return;
+  }
 
-  if (!UNISAT_API_KEY) return; // no key — fallbacks stay
+  // Header row
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;';
 
-  // Fetch live data in parallel
-  const [domainTypes, sales3L, sales4L, sales3D, satsFloor] = await Promise.all([
-    fetchDomainTypes(),
-    // 3L floor: 3-char .btc
-    unisatPost('/v3/market/domain/auction/list', {
-      filter: { nftType: 'domain', domainType: 'btc', domainMinLength: 2, domainMaxLength: 3 },
-      sort: { unitPrice: 1 }, start: 0, limit: 1,
-    }),
-    // 4L floor: 4-char .btc
-    unisatPost('/v3/market/domain/auction/list', {
-      filter: { nftType: 'domain', domainType: 'btc', domainMinLength: 3, domainMaxLength: 4 },
-      sort: { unitPrice: 1 }, start: 0, limit: 1,
-    }),
-    // 3-digit floor: 3-char numeric — fetch and filter client-side
-    unisatPost('/v3/market/domain/auction/list', {
-      filter: { nftType: 'domain', domainType: 'btc', domainMinLength: 2, domainMaxLength: 3 },
-      sort: { unitPrice: 1 }, start: 0, limit: 20,
-    }),
-    // .sats floor
-    unisatPost('/v3/market/domain/auction/list', {
-      filter: { nftType: 'domain', domainType: 'sats' },
-      sort: { unitPrice: 1 }, start: 0, limit: 1,
-    }),
-  ]);
+  const header = document.createElement('div');
+  header.style.cssText = 'display:grid;grid-template-columns:28px 90px 1fr 1fr 60px;gap:12px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--color-divider);';
+  header.innerHTML = `
+    <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-faint);">#</span>
+    <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-faint);">TLD</span>
+    <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-faint);text-align:right;">Floor</span>
+    <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-faint);text-align:right;">24h Vol</span>
+    <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-faint);text-align:right;">Change</span>
+  `;
+  wrap.appendChild(header);
 
-  // Rebuild cards with live values
+  tlds.forEach(([key, dt], i) => {
+    const meta = TLD_META[key] || { label: '.'+key, color: '#888', browse: '#' };
+    const floor   = dt.curPrice   > 0 ? dt.curPrice   : null;
+    const vol     = dt.btcVolume  > 0 ? dt.btcVolume  : null;
+    const pct     = dt.btcVolumePercent;
+    const sales   = dt.amountVolume || 0;
+
+    const floorHtml = floor
+      ? `<div style="text-align:right;">
+           <div style="font-family:var(--font-mono);font-size:var(--text-xs);font-weight:700;color:var(--color-text);">${formatSats(floor)}</div>
+           ${btcRate ? `<div style="font-size:9px;color:var(--color-text-faint);">${formatUsd(floor, btcRate)}</div>` : ''}
+         </div>`
+      : `<span style="font-size:var(--text-xs);color:var(--color-text-faint);display:block;text-align:right;">No listings</span>`;
+
+    const volHtml = vol
+      ? `<div style="text-align:right;">
+           <div style="font-family:var(--font-mono);font-size:var(--text-xs);font-weight:700;color:var(--color-text);">${formatSats(vol)}</div>
+           <div style="font-size:9px;color:var(--color-text-faint);">${sales} sale${sales!==1?'s':''}</div>
+         </div>`
+      : `<span style="font-size:var(--text-xs);color:var(--color-text-faint);display:block;text-align:right;">—</span>`;
+
+    let changeHtml = '<span style="font-size:var(--text-xs);color:var(--color-text-faint);display:block;text-align:right;">—</span>';
+    if (pct !== null && pct !== undefined && pct !== 0) {
+      const up = pct > 0;
+      const pctStr = (up ? '+' : '') + pct.toFixed(1) + '%';
+      changeHtml = `<span style="font-size:var(--text-xs);font-family:var(--font-mono);font-weight:700;display:block;text-align:right;color:${up ? 'var(--color-success)' : 'var(--color-error)'};">${pctStr}</span>`;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'tld-row';
+    row.innerHTML = `
+      <span style="font-size:var(--text-xs);font-family:var(--font-mono);color:var(--color-text-faint);font-weight:600;">${i + 1}</span>
+      <a href="${meta.browse}" class="tld-pill" style="border-color:${meta.color}22;color:${meta.color};">${meta.label}</a>
+      ${floorHtml}
+      ${volHtml}
+      ${changeHtml}
+    `;
+    wrap.appendChild(row);
+  });
+
   el.innerHTML = '';
-
-  const btcFloor  = domainTypes && domainTypes['btc']  ? domainTypes['btc'].curPrice  : null;
-  const satsFloorPrice = satsFloor && satsFloor.list && satsFloor.list[0] ? satsFloor.list[0].price : null;
-  const floor3L   = sales3L  && sales3L.list  && sales3L.list[0]  ? sales3L.list[0].price  : null;
-  const floor4L   = sales4L  && sales4L.list  && sales4L.list[0]  ? sales4L.list[0].price  : null;
-
-  // 3-digit: filter 3-char numeric from batch
-  let floor3D = null;
-  if (sales3D && sales3D.list) {
-    const numeric = sales3D.list.find(item => item.domain && /^\d{3}$/.test(item.domain.replace(/\.[^.]+$/, '')));
-    if (numeric) floor3D = numeric.price;
-  }
-
-  el.appendChild(buildIndexCard('BTC Names Floor', btcFloor  ? formatSats(btcFloor)  : '0.0008 BTC',   'Composite floor across all TLDs',    null, true));
-  el.appendChild(buildIndexCard('3L Club',         floor3L   ? formatSats(floor3L)   : '0.0042 BTC',   '.btc three-character floor',          null, true));
-  el.appendChild(buildIndexCard('4L Club',         floor4L   ? formatSats(floor4L)   : '0.00055 BTC',  '.btc four-character floor',           null, true));
-  el.appendChild(buildIndexCard('3-Digit Club',    floor3D   ? formatSats(floor3D)   : '0.012 BTC',    '000-999 numeric floor',               null, true));
-  el.appendChild(buildIndexCard('BNRP Active',     btcFloor  ? formatSats(Math.round(btcFloor * 1.2)) : '0.00095 BTC', 'Names with BNRP records', null, true));
-  el.appendChild(buildIndexCard('.sats Floor',     satsFloorPrice ? formatSats(satsFloorPrice) : '0.00022 BTC', 'Sats Names protocol floor', null, true));
-
-  // Fetch and render live recent sales
-  const liveSales = await fetchRecentSales(10);
-  if (liveSales && liveSales.length > 0) {
-    const rows = liveSales
-      .filter(s => s.domain && s.price)
-      .slice(0, 8)
-      .map(s => [
-        s.domain,
-        formatSats(s.price),
-        'UniSat',
-        timeAgo(s.timestamp),
-      ]);
-    if (rows.length > 0) populateSalesRows(rows);
-  }
+  el.appendChild(wrap);
 }
+
+function renderSalesFeed(sales, btcRate) {
+  const el = qs('#salesFeed');
+  if (!el) return;
+
+  if (!sales || !sales.length) {
+    el.innerHTML = '<div style="color:var(--color-text-faint);font-size:var(--text-sm);padding:var(--space-6) 0;text-align:center;">No recent sales found</div>';
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:0 var(--space-4);overflow:hidden;';
+
+  sales.slice(0, 12).forEach(s => {
+    const name   = s.domain || s.name || '?';
+    const price  = s.price || 0;
+    const ts     = s.timestamp;
+    const tldKey = s.domainType || '';
+    const meta   = TLD_META[tldKey] || {};
+
+    const item = document.createElement('div');
+    item.className = 'sale-item';
+    item.innerHTML = `
+      <div style="min-width:0;flex:1;">
+        <a href="./name.html?name=${encodeURIComponent(name)}" class="sale-name">${escHtml(name)}</a>
+        <div style="font-size:9px;color:var(--color-text-faint);margin-top:1px;">${ts ? timeAgo(ts) : ''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div class="sale-price">${price ? formatSats(price) : '—'}</div>
+        ${btcRate && price ? `<div class="sale-usd">${formatUsd(price, btcRate)}</div>` : ''}
+      </div>
+    `;
+    wrap.appendChild(item);
+  });
+
+  el.innerHTML = '';
+  el.appendChild(wrap);
+}
+
+// Skeleton loaders for market tab
+function renderMarketSkeletons() {
+  const lb = qs('#tldLeaderboard');
+  const sf = qs('#salesFeed');
+  const skelRow = (wide) => `<div style="height:44px;background:var(--color-surface-offset);border-radius:var(--radius-md);margin-bottom:4px;${wide?'width:100%':'width:70%'};animation:shimmer 1.5s ease-in-out infinite;background:linear-gradient(90deg,var(--color-surface-offset)25%,var(--color-surface-dynamic)50%,var(--color-surface-offset)75%);background-size:200% 100%;"></div>`;
+  if (lb) lb.innerHTML = skelRow(true)+skelRow(true)+skelRow(true)+skelRow(true)+skelRow(true)+skelRow(true);
+  if (sf) sf.innerHTML = skelRow(false)+skelRow(false)+skelRow(false)+skelRow(false)+skelRow(false)+skelRow(false);
+}
+
+function escHtml(str) {
+  return String(str).replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+// Legacy stubs (kept so old call sites don't break)
+function buildIndexCard() { return document.createElement('div'); }
+function buildSalesTable() {}
+function populateSalesRows() {}
+
+
+async function renderMarketIndexes() {
+  // Show skeletons immediately
+  renderMarketSkeletons();
+
+  if (!UNISAT_API_KEY) return;
+
+  const [domainTypes, liveSales, btcRate] = await Promise.all([
+    fetchDomainTypes(),
+    fetchRecentSales(16),
+    getBtcUsd(),
+  ]);
+
+  // Stats strip
+  if (domainTypes) {
+    const vals = Object.values(domainTypes);
+    const totalVol = vals.reduce((s, d) => s + (d.btcVolume || 0), 0);
+    const topTld = vals.sort((a, b) => (b.btcVolume||0) - (a.btcVolume||0))[0];
+
+    const el24h = qs('#mktVol24h');
+    const elList = qs('#mktListings');
+    const elTop  = qs('#mktTopTld');
+    if (el24h) el24h.textContent = totalVol > 0 ? formatSats(totalVol) : '—';
+    if (elTop && topTld && topTld.btcVolume > 0) elTop.textContent = '.' + topTld.domainType;
+  }
+
+  // Active listings count from our worker
+  try {
+    const res = await fetch(`${MARKET_API}/api/market/listings?limit=200`, { signal: AbortSignal.timeout(4000) });
+    const data = await res.json();
+    const elList = qs('#mktListings');
+    if (elList && data.ok) elList.textContent = (data.total || 0).toLocaleString();
+  } catch {}
+
+  // Last sale
+  if (liveSales && liveSales.length > 0) {
+    const last = liveSales[0];
+    const elLast = qs('#mktLastSale');
+    if (elLast && last.domain) {
+      elLast.textContent = last.domain + (last.price ? '  ' + formatSats(last.price) : '');
+    }
+  }
+
+  // Render leaderboard and sales feed
+  if (domainTypes) renderTldLeaderboard(domainTypes, btcRate);
+  if (liveSales)   renderSalesFeed(liveSales, btcRate);
+}
+
 
 // ── Search ────────────────────────────────────────────────────────────────────
 function initSearchInput(input, resultsEl) {
