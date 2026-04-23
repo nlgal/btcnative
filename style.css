@@ -709,8 +709,9 @@
 }
 .profile-card__field-value a { color: var(--color-primary); text-decoration: none; }
 .profile-card__field-value a:hover { color: var(--color-primary-hover); }
-.profile-card__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
-.profile-card__actions .btn--full { flex: 1 1 100%; min-width: 0; }
+.profile-card__actions { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4); }
+.profile-card__actions__row { display: flex; gap: var(--space-2); width: 100%; }
+#buyBtn { width: 100%; }
 #ownerActionRow { display: none; width: 100%; gap: var(--space-2); }
 #ownerActionRow.visible { display: flex; }
 #ownerActionRow .btn { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--text-xs); }
@@ -763,7 +764,7 @@
 .score-bar-row {
   display: flex; align-items: center; gap: var(--space-2); margin-bottom: 5px;
 }
-.score-bar-label { font-size: 10px; color: var(--color-text-faint); width: 80px; flex-shrink: 0; font-family: var(--font-mono); }
+.score-bar-label { font-size: 10px; color: var(--color-text-faint); width: 80px; flex-shrink: 0; font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .score-bar-track { flex: 1; height: 4px; background: var(--color-border); border-radius: var(--radius-full); overflow: hidden; }
 .score-bar-fill  { height: 100%; background: var(--color-primary); border-radius: var(--radius-full); }
 
@@ -957,7 +958,11 @@
   .port-search-btn { width: 100%; }
   .explore-layout { grid-template-columns: 1fr; }
   .stats-bar__inner { flex-wrap: wrap; gap: var(--space-3); }
-  .profile-card__actions { flex-wrap: wrap; }
+  /* profile-card__actions is already column — no override needed */
+  /* Score ring — tighten label width so bar track has room */
+  .score-ring-wrap { gap: var(--space-3); padding: var(--space-3); }
+  .score-ring { width: 56px; height: 56px; }
+  .score-bar-label { width: 64px; }
 }
 
 /* ── Mobile nav hamburger ── */
@@ -1253,10 +1258,44 @@
   align-items: center;
   margin-bottom: var(--space-4);
 }
+/* Controls row: desktop = flex row inline; mobile = separate scrollable strip */
+.lfb-controls-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  flex: 1;
+}
+
 @media (max-width: 640px) {
-  .lfb-row--main { gap: var(--space-2); }
+  /* Wrap the main row so TLD and controls appear on separate lines */
+  .lfb-row--main {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    gap: var(--space-2);
+  }
+  /* TLD group spans full width, its chips scroll horizontally */
+  .lfb-row--main .lfb-group--tld {
+    flex: 0 0 100%;
+    overflow: hidden;
+  }
+  .lfb-row--main .lfb-group--tld .lfb-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lfb-row--main .lfb-group--tld .lfb-chips::-webkit-scrollbar { display: none; }
+  /* Controls row: spans full width, scrolls horizontally as a unit */
+  .lfb-controls-row {
+    flex: 0 0 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lfb-controls-row::-webkit-scrollbar { display: none; }
   .lfb-divider { display: none; }
   .lfb-group { gap: var(--space-1); }
+  /* Price inputs slightly narrower on mobile */
+  .lfb-price-input { width: 68px; }
 }
 
 /* Price range inputs */

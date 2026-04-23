@@ -99,7 +99,7 @@
         <div class="lfb-row lfb-row--main">
 
           <!-- TLD group -->
-          <div class="lfb-group">
+          <div class="lfb-group lfb-group--tld">
             <span class="lfb-label">TLD</span>
             <div class="lfb-chips">
               <button class="lfb-chip active" data-tld="all" onclick="filterTld('all', this)">All</button>
@@ -112,53 +112,56 @@
             </div>
           </div>
 
-          <div class="lfb-divider"></div>
+          <!-- Controls: Length + Sort + Price + Actions (scrollable on mobile) -->
+          <div class="lfb-controls-row">
 
-          <!-- Length group -->
-          <div class="lfb-group">
-            <span class="lfb-label">Length</span>
-            <div class="lfb-chips">
-              <button class="lfb-chip" data-len="1-2" onclick="filterLen('1-2', this)">1-2</button>
-              <button class="lfb-chip" data-len="3" onclick="filterLen('3', this)">3</button>
-              <button class="lfb-chip" data-len="4" onclick="filterLen('4', this)">4</button>
-              <button class="lfb-chip" data-len="5" onclick="filterLen('5', this)">5</button>
-              <button class="lfb-chip" data-len="6+" onclick="filterLen('6+', this)">6+</button>
+            <!-- Length group -->
+            <div class="lfb-group">
+              <span class="lfb-label">Length</span>
+              <div class="lfb-chips">
+                <button class="lfb-chip" data-len="1-2" onclick="filterLen('1-2', this)">1-2</button>
+                <button class="lfb-chip" data-len="3" onclick="filterLen('3', this)">3</button>
+                <button class="lfb-chip" data-len="4" onclick="filterLen('4', this)">4</button>
+                <button class="lfb-chip" data-len="5" onclick="filterLen('5', this)">5</button>
+                <button class="lfb-chip" data-len="6+" onclick="filterLen('6+', this)">6+</button>
+              </div>
             </div>
-          </div>
 
-          <div class="lfb-divider"></div>
+            <div class="lfb-divider"></div>
 
-          <!-- Sort -->
-          <div class="lfb-group">
-            <span class="lfb-label">Sort</span>
-            <select id="marketSortSelect" onchange="sortNames(this.value, this)" style="font-size:var(--text-xs); font-family:var(--font-mono); background:var(--color-surface-offset); border:1px solid var(--color-border); color:var(--color-text); border-radius:var(--radius-md); padding:6px 10px; cursor:pointer; outline:none; min-width:180px;">
-              <option value="price_asc">Lowest price</option>
-              <option value="price_desc">Highest price</option>
-              <option value="score">Rank</option>
-              <option value="insc_asc">Lowest inscription</option>
-              <option value="insc_desc">Highest inscription</option>
-              <option value="recent">Recently listed</option>
-            </select>
-          </div>
-
-          <div class="lfb-divider"></div>
-
-          <!-- Price range -->
-          <div class="lfb-group lfb-group--price">
-            <span class="lfb-label">Price (BTC)</span>
-            <div class="lfb-price-inputs">
-              <input class="lfb-price-input" id="priceMin" type="number" placeholder="Min" min="0" step="0.0001" oninput="applyPriceFilter()" />
-              <span class="lfb-price-sep">–</span>
-              <input class="lfb-price-input" id="priceMax" type="number" placeholder="Max" min="0" step="0.0001" oninput="applyPriceFilter()" />
+            <!-- Sort -->
+            <div class="lfb-group">
+              <span class="lfb-label">Sort</span>
+              <select id="marketSortSelect" onchange="sortNames(this.value, this)" style="font-size:var(--text-xs); font-family:var(--font-mono); background:var(--color-surface-offset); border:1px solid var(--color-border); color:var(--color-text); border-radius:var(--radius-md); padding:6px 10px; cursor:pointer; outline:none; min-width:160px;">
+                <option value="price_asc">Lowest price</option>
+                <option value="price_desc">Highest price</option>
+                <option value="score">Rank</option>
+                <option value="insc_asc">Lowest inscription</option>
+                <option value="insc_desc">Highest inscription</option>
+                <option value="recent">Recently listed</option>
+              </select>
             </div>
-          </div>
 
-          <!-- Actions -->
-          <div style="margin-left:auto; display:flex; align-items:center; gap:var(--space-2); flex-shrink:0;">
-            <button class="lfb-btn-icon" onclick="toggleGridDensity(this)" id="densityBtn" title="Toggle density">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            </button>
-            <button class="lfb-clear" onclick="clearAllFilters()">Clear</button>
+            <div class="lfb-divider"></div>
+
+            <!-- Price range -->
+            <div class="lfb-group lfb-group--price">
+              <span class="lfb-label">Price (BTC)</span>
+              <div class="lfb-price-inputs">
+                <input class="lfb-price-input" id="priceMin" type="number" placeholder="Min" min="0" step="0.0001" oninput="applyPriceFilter()" />
+                <span class="lfb-price-sep">–</span>
+                <input class="lfb-price-input" id="priceMax" type="number" placeholder="Max" min="0" step="0.0001" oninput="applyPriceFilter()" />
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="margin-left:auto; display:flex; align-items:center; gap:var(--space-2); flex-shrink:0;">
+              <button class="lfb-btn-icon" onclick="toggleGridDensity(this)" id="densityBtn" title="Toggle density">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              </button>
+              <button class="lfb-clear" onclick="clearAllFilters()">Clear</button>
+            </div>
+
           </div>
         </div>
 

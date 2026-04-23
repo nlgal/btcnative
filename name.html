@@ -156,21 +156,21 @@
 
           <div class="profile-card__divider"></div>
           <div class="profile-card__actions">
-            <button class="btn btn--primary btn--full" id="buyBtn">Buy</button>
+            <button class="btn btn--primary" id="buyBtn">Buy</button>
             <!-- Owner action row: shown only when wallet owns this name -->
             <div id="ownerActionRow"></div>
-            <a class="btn btn--outline btn--sm" id="sellBtn" href="./sell.html" title="List for sale" style="display:none;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </a>
-            <button class="btn btn--outline btn--sm" id="shareBtn" onclick="shareProfile()" title="Share on X" aria-label="Share on X">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            </button>
-            <button class="btn btn--outline btn--sm" id="watchBtn" onclick="toggleWatch()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-            </button>
-            <button class="btn btn--outline btn--sm" id="offerBtn" style="display:none;" onclick="openOfferModal()" title="Make an offer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </button>
+            <!-- Icon button row -->
+            <div class="profile-card__actions__row">
+              <button class="btn btn--outline btn--sm" id="shareBtn" onclick="shareProfile()" title="Share on X" aria-label="Share on X">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              </button>
+              <button class="btn btn--outline btn--sm" id="watchBtn" onclick="toggleWatch()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              </button>
+              <button class="btn btn--outline btn--sm" id="offerBtn" style="display:none;" onclick="openOfferModal()" title="Make an offer">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>

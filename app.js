@@ -791,11 +791,13 @@ async function initProfilePage() {
   if (records.display) qs('#profileDisplayName').textContent = records.display;
   if (records.description) qs('#profileDesc').textContent = records.description;
 
-  // Avatar
+  // Avatar — no letter initials; show gradient bg or ordinal image
   const avatarEl = qs('#profileAvatar');
-  avatarEl.textContent = initial;
+  avatarEl.textContent = '';
+  const _avGrad = nameGradient(name);
+  avatarEl.style.background = `linear-gradient(135deg,${_avGrad.from},${_avGrad.to})`;
   if (records.avatar) {
-    initAvatar(avatarEl, records.avatar, initial);
+    initAvatar(avatarEl, records.avatar, '');
     // Also set banner tint
     qs('#profileBanner').style.background = 'linear-gradient(135deg, #1a1200, #2d1f00, #0a0a0a)';
   }
@@ -2639,7 +2641,10 @@ function renderMinimalProfile(name, data) {
   qs('#profileContent').removeAttribute('style');
   qs('#profileName').textContent = base + tld;
   qs('#breadcrumbName').textContent = name;
-  qs('#profileAvatar').textContent = initial;
+  const _minAvEl = qs('#profileAvatar');
+  _minAvEl.textContent = '';
+  const _minGrad = nameGradient(name);
+  _minAvEl.style.background = `linear-gradient(135deg,${_minGrad.from},${_minGrad.to})`;
 
   const addr = data.address;
   window._profileOwnerAddress = addr || ''; // store for offer modal
@@ -2914,9 +2919,11 @@ async function initProfilePageMVP() {
   if (records.description) qs('#profileDesc').textContent = records.description;
 
   const avatarEl = qs('#profileAvatar');
-  avatarEl.textContent = initial;
+  avatarEl.textContent = '';
+  const _avGrad2 = nameGradient(name);
+  avatarEl.style.background = `linear-gradient(135deg,${_avGrad2.from},${_avGrad2.to})`;
   if (records.avatar) {
-    initAvatar(avatarEl, records.avatar, initial);
+    initAvatar(avatarEl, records.avatar, '');
     qs('#profileBanner').style.background = 'linear-gradient(135deg, #1a1200, #2d1f00, #0a0a0a)';
   }
 

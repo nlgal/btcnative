@@ -1077,37 +1077,17 @@ async function loadYourListings(walletAddress) {
   ).join('');
 
   try {
-    // 1. Get all wallet names
-    const res = await fetch(`${MARKET_API}/api/names?address=${encodeURIComponent(walletAddress)}`, {
-      signal: AbortSignal.timeout(60000),
+    // Single call: fetch all listings by this seller address
+    const rate = await getSellBtcUsd();
+    const res = await fetch(`${MARKET_API}/api/my-listings?address=${encodeURIComponent(walletAddress)}`, {
+      signal: AbortSignal.timeout(15000),
     });
     const data = await res.json();
-    if (!data.ok || !Array.isArray(data.names) || !data.names.length) {
+    if (!data.ok || !Array.isArray(data.listings) || !data.listings.length) {
       section.style.display = 'none';
       return;
     }
-
-    const listable = data.names.filter(n => !n.isReInscription);
-    if (!listable.length) { section.style.display = 'none'; return; }
-
-    // 2. Check listing status for all names in parallel
-    const rate = await getSellBtcUsd();
-    const results = await Promise.allSettled(
-      listable.map(n =>
-        fetch(`${MARKET_API}/api/listing?name=${encodeURIComponent(n.name)}`, {
-          signal: AbortSignal.timeout(8000),
-        }).then(r => r.json()).then(d => ({ name: n.name, listing: d }))
-      )
-    );
-
-    const listed = results
-      .filter(r => r.status === 'fulfilled' && r.value.listing?.ok && r.value.listing?.listed)
-      .map(r => ({ name: r.value.name, ...r.value.listing }));
-
-    if (!listed.length) {
-      section.style.display = 'none';
-      return;
-    }
+    const listed = data.listings;
 
     // 3. Render rows
     inner.innerHTML = listed.map(item => {
