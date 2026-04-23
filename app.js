@@ -1568,6 +1568,8 @@ function _refetchListings() {
   if (currentLen === '4')   { apiParams.minLength = 4; apiParams.maxLength = 4; }
   if (currentLen === '5')   { apiParams.minLength = 5; apiParams.maxLength = 5; }
   if (currentLen === '6+')  { apiParams.minLength = 6; }
+  const needsBigBatch = currentSpecial && currentSpecial !== 'bnrp';
+  apiParams.pageSize = needsBigBatch ? 100 : 20;
   fetchListings(apiParams).then(result => {
     if (result && result.list) {
       LIVE_LISTINGS = result.list;
@@ -1593,7 +1595,7 @@ function filterLen(len, btn) {
 function filterSpecial(special, btn) {
   if (currentSpecial === special) { currentSpecial = null; btn.classList.remove('active'); }
   else { currentSpecial = special; qsa('[data-special]').forEach(b => b.classList.toggle('active', b.dataset.special === special)); }
-  renderListings(getFilteredNames()); // special is client-side only, no re-fetch needed
+  _refetchListings(); // re-fetch with larger batch so trait filtering has enough raw data
 }
 function sortNames(key, btn) {
   qsa('.filter-chip:not([data-tld]):not([data-len]):not([data-special]):not([data-tab])').forEach(b => b.classList.remove('active'));
@@ -2141,7 +2143,9 @@ function sortNames(key, btn) {
   renderListings(getFilteredNamesMVP());
 }
 
-// Re-fetch for MVP variant when TLD or length filter changes
+// Re-fetch for MVP variant when TLD, length, or special filter changes
+// When a special trait filter is active, fetch a larger batch so client-side
+// filtering has enough variety to find matches
 function _refetchListingsMVP() {
   const gridEl = qs('#listingsGrid');
   if (!gridEl) { renderListings(getFilteredNamesMVP()); return; }
@@ -2156,6 +2160,11 @@ function _refetchListingsMVP() {
   if (currentLen === '4')   { apiParams.minLength = 4; apiParams.maxLength = 4; }
   if (currentLen === '5')   { apiParams.minLength = 5; apiParams.maxLength = 5; }
   if (currentLen === '6+')  { apiParams.minLength = 6; }
+  // Fetch a larger batch when a trait filter is active — UniSat results are
+  // dominated by numeric names, so we need more raw data to find letter-only,
+  // palindromes, etc. after client-side filtering
+  const needsBigBatch = currentSpecial && currentSpecial !== 'bnrp';
+  apiParams.pageSize = needsBigBatch ? 100 : 20;
   fetchListings(apiParams).then(result => {
     LIVE_LISTINGS = (result && result.list) ? result.list : [];
     renderListings(getFilteredNamesMVP());
@@ -2192,7 +2201,8 @@ function filterSpecial(special, btn) {
     currentSpecial = special;
     document.querySelectorAll('[data-special]').forEach(b => b.classList.toggle('active', b.dataset.special === special));
   }
-  renderListings(getFilteredNamesMVP()); // special is client-side only
+  // Re-fetch with larger batch so trait filtering has enough raw data
+  _refetchListingsMVP();
 }
 
 function getFilteredNamesMVP() {
