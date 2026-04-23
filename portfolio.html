@@ -959,6 +959,7 @@ async function loadMyNames(address) {
       const card = document.createElement('div');
       card.className = 'name-card';
       card.id = 'myname-card-' + fullName.replace(/[^a-z0-9]/g, '_');
+      card.dataset.name = fullName;
       card.style.cssText = 'cursor:default; position:relative;';
 
       const base = fullName.includes('.') ? fullName.split('.').slice(0, -1).join('.') : fullName;
@@ -968,7 +969,7 @@ async function loadMyNames(address) {
         <div class="name-card__name">
           <span style="font-family:var(--font-mono); font-weight:700;">${base}</span><span style="color:var(--color-primary); font-family:var(--font-mono);">${tld}</span>
         </div>
-        <div class="name-card__listing-badge" style="display:none; font-size:10px; font-family:var(--font-mono); color:#f7931a; background:rgba(247,147,26,0.12); border:1px solid rgba(247,147,26,0.25); border-radius:99px; padding:2px 8px; align-self:flex-start;"></div>
+        <div class="name-card__listing-badge" style="display:none; font-size:11px; font-family:var(--font-mono); font-weight:600; color:#f7931a; background:rgba(247,147,26,0.12); border:1px solid rgba(247,147,26,0.3); border-radius:99px; padding:3px 10px;"></div>
         <div class="name-card__actions" style="display:flex; gap:var(--space-2); margin-top:auto;">
           <a href="./name.html?name=${encodeURIComponent(fullName)}" class="port-card__btn port-card__btn--outline" style="flex:1; text-align:center; font-size:var(--text-xs); text-decoration:none; display:flex; align-items:center; justify-content:center;">View</a>
           <a href="./sell.html?name=${encodeURIComponent(fullName)}" class="name-card__sell-btn port-card__btn port-card__btn--primary" style="flex:1; text-align:center; font-size:var(--text-xs); text-decoration:none; display:flex; align-items:center; justify-content:center;">List</a>
@@ -982,7 +983,7 @@ async function loadMyNames(address) {
     if (reInscriptionCount > 0) {
       const notice = document.createElement('div');
       notice.style.cssText = 'grid-column:1/-1; font-size:var(--text-xs); color:#ef4444; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); margin-top:var(--space-2);';
-      notice.textContent = `${reInscriptionCount} re-inscription${reInscriptionCount > 1 ? 's' : ''} hidden — only the first inscription of a name is valid.`;
+      notice.textContent = `${reInscriptionCount} re-inscription${reInscriptionCount > 1 ? 's' : ''} hidden. Only the first inscription of a name is valid.`;
       grid.appendChild(notice);
     }
 
@@ -994,19 +995,23 @@ async function loadMyNames(address) {
         await Promise.allSettled(allNames.slice(i, i + BATCH).map(async (fullName) => {
           try {
             const r = await fetch(`${MARKET_API}/api/listing?name=${encodeURIComponent(fullName)}`, {
-              signal: AbortSignal.timeout(8000),
+              signal: AbortSignal.timeout(20000),
             });
             const d = await r.json();
             if (!d.ok || !d.listed) return;
-            const cardEl = document.getElementById('myname-card-' + fullName.replace(/[^a-z0-9]/g, '_'));
+            // Find card by data-name (reliable) or id (fallback)
+            const cardEl = grid.querySelector(`[data-name="${fullName}"]`) ||
+                           document.getElementById('myname-card-' + fullName.replace(/[^a-z0-9]/g, '_'));
             if (!cardEl) return;
             // Show listed badge with price
             const badge = cardEl.querySelector('.name-card__listing-badge');
             const sellBtn = cardEl.querySelector('.name-card__sell-btn');
             if (badge) {
-              const btcAmt = d.priceSats ? (d.priceSats / 1e8).toFixed(8).replace(/0+$/, '').replace(/\.$/, '') + ' BTC' : 'Listed';
+              const btcAmt = d.priceSats
+                ? (d.priceSats / 1e8).toFixed(8).replace(/0+$/, '').replace(/\.$/, '') + ' BTC'
+                : 'Listed';
               badge.textContent = btcAmt;
-              badge.style.display = 'inline-block';
+              badge.style.display = 'block';
             }
             if (sellBtn) {
               sellBtn.textContent = 'Manage';
