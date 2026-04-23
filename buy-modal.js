@@ -182,16 +182,15 @@ async function _bmGetAddress(wallet) {
 }
 
 async function _bmGetPubkey(wallet, address) {
+  // Returns full 33-byte compressed pubkey hex (66 chars).
+  // Used directly in toSignInputs.publicKey (UniSat requires compressed).
+  // Caller strips prefix for tapInternalKey (x-only, 32 bytes).
   if (wallet.type === 'unisat') {
-    const compressed = await wallet.api.getPublicKey();
-    if (compressed && compressed.length === 66) return compressed.slice(2);
-    return compressed;
+    return wallet.api.getPublicKey(); // already 66-char compressed
   }
   if (wallet.type === 'xverse') {
     const res = await wallet.api.request('getAccounts', { purposes: ['payment'] });
-    const pk = res.result[0].publicKey;
-    if (pk && pk.length === 66) return pk.slice(2);
-    return pk;
+    return res.result[0].publicKey;  // already 66-char compressed
   }
   throw new Error('Unsupported wallet');
 }
@@ -248,7 +247,7 @@ async function _bmBuildCombinedPsbt({
   priceSats,
   buyerUtxos,        // array of { txid, vout, value }
   buyerAddress,
-  buyerPubkey,       // x-only 32-byte pubkey hex (64 chars) for PSBT_IN_TAP_INTERNAL_KEY
+  buyerPubkey,       // full compressed pubkey hex (66 chars) — x-only derived internally for tapInternalKey
   feeAddress,
   feeSats,
   feeRate,
