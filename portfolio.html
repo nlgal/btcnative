@@ -944,8 +944,15 @@ async function loadMyNames(address) {
       return;
     }
 
+    // Show re-inscription warning if any were filtered
+    // (declared here, appended to grid after cards are rendered)
+
+    // Filter out re-inscriptions — they are not the canonical name
+    const validNames = names.filter(n => !n.isReInscription);
+    const reInscriptionCount = names.length - validNames.length;
+
     grid.innerHTML = '';
-    names.forEach(item => {
+    validNames.forEach(item => {
       const fullName = item.name || '';
       if (!fullName) return;
 
@@ -971,10 +978,18 @@ async function loadMyNames(address) {
       grid.appendChild(card);
     });
 
+    // Show re-inscription notice if any were filtered out
+    if (reInscriptionCount > 0) {
+      const notice = document.createElement('div');
+      notice.style.cssText = 'grid-column:1/-1; font-size:var(--text-xs); color:#ef4444; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); margin-top:var(--space-2);';
+      notice.textContent = `${reInscriptionCount} re-inscription${reInscriptionCount > 1 ? 's' : ''} hidden — only the first inscription of a name is valid.`;
+      grid.appendChild(notice);
+    }
+
     // Async: check listing status for each name and patch cards
     (async () => {
       const BATCH = 6;
-      const allNames = names.map(n => n.name).filter(Boolean);
+      const allNames = validNames.map(n => n.name).filter(Boolean);
       for (let i = 0; i < allNames.length; i += BATCH) {
         await Promise.allSettled(allNames.slice(i, i + BATCH).map(async (fullName) => {
           try {
