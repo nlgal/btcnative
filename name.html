@@ -36,22 +36,17 @@
         BTC Native
       </a>
       <ul class="nav__links" role="list">
-        <li><a href="./index.html" class="nav__link">Discover</a></li>
-        <li><a href="./explore.html" class="nav__link">Explore</a></li>
+        <li><a href="./explore.html" class="nav__link">Names</a></li>
         <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
-        <li><a href="./bulk.html" class="nav__link">Bulk</a></li>
         <li><a href="./sell.html" class="nav__link">Sell</a></li>
-        <li><a href="./portfolio.html" class="nav__link">Portfolio</a></li>
+        <li><a href="./portfolio.html" class="nav__link">My Names</a></li>
       </ul>
       <div class="nav__actions">
-        <div class="search-wrap" style="position:relative; width:200px;">
-          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="left:var(--space-3);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input class="search-input" id="navSearch" type="text" placeholder="Search names..." autocomplete="off"
-            style="height:36px; font-size:var(--text-sm); padding-left:36px; border-radius:var(--radius-lg);" />
-          <button class="search-clear" id="navSearchClear" aria-label="Clear search" tabindex="-1">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-          <div class="search-results" id="navResults" style="display:none;"></div>
+        <div class="nav__search" id="navSearchWrap">
+          <svg class="nav__search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="nav__search-input" id="navSearchInput" type="text" placeholder="Search Bitcoin names..." autocomplete="off" spellcheck="false" aria-label="Search Bitcoin names" />
+          <span class="nav__search-kbd">/</span>
+          <div class="nav__search-dropdown" id="navSearchDropdown"></div>
         </div>
         <button class="nav__wallet-btn" id="navWalletBtn" onclick="initNavWallet()" style="display:none;">
           Connect
@@ -139,20 +134,8 @@
             <span class="profile-card__field-value" style="font-size:10px;" id="profileInscriptionId">—</span>
           </div>
 
-          <!-- Score ring -->
-          <div class="score-ring-wrap" id="scoreRingWrap">
-            <div class="score-ring">
-              <svg viewBox="0 0 64 64" width="64" height="64">
-                <circle cx="32" cy="32" r="26" fill="none" stroke="var(--color-border)" stroke-width="4"/>
-                <circle cx="32" cy="32" r="26" fill="none" stroke="var(--color-primary)" stroke-width="4"
-                  stroke-dasharray="163.4" stroke-dashoffset="163.4"
-                  stroke-linecap="round" transform="rotate(-90 32 32)"
-                  id="scoreCircle" style="transition:stroke-dashoffset 1s ease;"/>
-              </svg>
-              <div class="score-ring__value" id="scoreValue">—</div>
-            </div>
-            <div class="score-ring__breakdown" id="scoreBreakdown"></div>
-          </div>
+          <!-- Rarity chips -->
+          <div class="rarity-chips" id="rarityChips"></div>
 
           <div class="profile-card__divider"></div>
           <div class="profile-card__actions">
@@ -240,7 +223,9 @@
           <!-- Comps -->
           <div class="tab-content" id="ptab-comps">
             <p style="font-size:var(--text-xs); color:var(--color-text-faint); margin-bottom:var(--space-4);">Names from the same category currently listed. Useful for pricing reference.</p>
-            <div class="comps-grid" id="compsGrid"></div>
+            <div class="comps-grid" id="compsGrid">
+              <p style="font-size:var(--text-sm); color:var(--color-text-faint); padding:var(--space-8) 0;">No comparable listings found yet.</p>
+            </div>
           </div>
 
           <!-- Metadata -->
@@ -335,19 +320,100 @@
   </div>
 </main>
 
-<footer class="footer">
+<footer class="footer footer--rich">
   <div class="container">
-    <div class="footer__inner">
-      <span class="footer__copy">© 2026 BTC Native · Built on <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" style="color:var(--color-text-faint);">BNRP</a></span>
-      <ul class="footer__links" role="list">
-        <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Protocol</a></li>
-        <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
-      </ul>
+    <div class="footer__grid">
+      <div>
+        <span class="footer__col-label">Protocol</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">BNRP spec</a></li>
+          <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
+          <li><a href="./index.html#how-it-works">How it works</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Market</span>
+        <ul class="footer__col-links">
+          <li><a href="./explore.html?tab=listings">Browse names</a></li>
+          <li><a href="./explore.html?tab=market">Market data</a></li>
+          <li><a href="./sell.html">List a name</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Tools</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="./bulk.html">Bulk search</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Community</span>
+        <ul class="footer__col-links">
+          <li><a href="https://x.com" target="_blank" rel="noopener noreferrer">Twitter / X</a></li>
+          <li><a href="https://github.com/nlgal" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__brand">
+      <span>© 2026 BTC Native</span>
+      <span>·</span>
+      <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Built on BNRP</a>
+      <span>·</span>
+      <span class="footer__status-dot live" id="footerStatus">Indexed just now</span>
     </div>
   </div>
 </footer>
 
 <script src="./app.js"></script>
+<script src="./nav-search.js"></script>
 <script type="module" src="./buy-modal.js"></script>
+<script>
+// ── Rarity chips for name profile — replaces radar chart
+(function() {
+  function buildRarityChips(name, inscriptionNumber, bnrp) {
+    const container = document.getElementById('rarityChips');
+    if (!container) return;
+    const TLDS = ['.btc','.sats','.x','.ord','.gm','.xbt','.sat','.unisat','.fb'];
+    const tld  = TLDS.find(t => name.endsWith(t)) || '';
+    const base = tld ? name.slice(0, -tld.length) : name;
+    const chips = [];
+    const len = base.length;
+    if (len === 1) chips.push({ cls:'rarity-chip--1l', label:'1L' });
+    else if (len === 2) chips.push({ cls:'rarity-chip--2l', label:'2L' });
+    else if (len === 3) chips.push({ cls:'rarity-chip--3l', label:'3L' });
+    if (/^\d+$/.test(base)) {
+      chips.push({ cls:'rarity-chip--number', label:'Number' });
+      if (parseInt(base) <= 100)  chips.push({ cls:'rarity-chip--1l', label:'100 Club' });
+      else if (parseInt(base) <= 1000) chips.push({ cls:'rarity-chip--2l', label:'1K Club' });
+      if (/^9+$/.test(base))     chips.push({ cls:'rarity-chip--999', label:'999 Club' });
+    }
+    if (base.length >= 2 && base === base.split('').reverse().join(''))
+      chips.push({ cls:'rarity-chip--palindrome', label:'Palindrome' });
+    if (base.length >= 2 && base.split('').every(c => c === base[0]))
+      chips.push({ cls:'rarity-chip--allsame', label:'All Same' });
+    if (/^[a-zA-Z]{4,}$/.test(base))
+      chips.push({ cls:'rarity-chip--dictionary', label:'Dictionary' });
+    if (bnrp && (bnrp.name || (bnrp.records && Object.keys(bnrp.records).length)))
+      chips.push({ cls:'rarity-chip--bnrp', label:'BNRP Verified' });
+    if (inscriptionNumber && inscriptionNumber < 10000000)
+      chips.push({ cls:'rarity-chip--age', label:'#' + Number(inscriptionNumber).toLocaleString() });
+    container.innerHTML = chips.map(c =>
+      `<span class="rarity-chip ${c.cls}">${c.label}</span>`
+    ).join('') || '<span style="font-size:var(--text-xs);color:var(--color-text-faint);">Resolving traits...</span>';
+  }
+  window.renderRarityChips = buildRarityChips;
+  // Auto-render when profile name is populated
+  const obs = new MutationObserver(function() {
+    const nameEl = document.getElementById('profileName');
+    if (!nameEl || !nameEl.textContent.trim() || nameEl.textContent === '\u2014') return;
+    const inscNum = window._currentInscriptionNumber || null;
+    const bnrp    = window._currentBnrpData || null;
+    buildRarityChips(nameEl.textContent.trim(), inscNum, bnrp);
+    obs.disconnect();
+  });
+  const nameEl = document.getElementById('profileName');
+  if (nameEl) obs.observe(nameEl, { childList: true, characterData: true, subtree: true });
+})();
+</script>
 </body>
 </html>

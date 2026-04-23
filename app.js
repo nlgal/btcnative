@@ -799,6 +799,12 @@ async function initProfilePage() {
   qs('#profileContent').removeAttribute('style');
   qs('#profileName').textContent = base + tld;
   qs('#breadcrumbName').textContent = name;
+  // Expose for rarity chips module
+  window._currentBnrpData = resolvedData;
+  window._currentInscriptionNumber = resolvedData.inscriptionNumber || resolvedData.inscNumber || null;
+  if (typeof window.renderRarityChips === 'function') {
+    window.renderRarityChips(base + tld, window._currentInscriptionNumber, resolvedData);
+  }
 
   if (records.display) qs('#profileDisplayName').textContent = records.display;
   if (records.description) qs('#profileDesc').textContent = records.description;
@@ -2653,6 +2659,11 @@ function renderMinimalProfile(name, data) {
   qs('#profileContent').removeAttribute('style');
   qs('#profileName').textContent = base + tld;
   qs('#breadcrumbName').textContent = name;
+  window._currentBnrpData = data;
+  window._currentInscriptionNumber = data.inscriptionNumber || null;
+  if (typeof window.renderRarityChips === 'function') {
+    window.renderRarityChips(base + tld, window._currentInscriptionNumber, data);
+  }
   const _minAvEl = qs('#profileAvatar');
   _minAvEl.textContent = '';
   const _minGrad = nameGradient(name);

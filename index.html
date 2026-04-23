@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BTC Native — Bitcoin Name Market</title>
+  <meta property="og:title" content="BTC Native — Bitcoin Name Market" />
+  <meta property="og:description" content="Buy, sell, and track .btc, .sats, .x, .ord names. Floor prices, collector scores, BNRP identity cards." />
   <meta name="description" content="The market for Bitcoin names. Buy, sell, and track .btc, .sats, .x, .ord and more. Floor prices, collector scores, BNRP identity cards." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -25,14 +27,18 @@
         BTC Native
       </a>
       <ul class="nav__links" role="list">
-        <li><a href="./index.html" class="nav__link active">Discover</a></li>
-        <li><a href="./explore.html" class="nav__link">Explore</a></li>
+        <li><a href="./explore.html" class="nav__link">Names</a></li>
         <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
-        <li><a href="./bulk.html" class="nav__link">Bulk</a></li>
         <li><a href="./sell.html" class="nav__link">Sell</a></li>
-        <li><a href="./portfolio.html" class="nav__link">Portfolio</a></li>
+        <li><a href="./portfolio.html" class="nav__link">My Names</a></li>
       </ul>
       <div class="nav__actions">
+        <div class="nav__search" id="navSearchWrap">
+          <svg class="nav__search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="nav__search-input" id="navSearchInput" type="text" placeholder="Search Bitcoin names..." autocomplete="off" spellcheck="false" aria-label="Search Bitcoin names" />
+          <span class="nav__search-kbd">/</span>
+          <div class="nav__search-dropdown" id="navSearchDropdown"></div>
+        </div>
         <button class="nav__wallet-btn" id="navWalletBtn" onclick="initNavWallet()" style="display:none;">
           Connect
         </button>
@@ -114,67 +120,55 @@
 <main>
   <div class="container">
 
+    <!-- Live Market module — replaces three separate carousels -->
+    <section class="section">
+      <div class="section__header">
+        <h2 class="section__title"><span class="section-label">LIVE</span> Market</h2>
+        <a href="./explore.html?tab=listings" class="section__link">All listings →</a>
+      </div>
+      <div class="live-market">
+        <div class="live-market__tabs" role="tablist">
+          <button class="live-market__tab active" data-lm="listed" onclick="switchLiveMarket('listed', this)" role="tab" aria-selected="true">Recently Listed</button>
+          <button class="live-market__tab" data-lm="drops" onclick="switchLiveMarket('drops', this)" role="tab" aria-selected="false">Price Drops</button>
+          <button class="live-market__tab" data-lm="sales" onclick="switchLiveMarket('sales', this)" role="tab" aria-selected="false">Recent Sales</button>
+        </div>
+        <div class="live-market__body">
+          <div class="scroll-row" id="recentlyListed" data-lm-panel="listed">
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+          </div>
+          <div class="scroll-row" id="priceDrops" data-lm-panel="drops" style="display:none;">
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+          </div>
+          <div class="scroll-row" id="recentSales" data-lm-panel="sales" style="display:none;">
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+            <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
+          </div>
+        </div>
+        <div class="live-market__footer">
+          <a href="./explore.html?tab=listings" class="live-market__see-all" id="lmSeeAll">See all listings →</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
     <!-- Categories -->
     <section class="section">
       <div class="section__header">
-        <h2 class="section__title">Categories</h2>
+        <h2 class="section__title">Browse by category</h2>
         <a href="./explore.html" class="section__link">View all →</a>
       </div>
+      <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-5); max-width:60ch;">Fixed supply. Every category is a collector tier.</p>
       <div class="category-grid" id="categoryGrid">
-        <!-- populated by JS -->
-      </div>
-    </section>
-
-    <div class="divider"></div>
-
-    <!-- Recently Listed -->
-    <section class="section" style="padding-bottom:var(--space-8);">
-      <div class="section__header">
-        <h2 class="section__title">
-          <span class="section-label">LIVE</span>
-          Recently Listed
-        </h2>
-        <a href="./explore.html?tab=listings" class="section__link">All listings →</a>
-      </div>
-      <div class="scroll-row" id="recentlyListed">
-        <!-- skeleton while loading -->
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-      </div>
-    </section>
-
-    <div class="divider"></div>
-
-    <!-- Price Drops -->
-    <section class="section" style="padding-bottom:var(--space-8);">
-      <div class="section__header">
-        <h2 class="section__title">
-          Price Drops
-        </h2>
-        <a href="./explore.html?tab=listings&sort=recent" class="section__link">See more →</a>
-      </div>
-      <div class="scroll-row" id="priceDrops">
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-        <div class="name-card skeleton" style="height:100px; min-width:180px; flex:0 0 180px;"></div>
-      </div>
-    </section>
-
-    <div class="divider"></div>
-
-    <!-- Recent Sales -->
-    <section class="section">
-      <div class="section__header">
-        <h2 class="section__title">Recent Sales</h2>
-        <a href="./explore.html?tab=market" class="section__link">Full market →</a>
-      </div>
-      <div class="name-grid" id="recentSales">
         <!-- populated by JS -->
       </div>
     </section>
@@ -190,6 +184,34 @@
       <p style="color:var(--color-text-muted); font-size:var(--text-sm); margin-bottom:var(--space-6); max-width:60ch;">Names with active <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">BNRP</a> identity records — avatar, display name, and linked addresses set on-chain.</p>
       <div class="name-grid" id="bnrpNames">
         <!-- populated by JS -->
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- How it works -->
+    <section class="section how-it-works">
+      <div class="section__header">
+        <h2 class="section__title">How it works</h2>
+        <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" class="section__link">Learn about BNRP →</a>
+      </div>
+      <div class="how-it-works__steps">
+        <div class="how-it-works__step">
+          <span class="how-it-works__num">01</span>
+          <div class="how-it-works__title">Inscribed on-chain</div>
+          <p class="how-it-works__desc">Bitcoin names are Ordinal inscriptions. They live permanently on the Bitcoin blockchain, owned by whoever holds the inscription.</p>
+        </div>
+        <div class="how-it-works__step">
+          <span class="how-it-works__num">02</span>
+          <div class="how-it-works__title">Resolved via BNRP</div>
+          <p class="how-it-works__desc">The Bitcoin Name Resolution Protocol maps .btc, .sats, and .x names to wallets, avatars, and identities. No central server, no single company.</p>
+        </div>
+        <div class="how-it-works__step">
+          <span class="how-it-works__num">03</span>
+          <div class="how-it-works__title">Buy, sell, or register</div>
+          <p class="how-it-works__desc">BTC Native is the first open marketplace for Bitcoin names. Trade directly with your wallet. No sign-up, no custody.</p>
+          <a href="./sell.html" class="how-it-works__learn">List a name →</a>
+        </div>
       </div>
     </section>
 
@@ -314,21 +336,145 @@
 </main>
 
 <!-- ── FOOTER ──────────────────────────────────────────────────────── -->
-<footer class="footer">
+<footer class="footer footer--rich">
   <div class="container">
-    <div class="footer__inner">
-      <span class="footer__copy">© 2026 BTC Native · Built on <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" style="color:var(--color-text-faint);">BNRP</a></span>
-      <ul class="footer__links" role="list">
-        <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Protocol</a></li>
-        <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
-        <li><a href="./explore.html">Explore</a></li>
-        <li><a href="./bulk.html">Bulk</a></li>
-      </ul>
+    <div class="footer__grid">
+      <div>
+        <span class="footer__col-label">Protocol</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">BNRP spec</a></li>
+          <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="./about.html">About</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Market</span>
+        <ul class="footer__col-links">
+          <li><a href="./explore.html?tab=listings">Browse names</a></li>
+          <li><a href="./explore.html?tab=market">Market data</a></li>
+          <li><a href="./sell.html">List a name</a></li>
+          <li><a href="./explore.html?tab=listings&sort=price_asc">Floor names</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Tools</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="./bulk.html">Bulk search</a></li>
+          <li><a href="https://bnrp.name/api/resolve?domain=satoshi.btc" target="_blank" rel="noopener noreferrer">API</a></li>
+          <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Open source</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Community</span>
+        <ul class="footer__col-links">
+          <li><a href="https://x.com" target="_blank" rel="noopener noreferrer">Twitter / X</a></li>
+          <li><a href="https://github.com/nlgal" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="https://unisat.io" target="_blank" rel="noopener noreferrer">UniSat</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__brand">
+      <span>© 2026 BTC Native</span>
+      <span>·</span>
+      <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Built on BNRP</a>
+      <span>·</span>
+      <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">Open source</a>
+      <span>·</span>
+      <span class="footer__status-dot live" id="footerStatus">Indexed just now</span>
     </div>
   </div>
 </footer>
 
 <script src="./app.js"></script>
+<script src="./nav-search.js"></script>
+<script>
+// ── Live Market tab switcher
+window.switchLiveMarket = function(tab, btn) {
+  const lmSeeAll = document.getElementById('lmSeeAll');
+  document.querySelectorAll('.live-market__tab').forEach(b => {
+    b.classList.toggle('active', b === btn);
+    b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+  });
+  ['recentlyListed','priceDrops','recentSales'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const map = { listed: 'recentlyListed', drops: 'priceDrops', sales: 'recentSales' };
+  const seeAllMap = {
+    listed: './explore.html?tab=listings',
+    drops:  './explore.html?tab=listings&sort=price_desc',
+    sales:  './explore.html?tab=market',
+  };
+  const targetEl = document.getElementById(map[tab]);
+  if (targetEl) targetEl.style.display = 'flex';
+  if (lmSeeAll) lmSeeAll.href = seeAllMap[tab] || './explore.html?tab=listings';
+};
+</script>
+<script>
+// ── Indexer status dot
+(function() {
+  const el = document.getElementById('footerStatus');
+  if (!el) return;
+  // Lightweight check: fetch latest block from mempool.space
+  fetch('https://mempool.space/api/blocks/tip/height', { signal: AbortSignal.timeout(5000) })
+    .then(r => r.text())
+    .then(height => {
+      el.textContent = 'Block ' + parseInt(height).toLocaleString() + ' indexed';
+      el.className = 'footer__status-dot live';
+    })
+    .catch(() => {
+      el.textContent = 'Status unknown';
+      el.className = 'footer__status-dot stale';
+    });
+})();
+</script>
+<script>
+// ── Stats bar USD prices
+(function() {
+  let btcUsd = null;
+  async function fetchBtcUsd() {
+    try {
+      const r = await fetch('https://mempool.space/api/v1/prices', { signal: AbortSignal.timeout(6000) });
+      const d = await r.json();
+      return d.USD || null;
+    } catch { return null; }
+  }
+  function addUsd(elId, sats) {
+    const el = document.getElementById(elId);
+    if (!el || !sats || !btcUsd) return;
+    const btc = sats / 1e8;
+    const usd = btc * btcUsd;
+    let sub = el.querySelector('.stat-item__usd');
+    if (!sub) { sub = document.createElement('span'); sub.className = 'stat-item__usd'; el.parentNode.appendChild(sub); }
+    sub.textContent = '$' + (usd < 1 ? usd.toFixed(2) : Math.round(usd).toLocaleString());
+  }
+  // Observe stat value changes and attach USD
+  fetchBtcUsd().then(price => {
+    btcUsd = price;
+    // After app.js populates stats, attach USD labels via MutationObserver
+    ['statBtcFloor','statSatsFloor','stat3LFloor'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const obs = new MutationObserver(() => {
+        // Parse BTC value from text
+        const txt = el.textContent.trim();
+        const match = txt.match(/([\d.]+)/);
+        if (match && btcUsd) {
+          const btc = parseFloat(match[1]);
+          let sub = el.parentNode.querySelector('.stat-item__usd');
+          if (!sub) { sub = document.createElement('span'); sub.className = 'stat-item__usd'; el.parentNode.appendChild(sub); }
+          const usd = btc * btcUsd;
+          sub.textContent = '$' + (usd < 1 ? usd.toFixed(2) : Math.round(usd).toLocaleString());
+          obs.disconnect();
+        }
+      });
+      obs.observe(el, { childList: true, characterData: true, subtree: true });
+    });
+  });
+})();
+</script>
 <script>
 // ── BNRP Registration widget ──────────────────────────────────────────────────
 (function() {

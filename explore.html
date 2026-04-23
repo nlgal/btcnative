@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Explore — BTC Native</title>
+  <title>Names — BTC Native</title>
   <meta name="description" content="Browse and filter Bitcoin names by category, TLD, length, rarity, and BNRP status." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,19 +24,17 @@
         BTC Native
       </a>
       <ul class="nav__links" role="list">
-        <li><a href="./index.html" class="nav__link">Discover</a></li>
-        <li><a href="./explore.html" class="nav__link active">Explore</a></li>
+        <li><a href="./explore.html" class="nav__link active">Names</a></li>
         <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
-        <li><a href="./bulk.html" class="nav__link">Bulk</a></li>
         <li><a href="./sell.html" class="nav__link">Sell</a></li>
-        <li><a href="./portfolio.html" class="nav__link">Portfolio</a></li>
+        <li><a href="./portfolio.html" class="nav__link">My Names</a></li>
       </ul>
       <div class="nav__actions">
-        <div class="nav__search-compact" style="position:relative;">
-          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="left:var(--space-3);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input class="search-input" id="navSearch" type="text" placeholder="Search names..." autocomplete="off"
-            style="height:36px; font-size:var(--text-sm); padding-left:36px; border-radius:var(--radius-lg);" />
-          <div class="search-results" id="navResults" style="display:none;"></div>
+        <div class="nav__search" id="navSearchWrap">
+          <svg class="nav__search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="nav__search-input" id="navSearchInput" type="text" placeholder="Search Bitcoin names..." autocomplete="off" spellcheck="false" aria-label="Search Bitcoin names" />
+          <span class="nav__search-kbd">/</span>
+          <div class="nav__search-dropdown" id="navSearchDropdown"></div>
         </div>
         <button class="nav__wallet-btn" id="navWalletBtn" onclick="initNavWallet()" style="display:none;">
           Connect
@@ -57,7 +55,7 @@
 
     <!-- Page header + tab bar -->
     <div style="padding-block:var(--space-6) var(--space-2); border-bottom:1px solid var(--color-divider);">
-      <h1 style="font-family:var(--font-display); font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--color-text); margin-bottom:var(--space-2);">Explore</h1>
+      <h1 style="font-family:var(--font-display); font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--color-text); margin-bottom:var(--space-2);">Names</h1>
       <div style="display:flex; gap:var(--space-1); padding-top:var(--space-3); flex-wrap:wrap;">
         <button class="filter-chip" data-tab="categories" onclick="switchTab('categories')">Categories</button>
         <button class="filter-chip" data-tab="listings" onclick="switchTab('listings')">Listings</button>
@@ -187,8 +185,13 @@
 
       <!-- Results area -->
       <div class="listings-body">
+        <!-- Active filter pills -->
+        <div class="active-filters" id="activeFilters"></div>
         <div class="listings-topbar">
-          <span class="sort-bar__count" id="listingCount">Loading...</span>
+          <div>
+            <div class="listings-count-header" id="listingCountHeader"></div>
+            <div class="listings-count-sub" id="listingCount">Loading...</div>
+          </div>
         </div>
         <div class="name-grid" id="listingsGrid" style="grid-template-columns:repeat(auto-fill, minmax(180px,1fr));"></div>
         <div style="text-align:center; padding:var(--space-8);">
@@ -246,20 +249,53 @@
   </div>
 </section>
 
-<footer class="footer">
+<footer class="footer footer--rich">
   <div class="container">
-    <div class="footer__inner">
-      <span class="footer__copy">© 2026 BTC Native · Built on <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" style="color:var(--color-text-faint);">BNRP</a></span>
-      <ul class="footer__links" role="list">
-        <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Protocol</a></li>
-        <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
-        <li><a href="./bulk.html">Bulk Search</a></li>
-      </ul>
+    <div class="footer__grid">
+      <div>
+        <span class="footer__col-label">Protocol</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">BNRP spec</a></li>
+          <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
+          <li><a href="./index.html#how-it-works">How it works</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Market</span>
+        <ul class="footer__col-links">
+          <li><a href="./explore.html?tab=listings">Browse names</a></li>
+          <li><a href="./explore.html?tab=market">Market data</a></li>
+          <li><a href="./sell.html">List a name</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Tools</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="./bulk.html">Bulk search</a></li>
+          <li><a href="https://bnrp.name/api/resolve?domain=satoshi.btc" target="_blank" rel="noopener noreferrer">API</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Community</span>
+        <ul class="footer__col-links">
+          <li><a href="https://x.com" target="_blank" rel="noopener noreferrer">Twitter / X</a></li>
+          <li><a href="https://github.com/nlgal" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__brand">
+      <span>© 2026 BTC Native</span>
+      <span>·</span>
+      <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Built on BNRP</a>
+      <span>·</span>
+      <span class="footer__status-dot live" id="footerStatus">Indexed just now</span>
     </div>
   </div>
 </footer>
 
 <script src="./app.js"></script>
+<script src="./nav-search.js"></script>
 
 <script>
 (function initFloorTicker() {
@@ -365,3 +401,71 @@ async function subscribeFloorAlert() {
 </script>
 </body>
 </html>
+
+<script>
+// ── Active filter pills + prominent count ──────────────────────────────────
+(function() {
+  function renderActiveFilters() {
+    const container = document.getElementById('activeFilters');
+    if (!container) return;
+
+    const pills = [];
+    if (typeof currentTld !== 'undefined' && currentTld !== 'all') {
+      pills.push({ label: currentTld, clear: () => { filterTld('all'); } });
+    }
+    if (typeof currentLen !== 'undefined' && currentLen !== 'all') {
+      pills.push({ label: currentLen + ' chars', clear: () => { filterLen(currentLen); } });
+    }
+    if (typeof currentSpecial !== 'undefined' && currentSpecial) {
+      pills.push({ label: currentSpecial, clear: () => { filterSpecial(currentSpecial); } });
+    }
+    if (typeof currentPriceMin !== 'undefined' && currentPriceMin) {
+      pills.push({ label: 'Min ' + currentPriceMin + ' BTC', clear: () => { currentPriceMin=null; const el=document.getElementById('priceMin'); if(el)el.value=''; renderListings(getFilteredNamesMVP?getFilteredNamesMVP():getFilteredNames()); renderActiveFilters(); } });
+    }
+    if (typeof currentPriceMax !== 'undefined' && currentPriceMax) {
+      pills.push({ label: 'Max ' + currentPriceMax + ' BTC', clear: () => { currentPriceMax=null; const el=document.getElementById('priceMax'); if(el)el.value=''; renderListings(getFilteredNamesMVP?getFilteredNamesMVP():getFilteredNames()); renderActiveFilters(); } });
+    }
+
+    if (pills.length === 0) { container.innerHTML = ''; return; }
+
+    container.innerHTML = pills.map((p, i) =>
+      `<button class="active-filter-pill" onclick="window._clearPill(${i})">
+        ${p.label} <span class="active-filter-pill__x">\u00d7</span>
+      </button>`
+    ).join('') + (pills.length >= 2
+      ? `<button class="filter-clear-all" onclick="clearAllFilters();window._updateFilterUI()">Clear all</button>`
+      : '');
+
+    window._clearPill = function(i) {
+      pills[i].clear();
+      renderActiveFilters();
+    };
+  }
+
+  function updateCountHeader() {
+    const sub = document.getElementById('listingCount');
+    const header = document.getElementById('listingCountHeader');
+    if (!header || !sub) return;
+    const text = sub.textContent || '';
+    const match = text.match(/\d+/);
+    if (match) {
+      header.textContent = match[0] + ' listings';
+    }
+  }
+
+  window._updateFilterUI = function() {
+    renderActiveFilters();
+    updateCountHeader();
+  };
+
+  // Hook into render cycle: after app.js updates listingCount, update our UI
+  const countEl = document.getElementById('listingCount');
+  if (countEl) {
+    const obs = new MutationObserver(() => {
+      updateCountHeader();
+      renderActiveFilters();
+    });
+    obs.observe(countEl, { childList: true, characterData: true, subtree: true });
+  }
+})();
+</script>

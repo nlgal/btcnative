@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Portfolio — BTC Native</title>
+  <title>My Names — BTC Native</title>
   <meta name="description" content="View all Bitcoin names owned by a BTC address." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -411,19 +411,17 @@
         BTC Native
       </a>
       <ul class="nav__links" role="list">
-        <li><a href="./index.html" class="nav__link">Discover</a></li>
-        <li><a href="./explore.html" class="nav__link">Explore</a></li>
+        <li><a href="./explore.html" class="nav__link">Names</a></li>
         <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
-        <li><a href="./bulk.html" class="nav__link">Bulk</a></li>
         <li><a href="./sell.html" class="nav__link">Sell</a></li>
-        <li><a href="./portfolio.html" class="nav__link active">Portfolio</a></li>
+        <li><a href="./portfolio.html" class="nav__link active">My Names</a></li>
       </ul>
       <div class="nav__actions">
-        <div style="position:relative; width:200px;">
-          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="left:var(--space-3);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input class="search-input" id="navSearch" type="text" placeholder="Search names..." autocomplete="off"
-            style="height:36px; font-size:var(--text-sm); padding-left:36px; border-radius:var(--radius-lg);" />
-          <div class="search-results" id="navResults" style="display:none;"></div>
+        <div class="nav__search" id="navSearchWrap">
+          <svg class="nav__search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="nav__search-input" id="navSearchInput" type="text" placeholder="Search Bitcoin names..." autocomplete="off" spellcheck="false" aria-label="Search Bitcoin names" />
+          <span class="nav__search-kbd">/</span>
+          <div class="nav__search-dropdown" id="navSearchDropdown"></div>
         </div>
         <button class="nav__wallet-btn" id="navWalletBtn" onclick="initNavWallet()" style="display:none;">
           Connect
@@ -442,7 +440,7 @@
 <main>
   <div class="port-wrap">
     <div class="port-hero">
-      <h1 style="letter-spacing:-0.03em;">Portfolio</h1>
+      <h1 style="letter-spacing:-0.03em;">My Names</h1>
     </div>
 
     <!-- My Names section (shown when wallet is connected) -->
@@ -534,20 +532,52 @@
   </div>
 </main>
 
-<footer class="footer">
+<footer class="footer footer--rich">
   <div class="container">
-    <div class="footer__inner">
-      <span class="footer__copy">© 2026 BTC Native · Built on <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer" style="color:var(--color-text-faint);">BNRP</a></span>
-      <ul class="footer__links" role="list">
-        <li><a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-        <li><a href="./explore.html">Explore</a></li>
-        <li><a href="./sell.html">Sell</a></li>
-      </ul>
+    <div class="footer__grid">
+      <div>
+        <span class="footer__col-label">Protocol</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">BNRP spec</a></li>
+          <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
+          <li><a href="./index.html#how-it-works">How it works</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Market</span>
+        <ul class="footer__col-links">
+          <li><a href="./explore.html?tab=listings">Browse names</a></li>
+          <li><a href="./explore.html?tab=market">Market data</a></li>
+          <li><a href="./sell.html">List a name</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Tools</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="./bulk.html">Bulk search</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Community</span>
+        <ul class="footer__col-links">
+          <li><a href="https://x.com" target="_blank" rel="noopener noreferrer">Twitter / X</a></li>
+          <li><a href="https://github.com/nlgal" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__brand">
+      <span>© 2026 BTC Native</span>
+      <span>·</span>
+      <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Built on BNRP</a>
+      <span>·</span>
+      <span class="footer__status-dot live" id="footerStatus">Indexed just now</span>
     </div>
   </div>
 </footer>
 
 <script src="./app.js"></script>
+<script src="./nav-search.js"></script>
 <script>
 // ── Portfolio page ─────────────────────────────────────────────────────────────
 // MARKET_API and UNISAT_API_KEY are defined in app.js
