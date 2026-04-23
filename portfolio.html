@@ -946,37 +946,63 @@ async function loadMyNames(address) {
 
     grid.innerHTML = '';
     names.forEach(item => {
-      // Worker returns { name, inscriptionId, inscriptionNumber }
       const fullName = item.name || '';
       if (!fullName) return;
 
       const card = document.createElement('div');
       card.className = 'name-card';
+      card.id = 'myname-card-' + fullName.replace(/[^a-z0-9]/g, '_');
       card.style.cssText = 'cursor:default; position:relative;';
 
-      const base    = fullName.includes('.') ? fullName.split('.').slice(0, -1).join('.') : fullName;
-      const tld     = fullName.includes('.') ? '.' + fullName.split('.').pop() : '';
-      const rawInit = base[0] ? base[0].toUpperCase() : '?';
-      const initial = /[A-Z]/i.test(rawInit) ? rawInit : '\u20BF';
-
-      // Deterministic gradient avatar (nameGradient defined in app.js, loaded first)
-      const grad = (typeof nameGradient === 'function') ? nameGradient(fullName) : { from: '#f7931a', to: '#c0620a', text: '#000' };
-      const gradStyle = `background:linear-gradient(135deg,${grad.from},${grad.to});color:${grad.text};`;
+      const base = fullName.includes('.') ? fullName.split('.').slice(0, -1).join('.') : fullName;
+      const tld  = fullName.includes('.') ? '.' + fullName.split('.').pop() : '';
 
       card.innerHTML = `
-        <div class="name-card__header">
-        </div>
         <div class="name-card__name">
           <span style="font-family:var(--font-mono); font-weight:700;">${base}</span><span style="color:var(--color-primary); font-family:var(--font-mono);">${tld}</span>
         </div>
-        <div class="name-card__actions" style="display:flex; gap:var(--space-2); margin-top:var(--space-2);">
+        <div class="name-card__listing-badge" style="display:none; font-size:10px; font-family:var(--font-mono); color:#f7931a; background:rgba(247,147,26,0.12); border:1px solid rgba(247,147,26,0.25); border-radius:99px; padding:2px 8px; align-self:flex-start;"></div>
+        <div class="name-card__actions" style="display:flex; gap:var(--space-2); margin-top:auto;">
           <a href="./name.html?name=${encodeURIComponent(fullName)}" class="port-card__btn port-card__btn--outline" style="flex:1; text-align:center; font-size:var(--text-xs); text-decoration:none; display:flex; align-items:center; justify-content:center;">View</a>
-          <a href="./sell.html?name=${encodeURIComponent(fullName)}" class="port-card__btn port-card__btn--primary" style="flex:1; text-align:center; font-size:var(--text-xs); text-decoration:none; display:flex; align-items:center; justify-content:center;">List</a>
+          <a href="./sell.html?name=${encodeURIComponent(fullName)}" class="name-card__sell-btn port-card__btn port-card__btn--primary" style="flex:1; text-align:center; font-size:var(--text-xs); text-decoration:none; display:flex; align-items:center; justify-content:center;">List</a>
         </div>
       `;
 
       grid.appendChild(card);
     });
+
+    // Async: check listing status for each name and patch cards
+    (async () => {
+      const BATCH = 6;
+      const allNames = names.map(n => n.name).filter(Boolean);
+      for (let i = 0; i < allNames.length; i += BATCH) {
+        await Promise.allSettled(allNames.slice(i, i + BATCH).map(async (fullName) => {
+          try {
+            const r = await fetch(`${MARKET_API}/api/listing?name=${encodeURIComponent(fullName)}`, {
+              signal: AbortSignal.timeout(8000),
+            });
+            const d = await r.json();
+            if (!d.ok || !d.listed) return;
+            const cardEl = document.getElementById('myname-card-' + fullName.replace(/[^a-z0-9]/g, '_'));
+            if (!cardEl) return;
+            // Show listed badge with price
+            const badge = cardEl.querySelector('.name-card__listing-badge');
+            const sellBtn = cardEl.querySelector('.name-card__sell-btn');
+            if (badge) {
+              const btcAmt = d.priceSats ? (d.priceSats / 1e8).toFixed(8).replace(/0+$/, '').replace(/\.$/, '') + ' BTC' : 'Listed';
+              badge.textContent = btcAmt;
+              badge.style.display = 'inline-block';
+            }
+            if (sellBtn) {
+              sellBtn.textContent = 'Manage';
+              sellBtn.style.background = 'none';
+              sellBtn.style.border = '1px solid var(--color-border)';
+              sellBtn.style.color = 'var(--color-text-muted)';
+            }
+          } catch { /* silent */ }
+        }));
+      }
+    })();
   } catch (e) {
     grid.innerHTML = `<div style="grid-column:1/-1; color:var(--color-error, #ef4444); font-size:var(--text-sm);">Failed to load names: ${e.message}</div>`;
   }
