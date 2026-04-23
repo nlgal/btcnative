@@ -298,7 +298,7 @@ async function openBuyModal({ name, auctionId, priceSats }) {
     try {
       // ── Step 1: Detect + connect wallet ──────────────────────────────────
       _bmSetStatus(status, 'info', 'Detecting wallet...');
-      stepEl.textContent = 'Step 1 of 5';
+      stepEl.textContent = 'Step 1 of 4';
       const wallet = _bmDetectWallet();
       if (!wallet) {
         _bmSetStatus(status, 'error', 'No wallet detected. Install <a href="https://unisat.io/download" target="_blank" rel="noopener">UniSat</a> and refresh.');
@@ -335,7 +335,7 @@ async function openBuyModal({ name, auctionId, priceSats }) {
       // ── Step 2: Prepare bid (confirm auction still live, get fee rate) ────
       btn.textContent = 'Checking listing...';
       _bmSetStatus(status, 'info', 'Verifying listing is still active...');
-      stepEl.textContent = 'Step 2 of 5';
+      stepEl.textContent = 'Step 2 of 4';
 
       const prepData = await _bmUnisat(
         '/v3/market/domain/auction/create_bid_prepare',
@@ -346,7 +346,7 @@ async function openBuyModal({ name, auctionId, priceSats }) {
       // ── Step 3: Build PSBT via UniSat ─────────────────────────────────────
       btn.textContent = 'Building transaction...';
       _bmSetStatus(status, 'info', 'Building transaction...');
-      stepEl.textContent = 'Step 3 of 5';
+      stepEl.textContent = 'Step 3 of 4';
 
       const bidData = await _bmUnisat(
         '/v3/market/domain/auction/create_bid',
@@ -375,59 +375,17 @@ async function openBuyModal({ name, auctionId, priceSats }) {
         });
       }
 
-      // ── Step 4: Worker injects 1% fee output into PSBT ───────────────────
-      btn.textContent = 'Injecting fee output...';
-      _bmSetStatus(status, 'info', 'Adding platform fee output...');
-      stepEl.textContent = 'Step 4 of 5';
-
-      // psbtBid from UniSat is hex — convert to base64 for the worker
-      function hexToBase64(hex) {
-        const bytes = new Uint8Array(hex.match(/.{1,2}/g).map(b => parseInt(b, 16)));
-        let bin = '';
-        for (const b of bytes) bin += String.fromCharCode(b);
-        return btoa(bin);
-      }
-      function base64ToHex(b64) {
-        const bin = atob(b64);
-        let hex = '';
-        for (let i = 0; i < bin.length; i++) {
-          hex += bin.charCodeAt(i).toString(16).padStart(2, '0');
-        }
-        return hex;
-      }
-
-      const psbtBase64 = hexToBase64(psbtBid);
-
-      const injectRes = await fetch(`${MARKET_API_BM}/api/psbt/prepare`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          auctionId,
-          buyerAddress,
-          priceSats,
-          feeRate,
-          psbtBase64, // pass the raw PSBT so worker doesn't need to re-fetch
-        }),
-        signal: AbortSignal.timeout(15000),
-      });
-      const injectData = await injectRes.json();
-
-      let psbtToSign;
-      if (injectData.ok && injectData.psbtBase64) {
-        // Fee injected — convert back to hex for wallet signing
-        psbtToSign = base64ToHex(injectData.psbtBase64);
-      } else {
-        // Worker unavailable or injection failed — fall back to original PSBT
-        // Fee collection skipped, but buy still works
-        console.warn('Fee injection failed, using original PSBT:', injectData.error);
-        psbtToSign = psbtBid;
-      }
+      // ── Step 4: Sign original UniSat PSBT ───────────────────────────────
+      // Fee injection via PSBT modification is skipped — UniSat validates its
+      // own PSBTs and rejects any that have been modified externally.
+      // Platform fee is collected separately via the listing flow.
+      stepEl.textContent = 'Step 4 of 4';
+      const psbtToSign = psbtBid;
 
       // ── Step 5: Buyer signs ───────────────────────────────────────────────
       btn.textContent = 'Sign in wallet...';
       _bmSetStatus(status, 'info', 'Check your wallet — a signature request is waiting.');
-      stepEl.textContent = 'Step 5 of 5';
+      stepEl.textContent = 'Step 4 of 4';
 
       const signedPsbt = await _bmSignPsbt(wallet, psbtToSign, bidSignIndexes || [], buyerPubkey);
 
