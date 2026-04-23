@@ -1550,20 +1550,50 @@ function switchTab(tab) {
 }
 
 let currentTld = 'all', currentLen = 'all', currentSpecial = null;
+
+// Re-fetch listings from API whenever TLD or length filter changes,
+// since UniSat returns paginated results per-TLD (client-side filter alone won't work)
+function _refetchListings() {
+  const el = qs('#listingsGrid');
+  if (!el) { renderListings(getFilteredNames()); return; }
+  // Show skeletons immediately
+  el.innerHTML = Array(8).fill(0).map(() =>
+    `<div class="name-card skeleton" style="height:96px;border-radius:var(--radius-lg);"></div>`
+  ).join('');
+  LIVE_LISTINGS = null; // mark as loading
+  const apiParams = {};
+  if (currentTld && currentTld !== 'all') apiParams.domainType = currentTld.replace('.', '');
+  if (currentLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
+  if (currentLen === '3')   { apiParams.minLength = 3; apiParams.maxLength = 3; }
+  if (currentLen === '4')   { apiParams.minLength = 4; apiParams.maxLength = 4; }
+  if (currentLen === '5')   { apiParams.minLength = 5; apiParams.maxLength = 5; }
+  if (currentLen === '6+')  { apiParams.minLength = 6; }
+  fetchListings(apiParams).then(result => {
+    if (result && result.list) {
+      LIVE_LISTINGS = result.list;
+    } else {
+      LIVE_LISTINGS = [];
+    }
+    renderListings(getFilteredNames());
+    const countEl = qs('#listingCount');
+    if (countEl && result && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
+  });
+}
+
 function filterTld(tld, btn) {
   currentTld = tld;
   qsa('[data-tld]').forEach(b => b.classList.toggle('active', b.dataset.tld === tld));
-  renderListings(getFilteredNames());
+  _refetchListings();
 }
 function filterLen(len, btn) {
   if (currentLen === len) { currentLen = 'all'; btn.classList.remove('active'); }
   else { currentLen = len; qsa('[data-len]').forEach(b => b.classList.toggle('active', b.dataset.len === len)); }
-  renderListings(getFilteredNames());
+  _refetchListings();
 }
 function filterSpecial(special, btn) {
   if (currentSpecial === special) { currentSpecial = null; btn.classList.remove('active'); }
   else { currentSpecial = special; qsa('[data-special]').forEach(b => b.classList.toggle('active', b.dataset.special === special)); }
-  renderListings(getFilteredNames());
+  renderListings(getFilteredNames()); // special is client-side only, no re-fetch needed
 }
 function sortNames(key, btn) {
   qsa('.filter-chip:not([data-tld]):not([data-len]):not([data-special]):not([data-tab])').forEach(b => b.classList.remove('active'));
@@ -2098,7 +2128,7 @@ function clearAllFilters() {
   const maxEl = document.getElementById('priceMax');
   if (minEl) minEl.value = '';
   if (maxEl) maxEl.value = '';
-  renderListings(getFilteredNamesMVP());
+  _refetchListingsMVP();
 }
 
 // Override sortNames to use new key scheme
@@ -2111,6 +2141,29 @@ function sortNames(key, btn) {
   renderListings(getFilteredNamesMVP());
 }
 
+// Re-fetch for MVP variant when TLD or length filter changes
+function _refetchListingsMVP() {
+  const gridEl = qs('#listingsGrid');
+  if (!gridEl) { renderListings(getFilteredNamesMVP()); return; }
+  gridEl.innerHTML = Array(8).fill(0).map(() =>
+    `<div class="name-card skeleton" style="height:96px;border-radius:var(--radius-lg);"></div>`
+  ).join('');
+  LIVE_LISTINGS = null;
+  const apiParams = {};
+  if (currentTld && currentTld !== 'all') apiParams.domainType = currentTld.replace('.', '');
+  if (currentLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
+  if (currentLen === '3')   { apiParams.minLength = 3; apiParams.maxLength = 3; }
+  if (currentLen === '4')   { apiParams.minLength = 4; apiParams.maxLength = 4; }
+  if (currentLen === '5')   { apiParams.minLength = 5; apiParams.maxLength = 5; }
+  if (currentLen === '6+')  { apiParams.minLength = 6; }
+  fetchListings(apiParams).then(result => {
+    LIVE_LISTINGS = (result && result.list) ? result.list : [];
+    renderListings(getFilteredNamesMVP());
+    const countEl = qs('#listingCount');
+    if (countEl && result && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
+  });
+}
+
 // Override filterLen to support 6+
 function filterLen(len, btn) {
   if (currentLen === len) {
@@ -2120,14 +2173,14 @@ function filterLen(len, btn) {
     currentLen = len;
     document.querySelectorAll('[data-len]').forEach(b => b.classList.toggle('active', b.dataset.len === len));
   }
-  renderListings(getFilteredNamesMVP());
+  _refetchListingsMVP();
 }
 
 // Override filterTld
 function filterTld(tld, btn) {
   currentTld = tld;
   document.querySelectorAll('[data-tld]').forEach(b => b.classList.toggle('active', b.dataset.tld === tld));
-  renderListings(getFilteredNamesMVP());
+  _refetchListingsMVP();
 }
 
 // Override filterSpecial
@@ -2139,7 +2192,7 @@ function filterSpecial(special, btn) {
     currentSpecial = special;
     document.querySelectorAll('[data-special]').forEach(b => b.classList.toggle('active', b.dataset.special === special));
   }
-  renderListings(getFilteredNamesMVP());
+  renderListings(getFilteredNamesMVP()); // special is client-side only
 }
 
 function getFilteredNamesMVP() {
