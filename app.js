@@ -3505,13 +3505,53 @@ async function initNavWallet() {
   }
 }
 
-function setNavWalletConnected(address) {
+async function setNavWalletConnected(address) {
   const btn = document.getElementById('navWalletBtn');
   if (!btn) return;
   btn.dataset.addr = address;
-  btn.textContent = address.slice(0, 6) + '...' + address.slice(-4);
-  btn.classList.add('nav__wallet-btn--connected');
+  const shortAddr = address.slice(0, 6) + '...' + address.slice(-4);
   btn.title = address;
+
+  // Immediately show truncated address while resolving
+  btn.innerHTML = `<span class="nav__wallet-name">${shortAddr}</span>`;
+  btn.classList.add('nav__wallet-btn--connected');
+
+  // Async identity resolution
+  try {
+    const BNRP = 'https://api.bnrp.name/v1';
+    // Step 1: reverse resolve address → name
+    const revRes = await fetch(`${BNRP}/reverse/${encodeURIComponent(address)}`);
+    if (!revRes.ok) throw new Error('no reverse');
+    const revData = await revRes.json();
+    const name = revData.name;
+    if (!name) throw new Error('no name');
+
+    // Step 2: forward resolve name → profile.avatar
+    let avatarHtml = '';
+    try {
+      const fwdRes = await fetch(`${BNRP}/resolve/${encodeURIComponent(name)}`);
+      if (fwdRes.ok) {
+        const fwdData = await fwdRes.json();
+        const rawAvatar = fwdData?.profile?.avatar || '';
+        const inscriptionId = rawAvatar.startsWith('ord:') ? rawAvatar.slice(4) : rawAvatar;
+        if (inscriptionId) {
+          avatarHtml = `<span class="nav__wallet-avatar"><img src="https://static.unisat.space/content/${inscriptionId}" alt="" onerror="this.style.display='none'"></span>`;
+        }
+      }
+    } catch { /* no avatar — use gradient fallback */ }
+
+    if (!avatarHtml) {
+      avatarHtml = `<span class="nav__wallet-avatar"></span>`;
+    }
+
+    btn.innerHTML = `${avatarHtml}<span class="nav__wallet-name">${name}</span>`;
+    btn.classList.add('nav__wallet-btn--has-identity');
+    btn.title = `${name} (${address})`;
+  } catch {
+    // No name resolved — show gradient avatar + truncated address
+    btn.innerHTML = `<span class="nav__wallet-avatar"></span><span class="nav__wallet-name">${shortAddr}</span>`;
+    btn.classList.add('nav__wallet-btn--has-identity');
+  }
 }
 
 // ── Mobile nav toggle ───────────────────────────────────────────────────────────────────────────────────
