@@ -43,10 +43,13 @@
         <li><a href="./portfolio.html" class="nav__link">Portfolio</a></li>
       </ul>
       <div class="nav__actions">
-        <div style="position:relative; width:200px;">
+        <div class="search-wrap" style="position:relative; width:200px;">
           <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="left:var(--space-3);"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input class="search-input" id="navSearch" type="text" placeholder="Search names..." autocomplete="off"
             style="height:36px; font-size:var(--text-sm); padding-left:36px; border-radius:var(--radius-lg);" />
+          <button class="search-clear" id="navSearchClear" aria-label="Clear search" tabindex="-1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
           <div class="search-results" id="navResults" style="display:none;"></div>
         </div>
         <button class="nav__wallet-btn" id="navWalletBtn" onclick="initNavWallet()" style="display:none;">
@@ -56,6 +59,9 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
       </div>
+      <button class="nav__hamburger" id="navHamburger" aria-label="Menu" onclick="toggleMobileNav()">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </div>
 </nav>
@@ -158,6 +164,9 @@
             </button>
             <button class="btn btn--outline btn--sm" id="watchBtn" onclick="toggleWatch()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </button>
+            <button class="btn btn--outline btn--sm" id="offerBtn" style="display:none;" onclick="openOfferModal()" title="Make an offer">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </button>
           </div>
         </div>

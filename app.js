@@ -920,6 +920,9 @@ async function initBuyBtn(name, inscId) {
       buyBtn.textContent = 'View on UniSat';
       buyBtn.style.background = 'var(--color-surface-offset)';
       buyBtn.style.color = 'var(--color-text-muted)';
+      // Show offer button
+      const offerBtn = qs('#offerBtn');
+      if (offerBtn) offerBtn.style.display = '';
     }
   } catch (e) {
     // Worker unreachable -- silent fallback to UniSat link
@@ -931,6 +934,198 @@ async function initBuyBtn(name, inscId) {
   }
 }
 
+// ── Make an Offer Modal ──────────────────────────────────────────────────────
+function openOfferModal() {
+  const params = new URLSearchParams(location.search);
+  const name = params.get('name') || '';
+  const ownerAddress = window._profileOwnerAddress || '';
+
+  // Inject styles (reuse buy-modal pattern)
+  if (!document.getElementById('bn-offer-modal-styles')) {
+    const style = document.createElement('style');
+    style.id = 'bn-offer-modal-styles';
+    style.textContent = `
+      .bn-offer-backdrop {
+        position: fixed; inset: 0; z-index: 9000;
+        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 16px;
+      }
+      .bn-offer-modal {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 16px;
+        padding: 28px 28px 24px;
+        width: 100%; max-width: 420px;
+        box-shadow: 0 24px 48px rgba(0,0,0,0.18);
+        position: relative;
+      }
+      [data-theme="dark"] .bn-offer-modal { background: #141414; border-color: #2a2a2a; }
+      .bn-offer__close {
+        position: absolute; top: 16px; right: 16px;
+        background: none; border: none; cursor: pointer;
+        color: var(--color-text-muted); font-size: 20px; line-height: 1;
+        padding: 4px 6px; border-radius: 6px;
+      }
+      .bn-offer__close:hover { background: var(--color-surface-offset); }
+      .bn-offer__title {
+        font-family: var(--font-mono);
+        font-size: 1.1rem; font-weight: 700;
+        margin: 0 0 6px;
+        color: var(--color-text);
+      }
+      .bn-offer__sub {
+        font-size: var(--text-sm); color: var(--color-text-muted);
+        margin: 0 0 20px;
+      }
+      .bn-offer__field { margin-bottom: 16px; }
+      .bn-offer__label {
+        display: block;
+        font-size: var(--text-xs); font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.05em;
+        color: var(--color-text-muted);
+        margin-bottom: 6px;
+      }
+      .bn-offer__input {
+        width: 100%; padding: 10px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        background: var(--color-surface-offset);
+        color: var(--color-text);
+        font-family: var(--font-mono);
+        font-size: var(--text-sm);
+        box-sizing: border-box;
+      }
+      [data-theme="dark"] .bn-offer__input { background: #1a1a1a; border-color: #333; }
+      .bn-offer__input:focus { outline: none; border-color: var(--color-primary); }
+      .bn-offer__actions {
+        display: flex; gap: 10px; margin-top: 20px;
+      }
+      .bn-offer__cta {
+        flex: 1; padding: 12px;
+        border: none; border-radius: 10px;
+        background: var(--color-primary); color: #000;
+        font-weight: 700; font-size: var(--text-sm); cursor: pointer;
+        transition: opacity .15s;
+      }
+      .bn-offer__cta:hover { opacity: .88; }
+      .bn-offer__cta--secondary {
+        background: var(--color-surface-offset); color: var(--color-text);
+        border: 1px solid var(--color-border);
+      }
+      .bn-offer__msg {
+        margin-top: 12px; padding: 10px 14px;
+        border-radius: 8px; font-size: var(--text-xs);
+        display: none;
+      }
+      .bn-offer__msg.info { display: block; background: #e8f4fd; color: #1a6fa8; }
+      .bn-offer__msg.success { display: block; background: #e6f9f0; color: #1a7a46; }
+      [data-theme="dark"] .bn-offer__msg.info { background: #0a2030; color: #4aaddf; }
+      [data-theme="dark"] .bn-offer__msg.success { background: #0a2016; color: #4ac97a; }
+      .bn-offer__copy-block {
+        background: var(--color-surface-offset);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 12px;
+        font-size: var(--text-xs);
+        font-family: var(--font-mono);
+        word-break: break-all;
+        margin-top: 12px;
+        display: none;
+        line-height: 1.5;
+      }
+      [data-theme="dark"] .bn-offer__copy-block { background: #1a1a1a; border-color: #333; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'bn-offer-backdrop';
+
+  // Get the TLD-specific UniSat market URL
+  const tldRaw = getTld(name).replace('.', '');
+  const base = getBase(name);
+  const unisatOfferUrl = `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
+
+  backdrop.innerHTML = `
+    <div class="bn-offer-modal" role="dialog" aria-modal="true" aria-label="Make an offer for ${name}">
+      <button class="bn-offer__close" aria-label="Close">&times;</button>
+      <div class="bn-offer__title">Make an offer</div>
+      <div class="bn-offer__sub">${name} is not currently listed. Submit an offer to the owner.</div>
+
+      <div class="bn-offer__field">
+        <label class="bn-offer__label" for="offerAmount">Your offer (BTC)</label>
+        <input class="bn-offer__input" id="offerAmount" type="number" min="0.00001" step="0.0001" placeholder="0.001" />
+      </div>
+      <div class="bn-offer__field">
+        <label class="bn-offer__label" for="offerAddress">Your address (optional \u2014 for owner to respond)</label>
+        <input class="bn-offer__input" id="offerAddress" type="text" placeholder="bc1p..." autocomplete="off" spellcheck="false" />
+      </div>
+
+      <div class="bn-offer__copy-block" id="offerCopyBlock"></div>
+
+      <div class="bn-offer__msg" id="offerMsg"></div>
+
+      <div class="bn-offer__actions">
+        <button class="bn-offer__cta" id="offerSendBtn">Generate Offer</button>
+        <a class="bn-offer__cta bn-offer__cta--secondary" href="${unisatOfferUrl}" target="_blank" rel="noopener noreferrer" style="text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center;">UniSat</a>
+      </div>
+
+      <div style="margin-top:12px; font-size:10px; color:var(--color-text-faint); text-align:center;">
+        ${ownerAddress ? 'Owner: ' + ownerAddress.slice(0,16) + '...' + ownerAddress.slice(-6) : 'Owner address not resolved'}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(backdrop);
+
+  // Close on backdrop click or X
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
+  backdrop.querySelector('.bn-offer__close').onclick = () => backdrop.remove();
+
+  // Generate offer message
+  backdrop.querySelector('#offerSendBtn').onclick = () => {
+    const amount = parseFloat(backdrop.querySelector('#offerAmount').value);
+    const addr = backdrop.querySelector('#offerAddress').value.trim();
+    const msgEl = backdrop.querySelector('#offerMsg');
+    const copyBlock = backdrop.querySelector('#offerCopyBlock');
+
+    if (!amount || amount <= 0) {
+      msgEl.className = 'bn-offer__msg info';
+      msgEl.textContent = 'Please enter an offer amount.';
+      return;
+    }
+
+    const sats = Math.round(amount * 1e8);
+    const offerText = [
+      `Offer for ${name}`,
+      `Amount: ${amount} BTC (${sats.toLocaleString()} sats)`,
+      addr ? `Contact: ${addr}` : '',
+      `Via: btcnative.name`,
+    ].filter(Boolean).join('\n');
+
+    copyBlock.style.display = 'block';
+    copyBlock.innerHTML = offerText.replace(/\n/g, '<br>');
+
+    // Copy to clipboard
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(offerText).then(() => {
+        msgEl.className = 'bn-offer__msg success';
+        msgEl.textContent = 'Offer message copied to clipboard. Send it to the owner via UniSat or on-chain message.';
+      }).catch(() => {
+        msgEl.className = 'bn-offer__msg info';
+        msgEl.textContent = 'Copy the offer text above and send to the owner.';
+      });
+    } else {
+      msgEl.className = 'bn-offer__msg info';
+      msgEl.textContent = 'Copy the offer text above and send to the owner.';
+    }
+  };
+
+  // Focus amount input
+  setTimeout(() => backdrop.querySelector('#offerAmount').focus(), 50);
+}
+
 function showProfileError() {
   const sk = qs('#profileSkeleton');
   if (sk) sk.style.display = 'none';
@@ -938,7 +1133,15 @@ function showProfileError() {
   if (err) err.style.display = 'block';
 }
 
-let watchList = [];
+// ── Watchlist (localStorage-backed) ─────────────────────────────────────────────────────────────────────────────────
+function loadWatchList() {
+  try { return JSON.parse(localStorage.getItem('btcnative_watchlist') || '[]'); } catch { return []; }
+}
+function saveWatchList(list) {
+  try { localStorage.setItem('btcnative_watchlist', JSON.stringify(list)); } catch {}
+}
+let watchList = loadWatchList();
+
 function toggleWatch() {
   const params = new URLSearchParams(location.search);
   const name = params.get('name');
@@ -947,11 +1150,12 @@ function toggleWatch() {
   const isWatching = watchList.includes(name);
   if (isWatching) {
     watchList = watchList.filter(n => n !== name);
-    btn.style.color = '';
+    if (btn) btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
   } else {
     watchList.push(name);
-    btn.style.color = 'var(--color-error)';
+    if (btn) btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="#f7931a" stroke="#f7931a" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
   }
+  saveWatchList(watchList);
 }
 
 // ── Explore page ──────────────────────────────────────────────────────────────
@@ -1291,12 +1495,44 @@ function initSearchInput(input, resultsEl) {
     if (q.length < 2) { resultsEl.style.display = 'none'; return; }
     timer = setTimeout(() => runSearch(q, input, resultsEl), 300);
   });
+
+  // Find adjacent clear button
+  const clearBtn = input.parentElement.querySelector('.search-clear');
+  if (clearBtn) {
+    input.addEventListener('input', () => {
+      clearBtn.classList.toggle('visible', input.value.length > 0);
+    });
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      resultsEl.style.display = 'none';
+      clearBtn.classList.remove('visible');
+      input.focus();
+    });
+  }
+
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      const q = input.value.trim();
-      if (q) navigateToName(q);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const items = Array.from(resultsEl.querySelectorAll('.search-result-item'));
+      if (items.length === 0) return;
+      const focused = resultsEl.querySelector('.search-result-item.focused');
+      let idx = focused ? items.indexOf(focused) : -1;
+      if (e.key === 'ArrowDown') idx = Math.min(idx + 1, items.length - 1);
+      if (e.key === 'ArrowUp')   idx = Math.max(idx - 1, 0);
+      items.forEach(i => i.classList.remove('focused'));
+      items[idx].classList.add('focused');
+      items[idx].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
     }
-    if (e.key === 'Escape') resultsEl.style.display = 'none';
+    if (e.key === 'Enter') {
+      const focused = resultsEl.querySelector('.search-result-item.focused');
+      if (focused) {
+        focused.click();
+      } else {
+        const q2 = input.value.trim();
+        if (q2) navigateToName(q2);
+      }
+    }
+    if (e.key === 'Escape') { resultsEl.style.display = 'none'; clearTimeout(timer); }
   });
   document.addEventListener('click', e => {
     if (!input.contains(e.target) && !resultsEl.contains(e.target)) {
@@ -1310,6 +1546,7 @@ const SEARCH_TLDS = ['.btc', '.sats', '.x', '.ord', '.xbt'];
 
 async function runSearch(q, input, resultsEl) {
   resultsEl.style.display = 'block';
+  resultsEl.innerHTML = `<div style="padding:var(--space-3) var(--space-4); color:var(--color-text-faint); font-size:var(--text-sm);">Searching...</div>`;
 
   // Strip any TLD the user typed so we always work with the base
   const hasTld   = SUPPORTED_TLDS.some(t => q.endsWith(t));
@@ -1389,6 +1626,12 @@ async function runSearch(q, input, resultsEl) {
       }).catch(() => {});
     });
   }
+
+  // Hint footer
+  const hint = document.createElement('div');
+  hint.style.cssText = 'padding:var(--space-2) var(--space-4); font-size:10px; color:var(--color-text-faint); border-top:1px solid var(--color-border); text-align:center; letter-spacing:0.04em;';
+  hint.textContent = 'Enter to search \u00b7 \u2191\u2193 to navigate \u00b7 Esc to close';
+  resultsEl.appendChild(hint);
 }
 
 function showSearchResult(data, name, resultsEl) {
@@ -1589,23 +1832,51 @@ async function fetchAndRenderSaleHistory(name) {
 
   const base = getBase(name);
   const tldRaw = getTld(name).replace('.', '');
+  const fullNameLower = name.toLowerCase();
 
-  // Query UniSat for actions (sales/listings) for this name
+  // UniSat /v3/market/domain/auction/actions is a global feed — "keyword" is NOT
+  // a supported filter field. Fetch a large batch and client-side filter by domain.
   let events = [];
   if (UNISAT_API_KEY) {
-    const data = await unisatPost('/v3/market/domain/auction/actions', {
-      filter: { nftType: 'domain', domainType: tldRaw, keyword: base, event: 'Sold' },
-      start: 0,
-      limit: 10,
-    });
-    if (data && data.list) events = data.list;
+    try {
+      // Fetch sold events
+      const data = await unisatPost('/v3/market/domain/auction/actions', {
+        filter: { nftType: 'domain', domainType: tldRaw, event: 'Sold' },
+        start: 0,
+        limit: 200,
+      });
+      if (data && data.list) {
+        // domain field sometimes has "@" prefix (e.g. "@Store.btc") — strip it
+        events = data.list.filter(ev => {
+          const d = (ev.domain || '').toLowerCase().replace(/^@/, '');
+          return d === fullNameLower || d === base + '.' + tldRaw;
+        });
+      }
+    } catch (e) { /* silent */ }
+
+    try {
+      // Fetch listing events too for a fuller picture
+      const listData = await unisatPost('/v3/market/domain/auction/actions', {
+        filter: { nftType: 'domain', domainType: tldRaw, event: 'Listed' },
+        start: 0,
+        limit: 200,
+      });
+      if (listData && listData.list) {
+        const listEvents = listData.list.filter(ev => {
+          const d = (ev.domain || '').toLowerCase().replace(/^@/, '');
+          return d === fullNameLower || d === base + '.' + tldRaw;
+        }).map(ev => ({ ...ev, _eventType: 'Listed' }));
+        events = [...events, ...listEvents].sort((a, b) => b.timestamp - a.timestamp);
+      }
+    } catch (e) { /* silent */ }
   }
 
-  // Render sparkline if we have sale history
-  if (events.length >= 2) {
+  // Render sparkline from sold events only (price history)
+  const soldEvents = events.filter(ev => !ev._eventType || ev._eventType === 'Sold');
+  if (soldEvents.length >= 2) {
     const wrap = document.getElementById('saleHistoryWrap');
     if (wrap) {
-      const prices = events.map(e => e.price || 0).filter(p => p > 0).reverse(); // oldest first
+      const prices = soldEvents.map(e => e.price || 0).filter(p => p > 0).reverse(); // oldest first
       const sparkHtml = buildSparkline(prices);
       const sparkDiv = document.createElement('div');
       sparkDiv.style.cssText = 'margin-bottom:var(--space-4); padding:var(--space-3); background:var(--color-surface-offset); border-radius:var(--radius-md); border:1px solid var(--color-border);';
@@ -1649,12 +1920,22 @@ async function fetchAndRenderSaleHistory(name) {
   }
 
   events.forEach(ev => {
+    const eventType = ev._eventType || 'Sold';
+    let typeColor;
+    if (eventType === 'Sold') {
+      typeColor = 'color:var(--color-accent, #f7931a);';
+    } else if (eventType === 'Cancel') {
+      typeColor = 'color:var(--color-text-faint); opacity:0.6;';
+    } else {
+      // Listed — normal color
+      typeColor = 'color:var(--color-text);';
+    }
     const div = document.createElement('div');
-    div.className = 'history-event';
+    div.className = 'history-event' + (eventType === 'Listed' ? ' history-event--muted' : '');
     div.innerHTML = `
       <div class="history-event__row">
-        <span class="history-event__type">Sold</span>
-        <span class="history-event__price">${formatSats(ev.price)}</span>
+        <span class="history-event__type" style="${typeColor}">${eventType}</span>
+        ${ev.price ? `<span class="history-event__price">${formatSats(ev.price)}</span>` : ''}
       </div>
       <div class="history-event__meta">${timeAgo(ev.timestamp)} · UniSat</div>
     `;
@@ -2185,6 +2466,7 @@ function renderMinimalProfile(name, data) {
   qs('#profileAvatar').textContent = initial;
 
   const addr = data.address;
+  window._profileOwnerAddress = addr || ''; // store for offer modal
   if (addr) {
     qs('#profileAddress').innerHTML = `<a href="https://mempool.space/address/${addr}" target="_blank" rel="noopener noreferrer" title="${addr}">${shortAddr(addr)}</a>`;
   }
@@ -2374,6 +2656,7 @@ async function initProfilePageMVP() {
   }
 
   const addr = resolvedData.address || resolvedData.owner;
+  window._profileOwnerAddress = addr || ''; // store for offer modal
   if (addr) {
     qs('#profileAddress').innerHTML = `<a href="https://mempool.space/address/${addr}" target="_blank" rel="noopener noreferrer" title="${addr}">${shortAddr(addr)}</a>`;
   }
@@ -2432,6 +2715,12 @@ async function initProfilePageMVP() {
   if (sellBtn) sellBtn.href = `./sell.html?name=${encodeURIComponent(name)}`;
   initBuyBtn(name, inscId);
 
+  // Restore watchlist state
+  const watchBtn = qs('#watchBtn');
+  if (watchBtn && watchList.includes(name)) {
+    watchBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="#f7931a" stroke="#f7931a" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
+  }
+
   // Check if connected wallet owns this name
   checkWalletOwnership(name, inscId, addr).then(isOwner => {
     if (!isOwner) return;
@@ -2486,6 +2775,36 @@ async function initProfilePageMVP() {
 }
 
 // ── Social meta updater ────────────────────────────────────────────────────────
+function generateOgFallbackDataUrl(name, display, score) {
+  const base = getBase(name);
+  const tld  = getTld(name);
+  const initial = (display || base)[0].toUpperCase();
+  const scoreStr = score ? String(score) : '';
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+    <rect width="1200" height="630" fill="#0a0a0a"/>
+    <rect x="0" y="0" width="1200" height="4" fill="#f7931a"/>
+    <!-- Avatar circle -->
+    <circle cx="140" cy="280" r="72" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="2"/>
+    <text x="140" y="298" text-anchor="middle" font-family="monospace" font-size="52" font-weight="700" fill="#f7931a">${initial}</text>
+    <!-- Name -->
+    <text x="248" y="256" font-family="monospace" font-size="64" font-weight="800" fill="#f5f5f5">${base}</text>
+    <text x="${248 + base.length * 38}" y="256" font-family="monospace" font-size="64" font-weight="800" fill="#f7931a">${tld}</text>
+    ${display && display !== name ? `<text x="248" y="312" font-family="sans-serif" font-size="28" fill="#888">${display}</text>` : ''}
+    <!-- Score pill -->
+    ${scoreStr ? `<rect x="248" y="336" width="90" height="32" rx="16" fill="#1e1e1e" stroke="#2a2a2a"/>
+    <text x="293" y="358" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" fill="#f7931a">${scoreStr}</text>` : ''}
+    <!-- Bottom bar -->
+    <rect x="0" y="580" width="1200" height="50" fill="#111"/>
+    <rect x="48" y="592" width="24" height="24" rx="5" fill="#f7931a"/>
+    <text x="48" y="604" font-family="monospace" font-size="13" font-weight="900" fill="#000">B</text>
+    <text x="82" y="606" font-family="sans-serif" font-size="15" font-weight="600" fill="#888">btcnative.name</text>
+    <text x="1152" y="606" text-anchor="end" font-family="monospace" font-size="13" fill="#555">Bitcoin names</text>
+  </svg>`;
+
+  return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
+
 function updateProfileMeta({ name, records, inscId, addr }) {
   const display  = records.display || name;
   const desc     = records.description
@@ -2494,7 +2813,7 @@ function updateProfileMeta({ name, records, inscId, addr }) {
 
   // og:image: use the ordinals.com content URL for the inscription avatar if available,
   // otherwise use the name inscription itself as the image
-  let imageUrl = 'https://btcnative.name/assets/og-default.png';
+  let imageUrl = generateOgFallbackDataUrl(name, records.display, null);
   if (records.avatar && records.avatar.startsWith('ord:')) {
     const avatarId = records.avatar.replace('ord:', '');
     imageUrl = `https://ordinals.com/content/${avatarId}`;
@@ -2671,6 +2990,20 @@ function setNavWalletConnected(address) {
   btn.classList.add('nav__wallet-btn--connected');
   btn.title = address;
 }
+
+// ── Mobile nav toggle ───────────────────────────────────────────────────────────────────────────────────
+function toggleMobileNav() {
+  const nav = document.querySelector('.nav');
+  if (nav) nav.classList.toggle('nav--open');
+}
+// Close mobile nav on link click
+document.addEventListener('click', e => {
+  const link = e.target.closest('.nav__link');
+  if (link) {
+    const nav = document.querySelector('.nav');
+    if (nav) nav.classList.remove('nav--open');
+  }
+});
 
 // Show wallet button if wallet extension is installed
 document.addEventListener('DOMContentLoaded', () => {
