@@ -193,6 +193,105 @@
       </div>
     </section>
 
+    <div class="divider"></div>
+
+    <!-- BNRP Registration -->
+    <section class="section" id="registerSection">
+      <div class="section__header">
+        <h2 class="section__title">Register your name</h2>
+      </div>
+      <p style="color:var(--color-text-muted); font-size:var(--text-sm); margin-bottom:var(--space-6); max-width:60ch;">Set your on-chain identity by inscribing a BNRP record on Bitcoin. No account required — just your name and a Bitcoin wallet.</p>
+
+      <div class="bnrp-reg-card" id="bnrpRegCard">
+
+        <!-- Step 1: Name input -->
+        <div class="bnrp-reg-step" id="regStep1">
+          <label class="bnrp-reg-label">Your Bitcoin name</label>
+          <div style="display:flex; gap:var(--space-2); margin-top:var(--space-2);">
+            <input class="bnrp-reg-input" id="regNameInput" type="text" placeholder="satoshi.btc" autocomplete="off" spellcheck="false" maxlength="64" />
+            <button class="btn btn--primary" id="regNextBtn" onclick="regNext()">Continue</button>
+          </div>
+          <p class="bnrp-reg-hint" id="regNameHint"></p>
+        </div>
+
+        <!-- Step 2: Identity fields -->
+        <div class="bnrp-reg-step" id="regStep2" style="display:none;">
+          <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-5);">
+            <div class="bnrp-reg-avatar" id="regAvatar"></div>
+            <div>
+              <div style="font-weight:700; font-size:var(--text-base);" id="regNameDisplay"></div>
+              <button style="background:none;border:none;color:var(--color-text-faint);font-size:var(--text-xs);cursor:pointer;padding:0;margin-top:2px;" onclick="regReset()">← Change name</button>
+            </div>
+          </div>
+
+          <div class="bnrp-reg-fields">
+            <div class="bnrp-field-row">
+              <label class="bnrp-reg-label">Display name <span class="bnrp-optional">optional</span></label>
+              <input class="bnrp-reg-input" id="regDisplay" type="text" placeholder="Satoshi Nakamoto" maxlength="64" oninput="regPreview()" />
+            </div>
+            <div class="bnrp-field-row">
+              <label class="bnrp-reg-label">Description <span class="bnrp-optional">optional</span></label>
+              <input class="bnrp-reg-input" id="regDesc" type="text" placeholder="Bitcoin creator" maxlength="160" oninput="regPreview()" />
+            </div>
+            <div class="bnrp-field-row">
+              <label class="bnrp-reg-label">Website <span class="bnrp-optional">optional</span></label>
+              <input class="bnrp-reg-input" id="regUrl" type="url" placeholder="https://example.com" maxlength="200" oninput="regPreview()" />
+            </div>
+            <div class="bnrp-field-row">
+              <label class="bnrp-reg-label">X / Twitter <span class="bnrp-optional">optional</span></label>
+              <input class="bnrp-reg-input" id="regTwitter" type="text" placeholder="@handle" maxlength="64" oninput="regPreview()" />
+            </div>
+            <div class="bnrp-field-row">
+              <label class="bnrp-reg-label">Bitcoin address <span class="bnrp-optional">optional</span></label>
+              <input class="bnrp-reg-input" id="regBtc" type="text" placeholder="bc1p..." maxlength="90" spellcheck="false" oninput="regPreview()" />
+            </div>
+            <div class="bnrp-field-row">
+              <label class="bnrp-reg-label">Avatar inscription ID <span class="bnrp-optional">optional</span></label>
+              <input class="bnrp-reg-input" id="regAvId" type="text" placeholder="abc123...i0" maxlength="90" spellcheck="false" oninput="regPreview()" />
+            </div>
+            <div class="bnrp-field-row">
+              <label class="bnrp-reg-label" style="display:flex; align-items:center; gap:var(--space-2);">
+                Bitmap number
+                <span class="bnrp-optional">optional · coming soon</span>
+              </label>
+              <input class="bnrp-reg-input" id="regBitmap" type="text" placeholder="419" maxlength="20" spellcheck="false" disabled
+                style="opacity:0.5; cursor:not-allowed;"
+                title="Bitmap verification will be available once bitmap infrastructure is built out." oninput="regPreview()" />
+              <p style="font-size:var(--text-xs); color:var(--color-text-faint); margin-top:var(--space-1);">Ownership verified against your wallet when bitmap support launches.</p>
+            </div>
+          </div>
+
+          <button class="btn btn--primary" style="margin-top:var(--space-5); width:100%;" onclick="regBuild()">Generate JSON</button>
+        </div>
+
+        <!-- Step 3: JSON output -->
+        <div class="bnrp-reg-step" id="regStep3" style="display:none;">
+          <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-4);">
+            <div class="bnrp-reg-avatar" id="regAvatar3"></div>
+            <div>
+              <div style="font-weight:700;" id="regNameDisplay3"></div>
+              <button style="background:none;border:none;color:var(--color-text-faint);font-size:var(--text-xs);cursor:pointer;padding:0;margin-top:2px;" onclick="regBack()">← Edit fields</button>
+            </div>
+          </div>
+
+          <label class="bnrp-reg-label" style="margin-bottom:var(--space-2); display:block;">Your BNRP record JSON</label>
+          <pre class="bnrp-reg-json" id="regJsonOut"></pre>
+
+          <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin:var(--space-4) 0 var(--space-3);">
+            Inscribe this JSON on Bitcoin with content-type <code style="font-family:var(--font-mono); background:var(--color-surface-offset); padding:1px 5px; border-radius:3px;">application/json</code>. Once confirmed, BNRP resolvers pick it up automatically.
+          </p>
+
+          <div style="display:flex; gap:var(--space-3); flex-wrap:wrap;">
+            <button class="btn btn--primary" id="regCopyBtn" onclick="regCopy()">Copy JSON</button>
+            <a class="btn btn--outline" href="https://unisat.io/inscribe" target="_blank" rel="noopener noreferrer">Inscribe on UniSat</a>
+            <a class="btn btn--outline" href="https://ordinals.com" target="_blank" rel="noopener noreferrer">Inscribe via ord</a>
+          </div>
+          <p class="bnrp-reg-hint" id="regCopyHint" style="margin-top:var(--space-2);"></p>
+        </div>
+
+      </div>
+    </section>
+
   </div>
 </main>
 
@@ -212,5 +311,122 @@
 </footer>
 
 <script src="./app.js"></script>
+<script>
+// ── BNRP Registration widget ──────────────────────────────────────────────────
+(function() {
+  const BTCNAME_TLDS = ['.btc','.sats','.x','.ord','.gm','.xbt','.sat','.unisat','.fb'];
+  let regName = '';
+
+  function normalizeName(raw) {
+    const lower = raw.trim().toLowerCase();
+    if (BTCNAME_TLDS.some(t => lower.endsWith(t))) return lower;
+    return lower + '.btc';  // default TLD
+  }
+
+  function setRegAvatar(elId, name) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const grad = (typeof nameGradient === 'function')
+      ? nameGradient(name)
+      : { from: '#f7931a', to: '#c0620a', text: '#000' };
+    el.style.background = `linear-gradient(135deg,${grad.from},${grad.to})`;
+    el.style.color = grad.text;
+    el.textContent = name[0].toUpperCase();
+  }
+
+  window.regNext = function() {
+    const raw = document.getElementById('regNameInput').value;
+    if (!raw.trim()) {
+      document.getElementById('regNameHint').textContent = 'Enter a name to continue.';
+      return;
+    }
+    regName = normalizeName(raw);
+    document.getElementById('regNameHint').textContent = '';
+    document.getElementById('regNameDisplay').textContent = regName;
+    document.getElementById('regStep1').style.display = 'none';
+    document.getElementById('regStep2').style.display = 'block';
+    setRegAvatar('regAvatar', regName);
+  };
+
+  window.regReset = function() {
+    document.getElementById('regStep2').style.display = 'none';
+    document.getElementById('regStep3').style.display = 'none';
+    document.getElementById('regStep1').style.display = 'block';
+  };
+
+  window.regBack = function() {
+    document.getElementById('regStep3').style.display = 'none';
+    document.getElementById('regStep2').style.display = 'block';
+  };
+
+  window.regPreview = function() {};  // live preview hook (no-op for now)
+
+  window.regBuild = function() {
+    const get = id => (document.getElementById(id)?.value || '').trim();
+    const display = get('regDisplay');
+    const desc    = get('regDesc');
+    const url     = get('regUrl');
+    const twitter = get('regTwitter').replace(/^@/, '');
+    const btc     = get('regBtc');
+    const avId    = get('regAvId');
+    // bitmap disabled for now — reserved field, not yet active
+    // const bitmap = get('regBitmap');
+
+    const records = {};
+    if (display) records.display = display;
+    if (desc)    records.description = desc;
+    if (url)     records.url = url.startsWith('http') ? url : 'https://' + url;
+    if (twitter) records['com.twitter'] = twitter;
+    if (btc)     records.btc = btc;
+    if (avId)    records.avatar = avId.includes(':') ? avId : 'ord:' + avId;
+    // bitmap reserved — will be added when bitmap infrastructure launches:
+    // if (bitmap) records.bitmap = bitmap;
+
+    if (Object.keys(records).length === 0) {
+      alert('Fill in at least one field before generating.');
+      return;
+    }
+
+    const payload = { name: regName, records };
+    const jsonStr = JSON.stringify(payload, null, 2);
+
+    document.getElementById('regJsonOut').textContent = jsonStr;
+    document.getElementById('regNameDisplay3').textContent = regName;
+    setRegAvatar('regAvatar3', regName);
+
+    document.getElementById('regStep2').style.display = 'none';
+    document.getElementById('regStep3').style.display = 'block';
+
+    // Auto-copy to clipboard
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(jsonStr).catch(() => {});
+    }
+  };
+
+  window.regCopy = function() {
+    const json = document.getElementById('regJsonOut').textContent;
+    if (!json) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(json).then(() => {
+        const btn = document.getElementById('regCopyBtn');
+        const hint = document.getElementById('regCopyHint');
+        btn.textContent = 'Copied';
+        hint.textContent = 'JSON copied to clipboard. Paste it into UniSat Inscribe or ord.';
+        setTimeout(() => {
+          btn.textContent = 'Copy JSON';
+          hint.textContent = '';
+        }, 3000);
+      });
+    }
+  };
+
+  // Allow Enter key on name input
+  document.addEventListener('DOMContentLoaded', () => {
+    const inp = document.getElementById('regNameInput');
+    if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') regNext(); });
+  });
+})();
+</script>
+
 </body>
 </html>
