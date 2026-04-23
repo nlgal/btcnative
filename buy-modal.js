@@ -461,7 +461,7 @@ async function openBuyModal({ name, auctionId, priceSats }) {
       const msg = e.message || String(e);
       stepEl.textContent = '';
       if (/reject|cancel|denied|dismiss|user rejected/i.test(msg)) {
-        _bmSetStatus(status, 'info', 'Signature cancelled. Click below to try again.');
+        _bmSetStatus(status, 'info', 'Signature cancelled.');
       } else {
         _bmSetStatus(status, 'error', msg);
       }
