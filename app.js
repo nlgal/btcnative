@@ -302,7 +302,6 @@ function buildNameCard(data) {
   card.href = `./name.html?name=${encodeURIComponent(name)}`;
   card.innerHTML = `
     <div class="name-card__header">
-      <div class="name-card__avatar" data-avatar="${avatarField || ''}" data-initial="${initial}" style="${gradStyle}"></div>
       <div>
         <div class="name-card__name">${base}<span style="color:var(--color-primary);">${tld}</span></div>
         ${displayName ? `<div style="font-size:10px;color:var(--color-text-faint);">${displayName}</div>` : ''}
@@ -321,10 +320,6 @@ function buildNameCard(data) {
       if (usdEl) usdEl.textContent = ' · ' + formatUsd(price, rate);
     });
   }
-
-  // async avatar — if available, overrides gradient
-  const avatarEl = card.querySelector('.name-card__avatar');
-  if (avatarField) initAvatar(avatarEl, avatarField, initial);
 
   // badges — use class selector, not ID, to avoid CSS selector issues with hashes
   const badgesEl = card.querySelector('.name-card__badges');
