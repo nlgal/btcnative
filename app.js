@@ -1601,12 +1601,12 @@ async function initExplorePage() {
   const urlTld     = params.get('tld');
   const urlSpecial = params.get('special');
   if (urlLen)     { currentLen     = urlLen;     const b = qs(`[data-len="${urlLen}"]`);     if (b) b.classList.add('active'); }
-  if (urlTld)     { currentTld     = urlTld;     const b = qs(`[data-tld="${urlTld}"]`);     if (b) b.classList.add('active'); }
+  if (urlTld)     { currentTld     = urlTld.startsWith('.') ? urlTld : '.' + urlTld;     const b = qs(`[data-tld="${currentTld}"]`);     if (b) b.classList.add('active'); }
   if (urlSpecial) { currentSpecial = urlSpecial; const b = qs(`[data-special="${urlSpecial}"]`); if (b) b.classList.add('active'); }
 
   // Build API fetch params from URL filters
   const apiParams = {};
-  if (urlTld)  apiParams.domainType = urlTld.replace('.', ''); // e.g. '.btc' -> 'btc'
+  if (urlTld)  apiParams.domainType = currentTld.replace('.', ''); // e.g. '.btc' -> 'btc'
   if (urlLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
   if (urlLen === '3')   { apiParams.minLength = 3; apiParams.maxLength = 3; }
   if (urlLen === '4')   { apiParams.minLength = 4; apiParams.maxLength = 4; }
@@ -3694,7 +3694,7 @@ async function initExplorePageMVP() {
   const urlSpecial = params.get('special');
   const urlSort    = params.get('sort');
   if (urlLen)     { currentLen     = urlLen;     const b = qs(`[data-len="${urlLen}"]`);         if (b) b.classList.add('active'); }
-  if (urlTld)     { currentTld     = urlTld;     const b = qs(`[data-tld="${urlTld}"]`);         if (b) b.classList.add('active'); }
+  if (urlTld)     { currentTld     = urlTld.startsWith('.') ? urlTld : '.' + urlTld;     const b = qs(`[data-tld="${currentTld}"]`);         if (b) b.classList.add('active'); }
   if (urlSpecial) { currentSpecial = urlSpecial; const b = qs(`[data-special="${urlSpecial}"]`); if (b) b.classList.add('active'); }
   if (urlSort)    { currentSort    = urlSort; }
 
