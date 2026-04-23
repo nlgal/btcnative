@@ -1,46 +1,48 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" aria-label="BTC Native icon">
   <defs>
-    <linearGradient id="g" x1="35" y1="10" x2="80" y2="110" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="55" y1="8" x2="65" y2="112" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#FFB100"/>
       <stop offset="100%" stop-color="#FF8A00"/>
     </linearGradient>
   </defs>
 
-  <!-- Pixel dispersion — upper-left, bold cluster -->
-  <rect x="10" y="4"  width="14" height="14" rx="2.5" fill="url(#g)"/>
-  <rect x="27" y="3"  width="12" height="12" rx="2"   fill="url(#g)"/>
-  <rect x="41" y="7"  width="11" height="11" rx="2"   fill="url(#g)"/>
-  <rect x="6"  y="20" width="11" height="11" rx="2"   fill="url(#g)" opacity="0.85"/>
-  <rect x="20" y="17" width="10" height="10" rx="2"   fill="url(#g)" opacity="0.7"/>
-  <rect x="34" y="14" width="9"  height="9"  rx="1.8" fill="url(#g)" opacity="0.55"/>
-  <rect x="12" y="33" width="8"  height="8"  rx="1.5" fill="url(#g)" opacity="0.42"/>
-  <rect x="25" y="29" width="7"  height="7"  rx="1.4" fill="url(#g)" opacity="0.32"/>
-  <rect x="5"  y="35" width="6"  height="6"  rx="1.2" fill="url(#g)" opacity="0.22"/>
+  <!-- Pixel scatter — large squares at top, dispersing down-left into smaller ones -->
+  <rect x="32" y="6"  width="13" height="13" rx="2.5" fill="url(#g)"/>
+  <rect x="48" y="4"  width="12" height="12" rx="2"   fill="url(#g)"/>
+  <rect x="62" y="7"  width="10" height="10" rx="2"   fill="url(#g)"/>
+  <rect x="23" y="21" width="11" height="11" rx="2"   fill="url(#g)" opacity="0.9"/>
+  <rect x="37" y="19" width="11" height="11" rx="2"   fill="url(#g)" opacity="0.9"/>
+  <rect x="51" y="20" width="9"  height="9"  rx="1.8" fill="url(#g)" opacity="0.75"/>
+  <rect x="15" y="34" width="9"  height="9"  rx="1.8" fill="url(#g)" opacity="0.6"/>
+  <rect x="28" y="32" width="8"  height="8"  rx="1.5" fill="url(#g)" opacity="0.48"/>
+  <rect x="10" y="46" width="7"  height="7"  rx="1.4" fill="url(#g)" opacity="0.32"/>
+  <rect x="21" y="44" width="6"  height="6"  rx="1.2" fill="url(#g)" opacity="0.22"/>
 
-  <!-- Outer orbit arc — nearly full circle, break at top-left -->
-  <path d="M 60 11 A 49 49 0 1 1 17 84" stroke="url(#g)" stroke-width="4" stroke-linecap="round" fill="none"/>
-  <!-- White highlight arc — fills the break at top -->
-  <path d="M 44 13 A 49 49 0 0 1 60 11" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" fill="none"/>
-  <!-- Inner concentric arc — partial sweep at bottom only -->
-  <path d="M 32 92 A 34 34 0 0 0 88 92" stroke="url(#g)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.55"/>
+  <!-- Outer arc — nearly full circle, center (60,62), r=50, break at top-left -->
+  <path d="M 63 12 A 50 50 0 1 1 17 84" stroke="url(#g)" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <!-- White highlight arc at the break -->
+  <path d="M 46 13 A 50 50 0 0 1 63 12" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+  <!-- Inner arc — partial lower sweep, tighter radius -->
+  <path d="M 29 91 A 37 37 0 0 0 91 91" stroke="url(#g)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.5"/>
 
   <!--
-    ₿ — large, fills the circle (center 60,60 r49 → usable x:13–107, y:13–107)
-    Stem left edge x=44, width=10 → x44–54
-    Top tick at y=20, bottom at y=96
-    Upper bump: y20–57, apex at x=88 (stays inside circle)
-    Lower bump: y57–96, apex at x=90
+    ₿ tilted 12° clockwise around center (60,62)
+    All B geometry fits inside circle r=50 centered at (60,62)
+    Max right x before rotation: 84 (safe — at center y=62, circle right edge = 110)
+    After 12° rotation rightward bumps shift slightly right, so keep apex ≤83
   -->
-  <!-- Vertical stem -->
-  <rect x="44" y="20" width="10" height="78" rx="2" fill="url(#g)"/>
-  <!-- Top tick -->
-  <rect x="37" y="20" width="23" height="8" rx="2.5" fill="url(#g)"/>
-  <!-- Bottom tick -->
-  <rect x="37" y="90" width="23" height="8" rx="2.5" fill="url(#g)"/>
-  <!-- Mid tick -->
-  <rect x="37" y="55" width="21" height="7" rx="2" fill="url(#g)"/>
-  <!-- Upper D-bump: apex ~x88, center y=(20+57)/2=38.5 -->
-  <path d="M 50 20 L 68 20 Q 90 20 90 38.5 Q 90 57 68 57 L 50 57 Z" fill="url(#g)"/>
-  <!-- Lower D-bump: slightly wider, apex ~x91, center y=(57+96)/2=76.5 -->
-  <path d="M 50 57 L 69 57 Q 93 57 93 74.5 Q 93 92 69 92 L 50 92 Z" fill="url(#g)"/>
+  <g transform="rotate(12, 60, 62)" fill="url(#g)">
+    <!-- Stem x=54–64, y=25–95 -->
+    <rect x="54" y="25" width="10" height="70" rx="2"/>
+    <!-- Top tick -->
+    <rect x="47" y="25" width="23" height="8" rx="2.5"/>
+    <!-- Bottom tick -->
+    <rect x="47" y="87" width="23" height="8" rx="2.5"/>
+    <!-- Mid tick -->
+    <rect x="47" y="54" width="21" height="7" rx="2"/>
+    <!-- Upper D-bump: apex x=83 -->
+    <path d="M 60 26 L 71 26 Q 85 26 85 41 Q 85 55 71 55 L 60 55 Z"/>
+    <!-- Lower D-bump: apex x=85, slightly taller -->
+    <path d="M 60 55 L 73 55 Q 87 55 87 70 Q 87 86 73 86 L 60 86 Z"/>
+  </g>
 </svg>
