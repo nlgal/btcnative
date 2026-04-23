@@ -1,48 +1,61 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" aria-label="BTC Native icon">
   <defs>
-    <linearGradient id="g" x1="55" y1="8" x2="65" y2="112" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="60" y1="8" x2="60" y2="112" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#FFB100"/>
       <stop offset="100%" stop-color="#FF8A00"/>
     </linearGradient>
   </defs>
 
-  <!-- Pixel scatter — large squares at top, dispersing down-left into smaller ones -->
-  <rect x="32" y="6"  width="13" height="13" rx="2.5" fill="url(#g)"/>
-  <rect x="48" y="4"  width="12" height="12" rx="2"   fill="url(#g)"/>
-  <rect x="62" y="7"  width="10" height="10" rx="2"   fill="url(#g)"/>
-  <rect x="23" y="21" width="11" height="11" rx="2"   fill="url(#g)" opacity="0.9"/>
-  <rect x="37" y="19" width="11" height="11" rx="2"   fill="url(#g)" opacity="0.9"/>
-  <rect x="51" y="20" width="9"  height="9"  rx="1.8" fill="url(#g)" opacity="0.75"/>
-  <rect x="15" y="34" width="9"  height="9"  rx="1.8" fill="url(#g)" opacity="0.6"/>
-  <rect x="28" y="32" width="8"  height="8"  rx="1.5" fill="url(#g)" opacity="0.48"/>
-  <rect x="10" y="46" width="7"  height="7"  rx="1.4" fill="url(#g)" opacity="0.32"/>
-  <rect x="21" y="44" width="6"  height="6"  rx="1.2" fill="url(#g)" opacity="0.22"/>
-
-  <!-- Outer arc — nearly full circle, center (60,62), r=50, break at top-left -->
-  <path d="M 63 12 A 50 50 0 1 1 17 84" stroke="url(#g)" stroke-width="4.5" stroke-linecap="round" fill="none"/>
-  <!-- White highlight arc at the break -->
-  <path d="M 46 13 A 50 50 0 0 1 63 12" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" fill="none"/>
-  <!-- Inner arc — partial lower sweep, tighter radius -->
-  <path d="M 29 91 A 37 37 0 0 0 91 91" stroke="url(#g)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <!--
+    Pixel scatter — upper-left
+    3 loose columns dispersing away from the coin, largest near the coin, shrinking outward
+    Column positions mapped from reference image
+  -->
+  <!-- Col A — rightmost / largest, attached to top of coin -->
+  <rect x="46" y="14" width="11" height="11" rx="2"   fill="url(#g)"/>
+  <rect x="35" y="20" width="10" height="10" rx="2"   fill="url(#g)"/>
+  <!-- Col B — middle -->
+  <rect x="28" y="11" width="9"  height="9"  rx="1.8" fill="url(#g)"/>
+  <rect x="22" y="22" width="8"  height="8"  rx="1.6" fill="url(#g)"/>
+  <rect x="28" y="31" width="7"  height="7"  rx="1.4" fill="url(#g)"/>
+  <!-- Col C — leftmost / smallest -->
+  <rect x="14" y="7"  width="7"  height="7"  rx="1.4" fill="url(#g)"/>
+  <rect x="8"  y="17" width="6"  height="6"  rx="1.2" fill="url(#g)"/>
+  <rect x="14" y="27" width="5"  height="5"  rx="1"   fill="url(#g)"/>
+  <rect x="8"  y="35" width="4"  height="4"  rx="0.8" fill="url(#g)"/>
 
   <!--
-    ₿ tilted 12° clockwise around center (60,62)
-    All B geometry fits inside circle r=50 centered at (60,62)
-    Max right x before rotation: 84 (safe — at center y=62, circle right edge = 110)
-    After 12° rotation rightward bumps shift slightly right, so keep apex ≤83
+    Two concentric arcs — both open at top-left
+    Outer arc: r=49, center=(62,63), thick stroke
+    Inner arc: r=42, center=(62,63), thinner, gap at top-left AND small gap bottom-right
   -->
-  <g transform="rotate(12, 60, 62)" fill="url(#g)">
-    <!-- Stem x=54–64, y=25–95 -->
-    <rect x="54" y="25" width="10" height="70" rx="2"/>
-    <!-- Top tick -->
-    <rect x="47" y="25" width="23" height="8" rx="2.5"/>
-    <!-- Bottom tick -->
-    <rect x="47" y="87" width="23" height="8" rx="2.5"/>
-    <!-- Mid tick -->
-    <rect x="47" y="54" width="21" height="7" rx="2"/>
-    <!-- Upper D-bump: apex x=83 -->
-    <path d="M 60 26 L 71 26 Q 85 26 85 41 Q 85 55 71 55 L 60 55 Z"/>
-    <!-- Lower D-bump: apex x=85, slightly taller -->
-    <path d="M 60 55 L 73 55 Q 87 55 87 70 Q 87 86 73 86 L 60 86 Z"/>
-  </g>
+  <!-- Outer arc — breaks at top-left ~225°→315° (i.e. draws from ~315° clockwise to ~225°) -->
+  <path d="M 62 14 A 49 49 0 1 1 27 90" stroke="url(#g)" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <!-- White highlight at the break -->
+  <path d="M 47 15 A 49 49 0 0 1 62 14" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <!-- Inner arc — slightly inside, broken at top-left and small gap bottom-right -->
+  <path d="M 58 21 A 42 42 0 1 1 30 86" stroke="url(#g)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+
+  <!--
+    ₿ symbol — upright, centered at (62,63)
+    Standard Bitcoin proportions, large to fill circle
+    Stem: x=54–64, y=22–100
+    Upper bump D-curve: y=24–58, right apex ~x=88
+    Lower bump D-curve: y=58–96, right apex ~x=90 (slightly larger)
+    Top tick: y=22–30, protrudes left x=46
+    Bottom tick: y=92–100, protrudes left x=46
+    Mid tick: y=55–62, protrudes left x=46
+  -->
+  <!-- Stem -->
+  <rect x="54" y="22" width="10" height="78" rx="1.5" fill="url(#g)"/>
+  <!-- Top tick (protrudes above upper bump, sticks up through arc) -->
+  <rect x="46" y="22" width="26" height="8"  rx="2" fill="url(#g)"/>
+  <!-- Bottom tick -->
+  <rect x="46" y="91" width="26" height="8"  rx="2" fill="url(#g)"/>
+  <!-- Mid tick -->
+  <rect x="46" y="55" width="24" height="7"  rx="2" fill="url(#g)"/>
+  <!-- Upper D-bump -->
+  <path d="M 60 24 L 72 24 Q 90 24 90 41 Q 90 57 72 57 L 60 57 Z" fill="url(#g)"/>
+  <!-- Lower D-bump (slightly wider/taller) -->
+  <path d="M 60 57 L 74 57 Q 93 57 93 73.5 Q 93 91 74 91 L 60 91 Z" fill="url(#g)"/>
 </svg>
