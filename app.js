@@ -1463,7 +1463,7 @@ async function initExplorePage() {
       ).join('');
     }
     fetchListings(apiParams).then(result => {
-      if (result && result.list && result.list.length > 0) {
+      if (result && result.list) {
         LIVE_LISTINGS = result.list.map(unisatListingToCard);
       }
       renderListings(getFilteredNames());
@@ -1474,7 +1474,7 @@ async function initExplorePage() {
     renderListings(getFilteredNames());
     if (UNISAT_API_KEY) {
       fetchListings(apiParams).then(result => {
-        if (result && result.list && result.list.length > 0) {
+        if (result && result.list) {
           LIVE_LISTINGS = result.list.map(unisatListingToCard);
           renderListings(getFilteredNames());
           const countEl = qs('#listingCount');
@@ -1537,7 +1537,19 @@ function renderListings(names) {
   const countEl = qs('#listingCount');
   if (countEl) countEl.textContent = `${names.length} names`;
   if (names.length === 0) {
-    el.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:var(--space-16) 0; color:var(--color-text-faint); font-size:var(--text-sm);">No names match these filters.</div>`;
+    const isLoaded = LIVE_LISTINGS !== null;
+    const hasFilters = currentTld !== 'all' || currentLen !== 'all' || currentSpecial !== null;
+    if (isLoaded && !hasFilters) {
+      // Market is genuinely empty — show warm CTA
+      el.innerHTML = `<div style="grid-column:1/-1; display:flex; flex-direction:column; align-items:center; text-align:center; padding:var(--space-16) var(--space-8); color:var(--color-text-muted);">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-text-faint); margin-bottom:var(--space-4);" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <h3 style="color:var(--color-text); font-size:var(--text-base); font-weight:600; margin:0 0 var(--space-2);">No listings yet</h3>
+        <p style="max-width:30ch; margin:0 0 var(--space-6); font-size:var(--text-sm);">Be the first to list a Bitcoin name for sale.</p>
+        <a href="sell.html" class="btn btn-primary" style="font-size:var(--text-sm);">List a name &rarr;</a>
+      </div>`;
+    } else {
+      el.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:var(--space-16) 0; color:var(--color-text-faint); font-size:var(--text-sm);">No names match these filters.</div>`;
+    }
     return;
   }
   names.forEach(n => el.appendChild(buildNameCard({ ...n, score: calcScore(n) })));
@@ -1582,8 +1594,8 @@ function unisatListingToCard(item) {
 }
 
 function getFilteredNames() {
-  // Use live listings if available, else fall back to seed
-  const pool = LIVE_LISTINGS || SEED_NAMES;
+  // Use live listings if loaded (even if empty); fall back to seed only if not yet loaded
+  const pool = LIVE_LISTINGS !== null ? LIVE_LISTINGS : SEED_NAMES;
   return pool.filter(n => {
     if (currentTld !== 'all' && getTld(n.name) !== currentTld) return false;
     const base = getBase(n.name);
@@ -2088,7 +2100,7 @@ function filterSpecial(special, btn) {
 }
 
 function getFilteredNamesMVP() {
-  const pool = LIVE_LISTINGS || SEED_NAMES;
+  const pool = LIVE_LISTINGS !== null ? LIVE_LISTINGS : SEED_NAMES;
   let filtered = pool.filter(n => {
     if (currentTld !== 'all' && getTld(n.name) !== currentTld) return false;
     const base = getBase(n.name);
@@ -3473,7 +3485,7 @@ async function initExplorePageMVP() {
       ).join('');
     }
     const result = await fetchListings(apiParams);
-    if (result && result.list && result.list.length > 0) {
+    if (result && result.list) {
       LIVE_LISTINGS = result.list.map(unisatListingToCard);
     }
     renderListings(getFilteredNamesMVP());
@@ -3485,7 +3497,7 @@ async function initExplorePageMVP() {
     renderListings(getFilteredNamesMVP());
     if (UNISAT_API_KEY) {
       fetchListings(apiParams).then(result => {
-        if (result && result.list && result.list.length > 0) {
+        if (result && result.list) {
           LIVE_LISTINGS = result.list.map(unisatListingToCard);
           renderListings(getFilteredNamesMVP());
           const countEl = qs('#listingCount');
