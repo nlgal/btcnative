@@ -213,6 +213,92 @@
 }
 .nav__link:hover { color: var(--color-text); background: var(--color-surface-offset); }
 .nav__link.active { color: var(--color-primary); }
+
+/* ── Nav dropdowns ── */
+.nav__item {
+  position: relative;
+  list-style: none;
+}
+.nav__item:hover .nav__dropdown,
+.nav__item:focus-within .nav__dropdown {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.nav__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  min-width: 200px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.12);
+  padding: var(--space-2);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-6px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 2000;
+}
+/* Invisible bridge so mouse can travel from link to dropdown */
+.nav__dropdown::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+.nav__dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+.nav__dropdown-item:hover {
+  background: var(--color-surface-offset);
+  color: var(--color-text);
+}
+.nav__dropdown-item svg {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+.nav__dropdown-item:hover svg { opacity: 1; }
+.nav__dropdown-divider {
+  height: 1px;
+  background: var(--color-divider);
+  margin: var(--space-1) var(--space-2);
+}
+.nav__dropdown-label {
+  padding: var(--space-1) var(--space-3) var(--space-2);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-faint);
+}
+/* Caret on trigger link */
+.nav__link--has-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.nav__link--has-dropdown .nav__caret {
+  width: 10px;
+  height: 10px;
+  transition: transform 0.15s;
+  opacity: 0.5;
+}
+.nav__item:hover .nav__caret { transform: rotate(180deg); opacity: 1; }
 .nav__actions { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
 .nav__theme-btn {
   display: flex; align-items: center; justify-content: center;
@@ -1016,6 +1102,27 @@
   .nav__links .nav__link { padding: var(--space-3) 0; font-size: var(--text-base); border-bottom: 1px solid var(--color-divider); }
   .nav__links .nav__link:last-child { border-bottom: none; }
   .nav__wallet-btn { display: none !important; }
+  /* Mobile dropdown — show inline below each nav item */
+  .nav__item { flex-direction: column; align-items: flex-start; }
+  .nav__dropdown {
+    position: static;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    padding: 0 0 var(--space-2) var(--space-3);
+    min-width: unset;
+    width: 100%;
+    background: transparent;
+    display: none;
+  }
+  .nav__item.mobile-open .nav__dropdown { display: block; }
+  .nav__dropdown-label { padding: var(--space-1) 0 var(--space-1); font-size: 10px; }
+  .nav__dropdown-item { padding: var(--space-2) var(--space-2); font-size: var(--text-sm); }
+  .nav__caret { margin-left: auto; }
+  .nav__link--has-dropdown { width: 100%; }
 }
 
 /* ── Horizontal scroll rows (Recently Listed / Price Drops) ── */

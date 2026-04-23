@@ -24,11 +24,51 @@
         </svg>
         BTC Native
       </a>
-      <ul class="nav__links" role="list">
-        <li><a href="./explore.html" class="nav__link active">Names</a></li>
-        <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
-        <li><a href="./sell.html" class="nav__link">Sell</a></li>
-        <li><a href="./portfolio.html" class="nav__link">My Names</a></li>
+            <ul class="nav__links" role="list">
+        <li class="nav__item">
+          <a href="./explore.html" class="nav__link nav__link--has-dropdown active">
+            Names<svg class="nav__caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5l3 3 3-3"/></svg>
+          </a>
+          <div class="nav__dropdown">
+            <div class="nav__dropdown-label">Browse</div>
+      <a href="./explore.html" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="5" height="5" rx="0.5"/><rect x="8" y="1" width="5" height="5" rx="0.5"/><rect x="1" y="8" width="5" height="5" rx="0.5"/><rect x="8" y="8" width="5" height="5" rx="0.5"/></svg> Categories</a>
+      <a href="./explore.html?tab=listings" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="3.5" x2="13" y2="3.5"/><line x1="5" y1="7" x2="13" y2="7"/><line x1="5" y1="10.5" x2="13" y2="10.5"/><circle cx="2" cy="3.5" r="0.75" fill="currentColor"/><circle cx="2" cy="7" r="0.75" fill="currentColor"/><circle cx="2" cy="10.5" r="0.75" fill="currentColor"/></svg> Listings</a>
+      <a href="./bulk.html" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg> Bulk Search</a>
+          </div>
+        </li>
+        <li class="nav__item">
+          <a href="./explore.html?tab=market" class="nav__link nav__link--has-dropdown">
+            Market<svg class="nav__caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5l3 3 3-3"/></svg>
+          </a>
+          <div class="nav__dropdown">
+            <div class="nav__dropdown-label">Data</div>
+      <a href="./explore.html?tab=market" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="13" x2="13" y2="13"/><polyline points="3,9 6,5 9,7 12,3"/></svg> Overview</a>
+      <a href="./explore.html?tab=listings&sort=price_asc" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1h5l7 7-5 5L1 6V1z"/><circle cx="3.5" cy="3.5" r="0.75" fill="currentColor"/></svg> Floor Prices</a>
+      <a href="./explore.html?tab=market" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><polyline points="7,4 7,7 9.5,7"/></svg> Recent Sales</a>
+          </div>
+        </li>
+        <li class="nav__item">
+          <a href="./sell.html" class="nav__link nav__link--has-dropdown">
+            Sell<svg class="nav__caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5l3 3 3-3"/></svg>
+          </a>
+          <div class="nav__dropdown">
+            <div class="nav__dropdown-label">Manage</div>
+      <a href="./sell.html" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1v7M4 4l3-3 3 3"/><path d="M2 10v1.5A1.5 1.5 0 003.5 13h7a1.5 1.5 0 001.5-1.5V10"/></svg> List a Name</a>
+      <a href="./portfolio.html" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3.5A1 1 0 012 2.5h3.5l1 1.5H12a1 1 0 011 1v5.5a1 1 0 01-1 1H2a1 1 0 01-1-1V3.5z"/></svg> My Listings</a>
+            <div class="nav__dropdown-divider"></div>
+      <a href="./about.html#how-it-works" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><line x1="7" y1="6" x2="7" y2="10"/><circle cx="7" cy="4" r="0.5" fill="currentColor"/></svg> How It Works</a>
+          </div>
+        </li>
+        <li class="nav__item">
+          <a href="./portfolio.html" class="nav__link nav__link--has-dropdown">
+            My Names<svg class="nav__caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5l3 3 3-3"/></svg>
+          </a>
+          <div class="nav__dropdown">
+            <div class="nav__dropdown-label">Account</div>
+      <a href="./portfolio.html" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3.5A1 1 0 012 2.5h3.5l1 1.5H12a1 1 0 011 1v5.5a1 1 0 01-1 1H2a1 1 0 01-1-1V3.5z"/></svg> My Portfolio</a>
+      <a href="#" class="nav__dropdown-item nav__dropdown-item--wallet"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="12" height="9" rx="1"/><path d="M1 6h12"/><circle cx="10" cy="8.5" r="0.75" fill="currentColor"/></svg> Connect Wallet</a>
+          </div>
+        </li>
       </ul>
       <div class="nav__actions">
         <div class="nav__search" id="navSearchWrap">

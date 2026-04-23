@@ -3504,12 +3504,34 @@ function toggleMobileNav() {
   const nav = document.querySelector('.nav');
   if (nav) nav.classList.toggle('nav--open');
 }
-// Close mobile nav on link click
+// Close mobile nav on link or dropdown item click
 document.addEventListener('click', e => {
-  const link = e.target.closest('.nav__link');
+  const link = e.target.closest('.nav__link, .nav__dropdown-item');
   if (link) {
     const nav = document.querySelector('.nav');
     if (nav) nav.classList.remove('nav--open');
+  }
+});
+// Wallet connect via dropdown item
+document.addEventListener('click', e => {
+  const walletItem = e.target.closest('.nav__dropdown-item--wallet');
+  if (!walletItem) return;
+  e.preventDefault();
+  initNavWallet();
+});
+// Mobile: tap nav trigger to toggle dropdown
+document.addEventListener('click', e => {
+  if (window.innerWidth > 768) return; // desktop uses hover
+  const link = e.target.closest('.nav__link--has-dropdown');
+  if (!link) return;
+  const item = link.closest('.nav__item');
+  if (!item) return;
+  const isOpen = item.classList.contains('mobile-open');
+  // close all others
+  document.querySelectorAll('.nav__item.mobile-open').forEach(el => el.classList.remove('mobile-open'));
+  if (!isOpen) {
+    e.preventDefault();
+    item.classList.add('mobile-open');
   }
 });
 
