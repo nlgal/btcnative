@@ -117,7 +117,7 @@ async function fetchDomainTypes() {
 
 // Returns floor price (sats) for a specific TLD, or null
 async function fetchTldFloor(tldKey) {
-  // Query the listing with lowest price for this domainType
+  // Query the listing with lowest unitPrice for this domainType
   const data = await unisatPost('/v3/market/domain/auction/list', {
     filter: { nftType: 'domain', domainType: tldKey },
     sort:   { unitPrice: 1 },
@@ -125,7 +125,18 @@ async function fetchTldFloor(tldKey) {
     limit:  1,
   });
   if (!data || !data.list || data.list.length === 0) return null;
-  return data.list[0].price || null;
+  return data.list[0].unitPrice || data.list[0].price || null;
+}
+
+// Fetch real floor prices for all known TLDs in parallel
+async function fetchAllTldFloors() {
+  const tldKeys = Object.keys(TLD_META); // btc, sats, x, ord, xbt, gm, unisat, sat
+  const results = await Promise.allSettled(tldKeys.map(k => fetchTldFloor(k)));
+  const floors = {};
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') floors[tldKeys[i]] = r.value;
+  });
+  return floors;
 }
 
 // Returns recent sales array [{ domain, domainType, price, timestamp }]
@@ -1565,17 +1576,17 @@ async function loadMore() {
 
 // TLD metadata for the leaderboard
 const TLD_META = {
-  btc:    { label: '.btc',    color: '#f7931a', browse: './explore.html?tld=btc' },
-  sats:   { label: '.sats',   color: '#9b72f5', browse: './explore.html?tld=sats' },
-  x:      { label: '.x',      color: '#1d9bf0', browse: './explore.html?tld=x' },
-  ord:    { label: '.ord',    color: '#e8622a', browse: './explore.html?tld=ord' },
-  xbt:    { label: '.xbt',    color: '#2dd4bf', browse: './explore.html?tld=xbt' },
-  gm:     { label: '.gm',     color: '#4ade80', browse: './explore.html?tld=gm' },
-  unisat: { label: '.unisat', color: '#f59e0b', browse: './explore.html?tld=unisat' },
-  sat:    { label: '.sat',    color: '#a78bfa', browse: './explore.html?tld=sat' },
+  btc:    { label: '.btc',    color: '#f7931a', browse: './explore.html?tab=listings&tld=btc' },
+  sats:   { label: '.sats',   color: '#9b72f5', browse: './explore.html?tab=listings&tld=sats' },
+  x:      { label: '.x',      color: '#1d9bf0', browse: './explore.html?tab=listings&tld=x' },
+  ord:    { label: '.ord',    color: '#e8622a', browse: './explore.html?tab=listings&tld=ord' },
+  xbt:    { label: '.xbt',    color: '#2dd4bf', browse: './explore.html?tab=listings&tld=xbt' },
+  gm:     { label: '.gm',     color: '#4ade80', browse: './explore.html?tab=listings&tld=gm' },
+  unisat: { label: '.unisat', color: '#f59e0b', browse: './explore.html?tab=listings&tld=unisat' },
+  sat:    { label: '.sat',    color: '#a78bfa', browse: './explore.html?tab=listings&tld=sat' },
 };
 
-function renderTldLeaderboard(domainTypes, btcRate) {
+function renderTldLeaderboard(domainTypes, btcRate, floors = {}) {
   const el = qs('#tldLeaderboard');
   if (!el) return;
 
@@ -1606,7 +1617,8 @@ function renderTldLeaderboard(domainTypes, btcRate) {
 
   tlds.forEach(([key, dt], i) => {
     const meta = TLD_META[key] || { label: '.'+key, color: '#888', browse: '#' };
-    const floor   = dt.curPrice   > 0 ? dt.curPrice   : null;
+    // Use real floor from auction/list (floors map), not curPrice from domain_types (always 0)
+    const floor   = floors[key] > 0 ? floors[key] : null;
     const vol     = dt.btcVolume  > 0 ? dt.btcVolume  : null;
     const pct     = dt.btcVolumePercent;
     const sales   = dt.amountVolume || 0;
@@ -1712,10 +1724,11 @@ async function renderMarketIndexes() {
 
   if (!UNISAT_API_KEY) return;
 
-  const [domainTypes, liveSales, btcRate] = await Promise.all([
+  const [domainTypes, liveSales, btcRate, tldFloors] = await Promise.all([
     fetchDomainTypes(),
     fetchRecentSales(16),
     getBtcUsd(),
+    fetchAllTldFloors(),
   ]);
 
   // Stats strip
@@ -1749,7 +1762,7 @@ async function renderMarketIndexes() {
   }
 
   // Render leaderboard and sales feed
-  if (domainTypes) renderTldLeaderboard(domainTypes, btcRate);
+  if (domainTypes) renderTldLeaderboard(domainTypes, btcRate, tldFloors || {});
   if (liveSales)   renderSalesFeed(liveSales, btcRate);
 }
 
@@ -3369,7 +3382,9 @@ async function initExplorePageMVP() {
     return;
   }
 
-  const tab = params.get('tab') || 'categories';
+  // If a TLD filter is present but no explicit tab param, land on listings not categories
+  const _urlTldPre = params.get('tld');
+  const tab = params.get('tab') || (_urlTldPre ? 'listings' : 'categories');
   switchTab(tab);
 
   // Populate categories
