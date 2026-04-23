@@ -987,41 +987,35 @@ async function loadMyNames(address) {
       grid.appendChild(notice);
     }
 
-    // Async: check listing status for each name and patch cards
+    // Async: fetch all listings by this address in one call, then patch cards
     (async () => {
-      const BATCH = 6;
-      const allNames = validNames.map(n => n.name).filter(Boolean);
-      for (let i = 0; i < allNames.length; i += BATCH) {
-        await Promise.allSettled(allNames.slice(i, i + BATCH).map(async (fullName) => {
-          try {
-            const r = await fetch(`${MARKET_API}/api/listing?name=${encodeURIComponent(fullName)}`, {
-              signal: AbortSignal.timeout(20000),
-            });
-            const d = await r.json();
-            if (!d.ok || !d.listed) return;
-            // Find card by data-name (reliable) or id (fallback)
-            const cardEl = grid.querySelector(`[data-name="${fullName}"]`) ||
-                           document.getElementById('myname-card-' + fullName.replace(/[^a-z0-9]/g, '_'));
-            if (!cardEl) return;
-            // Show listed badge with price
-            const badge = cardEl.querySelector('.name-card__listing-badge');
-            const sellBtn = cardEl.querySelector('.name-card__sell-btn');
-            if (badge) {
-              const btcAmt = d.priceSats
-                ? (d.priceSats / 1e8).toFixed(8).replace(/0+$/, '').replace(/\.$/, '') + ' BTC'
-                : 'Listed';
-              badge.textContent = btcAmt;
-              badge.style.display = 'block';
-            }
-            if (sellBtn) {
-              sellBtn.textContent = 'Manage';
-              sellBtn.style.background = 'none';
-              sellBtn.style.border = '1px solid var(--color-border)';
-              sellBtn.style.color = 'var(--color-text-muted)';
-            }
-          } catch { /* silent */ }
-        }));
-      }
+      try {
+        const r = await fetch(
+          `${MARKET_API}/api/my-listings?address=${encodeURIComponent(address)}`,
+          { signal: AbortSignal.timeout(15000) }
+        );
+        const d = await r.json();
+        if (!d.ok || !Array.isArray(d.listings)) return;
+        d.listings.forEach(listing => {
+          const cardEl = grid.querySelector(`[data-name="${listing.name}"]`);
+          if (!cardEl) return;
+          const badge = cardEl.querySelector('.name-card__listing-badge');
+          const sellBtn = cardEl.querySelector('.name-card__sell-btn');
+          if (badge) {
+            const btcAmt = listing.priceSats
+              ? (listing.priceSats / 1e8).toFixed(8).replace(/0+$/, '').replace(/\.$/, '') + ' BTC'
+              : 'Listed';
+            badge.textContent = btcAmt;
+            badge.style.display = 'block';
+          }
+          if (sellBtn) {
+            sellBtn.textContent = 'Manage';
+            sellBtn.style.background = 'none';
+            sellBtn.style.border = '1px solid var(--color-border)';
+            sellBtn.style.color = 'var(--color-text-muted)';
+          }
+        });
+      } catch { /* silent */ }
     })();
   } catch (e) {
     grid.innerHTML = `<div style="grid-column:1/-1; color:var(--color-error, #ef4444); font-size:var(--text-sm);">Failed to load names: ${e.message}</div>`;
