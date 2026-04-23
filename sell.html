@@ -886,10 +886,15 @@ async function buildAndSignListingPsbt(wallet, inscUtxo, sellerAddress, priceSat
   const psbtB64 = bytesToB64(psbtBytes);
 
   // ── Ask wallet to sign SIGHASH_SINGLE|ANYONECANPAY (0x83 = 131) ──────────
-  // UniSat sign API accepts base64 or hex
+  // UniSat signPsbt always returns base64 — we convert to hex for the worker.
+  function b64ToHex(b64) {
+    const bin = atob(b64);
+    return Array.from(bin).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+  }
+
   let signedPsbtHex;
   if (wallet.type === 'unisat') {
-    const signed = await wallet.api.signPsbt(psbtB64, {
+    const signedB64 = await wallet.api.signPsbt(psbtB64, {
       autoFinalized: false,
       toSignInputs: [{
         index: 0,
@@ -897,14 +902,16 @@ async function buildAndSignListingPsbt(wallet, inscUtxo, sellerAddress, priceSat
         sighashTypes: [131], // SIGHASH_SINGLE | SIGHASH_ANYONECANPAY
       }],
     });
-    signedPsbtHex = signed; // UniSat returns hex
+    // UniSat returns base64 regardless of autoFinalized
+    signedPsbtHex = /^[0-9a-fA-F]+$/.test(signedB64) ? signedB64 : b64ToHex(signedB64);
   } else if (wallet.type === 'xverse') {
     const res = await wallet.api.request('signPsbt', {
       psbt: psbtB64,
       broadcast: false,
       signInputs: { '0': ['SIGHASH_SINGLE_ANYONECANPAY'] },
     });
-    signedPsbtHex = res.result.psbt;
+    const raw = res.result.psbt;
+    signedPsbtHex = /^[0-9a-fA-F]+$/.test(raw) ? raw : b64ToHex(raw);
   } else {
     throw new Error('Unsupported wallet');
   }
