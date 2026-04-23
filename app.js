@@ -3557,38 +3557,53 @@ async function setNavWalletConnected(address) {
   btn.innerHTML = `<span class="nav__wallet-name">${shortAddr}</span>`;
   btn.classList.add('nav__wallet-btn--connected');
 
-  // Async identity resolution
+  // Async identity resolution — both calls get 15s timeouts
+  // (BNRP worker makes multiple upstream calls; cold starts take 8-12s)
   try {
     const BNRP = 'https://api.bnrp.name/v1';
+
     // Step 1: reverse resolve address → name
-    const revRes = await fetch(`${BNRP}/reverse/${encodeURIComponent(address)}`);
-    if (!revRes.ok) throw new Error('no reverse');
-    const revData = await revRes.json();
-    const name = revData.name;
+    const revCtrl = new AbortController();
+    const revTimer = setTimeout(() => revCtrl.abort(), 15000);
+    let revData;
+    try {
+      const revRes = await fetch(`${BNRP}/reverse/${encodeURIComponent(address)}`, { signal: revCtrl.signal });
+      clearTimeout(revTimer);
+      if (!revRes.ok) throw new Error('no reverse');
+      revData = await revRes.json();
+    } finally { clearTimeout(revTimer); }
+    const name = revData?.name;
     if (!name) throw new Error('no name');
 
     // Step 2: forward resolve name → profile.avatar
     let avatarHtml = '';
     try {
-      const fwdRes = await fetch(`${BNRP}/resolve/${encodeURIComponent(name)}`);
-      if (fwdRes.ok) {
-        const fwdData = await fwdRes.json();
-        const rawAvatar = fwdData?.profile?.avatar || '';
-        const inscriptionId = rawAvatar.startsWith('ord:') ? rawAvatar.slice(4) : rawAvatar;
-        if (inscriptionId) {
-          avatarHtml = `<span class="nav__wallet-avatar"><img src="https://static.unisat.space/content/${inscriptionId}" alt="" onerror="this.style.display='none'"></span>`;
-        }
+      const fwdCtrl = new AbortController();
+      const fwdTimer = setTimeout(() => fwdCtrl.abort(), 15000);
+      let fwdData;
+      try {
+        const fwdRes = await fetch(`${BNRP}/resolve/${encodeURIComponent(name)}`, { signal: fwdCtrl.signal });
+        clearTimeout(fwdTimer);
+        if (fwdRes.ok) fwdData = await fwdRes.json();
+      } finally { clearTimeout(fwdTimer); }
+      const rawAvatar = fwdData?.profile?.avatar || '';
+      const inscriptionId = rawAvatar.startsWith('ord:') ? rawAvatar.slice(4) : rawAvatar;
+      if (inscriptionId) {
+        avatarHtml = `<span class="nav__wallet-avatar"><img src="https://static.unisat.space/content/${inscriptionId}" alt="" onerror="this.style.display='none'"></span>`;
       }
-    } catch { /* no avatar — use gradient fallback */ }
+    } catch { /* no avatar — gradient fallback */ }
 
-    if (!avatarHtml) {
-      avatarHtml = `<span class="nav__wallet-avatar"></span>`;
-    }
+    if (!avatarHtml) avatarHtml = `<span class="nav__wallet-avatar"></span>`;
+
+    // Guard: only update if this address is still the active wallet
+    // (user may have switched again while we were resolving)
+    if (btn.dataset.addr !== address) return;
 
     btn.innerHTML = `${avatarHtml}<span class="nav__wallet-name">${name}</span>`;
     btn.classList.add('nav__wallet-btn--has-identity');
     btn.title = `${name} (${address})`;
   } catch {
+    if (btn.dataset.addr !== address) return;
     // No name resolved — show gradient avatar + truncated address
     btn.innerHTML = `<span class="nav__wallet-avatar"></span><span class="nav__wallet-name">${shortAddr}</span>`;
     btn.classList.add('nav__wallet-btn--has-identity');
