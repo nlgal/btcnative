@@ -124,6 +124,9 @@ async function _bmUnisat(path, body) {
     if (msg.toLowerCase().includes('order not exist') || msg.toLowerCase().includes('not exist')) {
       throw new Error('This listing is no longer active. It may have been sold or delisted.');
     }
+    if (msg.toLowerCase().includes('receive address') || msg.toLowerCase().includes('bind first') || msg.toLowerCase().includes('need to bind')) {
+      throw new Error('Your wallet is using a non-Taproot address. In UniSat, tap your address at the top of the extension and switch to Taproot (bc1p).');
+    }
     if (msg.toLowerCase().includes('public key') || msg.toLowerCase().includes('pubkey')) {
       throw new Error('Wallet address mismatch. Make sure your wallet is unlocked and on the correct account.');
     }
@@ -305,6 +308,18 @@ async function openBuyModal({ name, auctionId, priceSats }) {
       _bmSetStatus(status, 'info', `Connecting ${wallet.type === 'unisat' ? 'UniSat' : 'Xverse'}...`);
       const buyerAddress = await _bmGetAddress(wallet);
       wallet._address = buyerAddress;
+
+      // UniSat requires a Taproot (bc1p) address to buy Ordinals.
+      // If the wallet is set to Native Segwit (bc1q) or Legacy, buying will fail.
+      if (wallet.type === 'unisat' && !buyerAddress.startsWith('bc1p')) {
+        _bmSetStatus(status, 'error',
+          'Your UniSat wallet is set to a non-Taproot address type (<code>' + buyerAddress.slice(0,10) + '...</code>).<br><br>' +
+          'To buy Ordinals, switch to <strong>Taproot</strong> in UniSat: open the extension, tap your address at the top, select <strong>Taproot</strong>.');
+        btn.disabled = false;
+        btn.textContent = 'Try again';
+        return;
+      }
+
       const buyerPubkey = await _bmGetPubkey(wallet);
 
       // ── Step 2: Prepare bid (confirm auction still live, get fee rate) ────
