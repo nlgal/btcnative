@@ -174,11 +174,13 @@
     for (const { name, data } of found) {
       const listed = data.status === 'listed' || data.listed;
       const price = listed ? fmtBtc(data.price || data.initPrice) : null;
+      const inscNum = data.inscriptionNumber != null ? data.inscriptionNumber : null;
       const href = `./name.html?name=${encodeURIComponent(name)}`;
       html += `
         <button class="nav__search-result" data-href="${href}" onclick="window.location.href='${href}'">
           <span class="nav__search-result-name">${escHtml(name)}</span>
           <span style="display:flex;align-items:center;gap:6px;">
+            ${inscNum !== null ? `<span style="font-family:var(--font-mono);font-size:10px;color:var(--color-text-faint);">#${escHtml(String(inscNum))}</span>` : ''}
             ${price ? `<span class="nav__search-result-price">${escHtml(price)}</span>` : ''}
             ${listed ? `<span class="nav__search-result-badge">For Sale</span>` : ''}
           </span>

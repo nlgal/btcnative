@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About — BTC Native</title>
+  <meta property="og:title" content="About BTC Native" />
+  <meta property="og:description" content="BTC Native is an open marketplace for Bitcoin names — .btc, .sats, .x, .ord and more — built on the BNRP open protocol." />
+  <meta name="description" content="Learn about BTC Native, the BNRP protocol, how the marketplace works, and our fee structure." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="./base.css" />
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+  <style>
+    .about-hero {
+      padding: var(--space-20) 0 var(--space-12);
+      border-bottom: 1px solid var(--color-divider);
+    }
+    .about-hero__eyebrow {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-primary);
+      margin-bottom: var(--space-3);
+    }
+    .about-hero__title {
+      font-family: var(--font-mono);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 700;
+      color: var(--color-text);
+      line-height: 1.1;
+      margin: 0 0 var(--space-4);
+    }
+    .about-hero__subtitle {
+      font-size: var(--text-lg);
+      color: var(--color-text-muted);
+      max-width: 56ch;
+      line-height: 1.6;
+    }
+    .about-section {
+      padding: var(--space-16) 0;
+      border-bottom: 1px solid var(--color-divider);
+    }
+    .about-section:last-of-type {
+      border-bottom: none;
+    }
+    .about-section__label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-primary);
+      margin-bottom: var(--space-2);
+    }
+    .about-section__title {
+      font-family: var(--font-display);
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      color: var(--color-text);
+      margin: 0 0 var(--space-6);
+    }
+    .about-section__body {
+      font-size: var(--text-base);
+      color: var(--color-text-muted);
+      line-height: 1.75;
+      max-width: 68ch;
+    }
+    .about-section__body p {
+      margin: 0 0 var(--space-4);
+    }
+    .about-section__body p:last-child {
+      margin-bottom: 0;
+    }
+    .about-section__body a {
+      color: var(--color-primary);
+      text-decoration: none;
+    }
+    .about-section__body a:hover {
+      text-decoration: underline;
+    }
+    .about-section__body code {
+      font-family: var(--font-mono);
+      font-size: 0.9em;
+      background: var(--color-surface-offset);
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: var(--color-text);
+    }
+    .how-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: var(--space-6);
+      margin-top: var(--space-8);
+    }
+    .how-step {
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      border-radius: 14px;
+      padding: var(--space-6);
+    }
+    .how-step__num {
+      width: 32px; height: 32px;
+      background: var(--color-primary);
+      color: #000;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      font-weight: 700;
+      margin-bottom: var(--space-3);
+    }
+    .how-step__title {
+      font-family: var(--font-display);
+      font-size: var(--text-base);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+    }
+    .how-step__desc {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      line-height: 1.6;
+    }
+    .fee-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--space-6);
+      font-size: var(--text-sm);
+    }
+    .fee-table th {
+      text-align: left;
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-faint);
+      border-bottom: 1px solid var(--color-divider);
+      font-weight: 600;
+    }
+    .fee-table td {
+      padding: var(--space-3) var(--space-4);
+      color: var(--color-text-muted);
+      border-bottom: 1px solid var(--color-divider);
+      vertical-align: top;
+    }
+    .fee-table tr:last-child td {
+      border-bottom: none;
+    }
+    .fee-table td:first-child {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .fee-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .fee-tag--highlight {
+      background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+      color: var(--color-primary);
+    }
+    .fee-tag--muted {
+      background: var(--color-surface-offset);
+      color: var(--color-text-faint);
+    }
+    .tld-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+    .tld-chip {
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="container">
+    <div class="nav__inner">
+      <a href="./index.html" class="nav__logo">
+        <svg class="nav__logo-mark" viewBox="0 0 28 28" fill="none" aria-label="BTC Native logo">
+          <rect width="28" height="28" rx="6" fill="#f7931a"/>
+          <path d="M8 7h7.5c2.5 0 4 1.2 4 3.2 0 1.4-.8 2.4-2 2.8v.1c1.6.3 2.7 1.4 2.7 3 0 2.3-1.7 3.9-4.5 3.9H8V7zm3 5h4c1 0 1.6-.5 1.6-1.4 0-.8-.6-1.3-1.6-1.3H11v2.7zm0 5.2h4.3c1.1 0 1.8-.6 1.8-1.5 0-.9-.7-1.5-1.8-1.5H11v3z" fill="#000"/>
+        </svg>
+        BTC Native
+      </a>
+      <ul class="nav__links" role="list">
+        <li><a href="./explore.html" class="nav__link">Names</a></li>
+        <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
+        <li><a href="./sell.html" class="nav__link">Sell</a></li>
+        <li><a href="./portfolio.html" class="nav__link">My Names</a></li>
+      </ul>
+      <div class="nav__actions">
+        <div class="nav__search" id="navSearchWrap">
+          <svg class="nav__search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="nav__search-input" id="navSearchInput" type="text" placeholder="Search Bitcoin names..." autocomplete="off" spellcheck="false" aria-label="Search Bitcoin names" />
+          <span class="nav__search-kbd">/</span>
+          <div class="nav__search-dropdown" id="navSearchDropdown"></div>
+        </div>
+        <button class="nav__theme-btn" data-theme-toggle aria-label="Toggle theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+      <button class="nav__hamburger" id="navHamburger" aria-label="Open menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <!-- Hero -->
+  <section class="about-hero">
+    <div class="container">
+      <div class="about-hero__eyebrow">About</div>
+      <h1 class="about-hero__title">Bitcoin names.<br>Open protocol.</h1>
+      <p class="about-hero__subtitle">
+        BTC Native is an open marketplace for Bitcoin names built on the
+        <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">BNRP protocol</a>.
+        No single company controls name resolution. Bitcoin and Ordinals are the root of truth.
+      </p>
+    </div>
+  </section>
+
+  <!-- What is BNRP -->
+  <section class="about-section">
+    <div class="container">
+      <div class="about-section__label">Protocol</div>
+      <h2 class="about-section__title">What is BNRP?</h2>
+      <div class="about-section__body">
+        <p>
+          The <strong>Bitcoin Name Resolution Protocol (BNRP)</strong> is an open standard for resolving
+          Bitcoin names to addresses, identity records, and on-chain data. It treats Bitcoin Ordinals
+          inscriptions as the canonical source of truth for name ownership and records.
+        </p>
+        <p>
+          A BNRP name is an Ordinals inscription with a structured JSON payload. The first inscription
+          wins. Re-inscriptions are invalid and are automatically blocked from buy and sell surfaces on
+          this platform. Ownership follows the UTXO: whoever controls the Bitcoin address holding the
+          inscription controls the name.
+        </p>
+        <p>
+          Supported name extensions: <strong>.btc</strong>, <strong>.sats</strong>, <strong>.x</strong>,
+          <strong>.ord</strong>, <strong>.xbt</strong>, and more. The protocol is open-source and
+          documented at <a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">github.com/nlgal/bnrp-spec</a>.
+          The public resolver is available at <code>https://bnrp.name/api/resolve?domain=satoshi.btc</code>.
+        </p>
+        <div class="tld-chips">
+          <span class="tld-chip">.btc</span>
+          <span class="tld-chip">.sats</span>
+          <span class="tld-chip">.x</span>
+          <span class="tld-chip">.ord</span>
+          <span class="tld-chip">.gm</span>
+          <span class="tld-chip">.xbt</span>
+          <span class="tld-chip">.sat</span>
+          <span class="tld-chip">.unisat</span>
+          <span class="tld-chip">.fb</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How the marketplace works -->
+  <section class="about-section">
+    <div class="container">
+      <div class="about-section__label">Marketplace</div>
+      <h2 class="about-section__title">How it works</h2>
+      <div class="about-section__body">
+        <p>
+          BTC Native uses a non-custodial PSBT marketplace. Sellers sign a partial Bitcoin transaction
+          using <code>SIGHASH_SINGLE|ANYONECANPAY</code> and post it to the platform. Buyers complete
+          the transaction by adding their own inputs and outputs. No third party holds the name at
+          any point.
+        </p>
+        <p>
+          Settlement happens on Bitcoin mainnet. Once the combined transaction broadcasts and confirms,
+          the name inscription moves to the buyer's address automatically, with no additional steps required.
+        </p>
+      </div>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-step__num">1</div>
+          <div class="how-step__title">Seller lists</div>
+          <div class="how-step__desc">
+            Connect your wallet, select the inscription, and set a price. A seller PSBT is signed
+            locally and stored on the platform. Your name stays in your wallet.
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-step__num">2</div>
+          <div class="how-step__title">Buyer purchases</div>
+          <div class="how-step__desc">
+            The buyer fetches the seller PSBT, adds their funding inputs, and signs. The combined
+            transaction is broadcast directly to the Bitcoin network.
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-step__num">3</div>
+          <div class="how-step__title">Settlement on-chain</div>
+          <div class="how-step__desc">
+            On confirmation, the inscription transfers to the buyer's address. Seller receives BTC.
+            No custodian, no escrow, no counterparty risk.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fee schedule -->
+  <section class="about-section">
+    <div class="container">
+      <div class="about-section__label">Fees</div>
+      <h2 class="about-section__title">Fee schedule</h2>
+      <div class="about-section__body">
+        <p>
+          BTC Native charges a single platform fee, added by the buyer at the time of purchase.
+          There is no listing fee and no fee for delisting. The fee address is hardcoded in the
+          open-source buy modal so it is fully auditable.
+        </p>
+      </div>
+      <table class="fee-table">
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Fee</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Listing a name</td>
+            <td><span class="fee-tag fee-tag--muted">FREE</span></td>
+            <td>No fee to list or delist. Change price anytime.</td>
+          </tr>
+          <tr>
+            <td>Buying a name</td>
+            <td><span class="fee-tag fee-tag--highlight">1%</span></td>
+            <td>
+              1% of the sale price, minimum 1,000 sats. Added as a buyer output in the PSBT.
+              Fully visible in transaction before signing.
+            </td>
+          </tr>
+          <tr>
+            <td>Making an offer</td>
+            <td><span class="fee-tag fee-tag--muted">FREE</span></td>
+            <td>Offers are recorded on-platform. No fee, no escrow required.</td>
+          </tr>
+          <tr>
+            <td>Watching a name</td>
+            <td><span class="fee-tag fee-tag--muted">FREE</span></td>
+            <td>Get notified by email when an unlisted name comes to market.</td>
+          </tr>
+          <tr>
+            <td>Bitcoin network fee</td>
+            <td>Variable</td>
+            <td>Standard Bitcoin transaction fee paid to miners. Not collected by BTC Native.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Open source -->
+  <section class="about-section" style="border-bottom: none;">
+    <div class="container">
+      <div class="about-section__label">Open source</div>
+      <h2 class="about-section__title">Built in the open</h2>
+      <div class="about-section__body">
+        <p>
+          The marketplace, the protocol spec, the npm resolution library, and the Cloudflare Worker
+          backend are all public. Pull requests welcome.
+        </p>
+        <p>
+          <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">github.com/nlgal/btcnative</a>
+          &nbsp;·&nbsp;
+          <a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">github.com/nlgal/bnrp-spec</a>
+          &nbsp;·&nbsp;
+          <a href="https://www.npmjs.com/package/bnrp" target="_blank" rel="noopener noreferrer">npm: bnrp</a>
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="footer footer--rich">
+  <div class="container">
+    <div class="footer__grid">
+      <div>
+        <span class="footer__col-label">Protocol</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">BNRP spec</a></li>
+          <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
+          <li><a href="./index.html#how-it-works">How it works</a></li>
+          <li><a href="./about.html">About</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Market</span>
+        <ul class="footer__col-links">
+          <li><a href="./explore.html?tab=listings">Browse names</a></li>
+          <li><a href="./explore.html?tab=market">Market data</a></li>
+          <li><a href="./sell.html">List a name</a></li>
+          <li><a href="./explore.html?tab=listings&sort=price_asc">Floor names</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Tools</span>
+        <ul class="footer__col-links">
+          <li><a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="./bulk.html">Bulk search</a></li>
+          <li><a href="https://bnrp.name/api/resolve?domain=satoshi.btc" target="_blank" rel="noopener noreferrer">API</a></li>
+          <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Open source</a></li>
+        </ul>
+      </div>
+      <div>
+        <span class="footer__col-label">Community</span>
+        <ul class="footer__col-links">
+          <li><a href="https://x.com" target="_blank" rel="noopener noreferrer">Twitter / X</a></li>
+          <li><a href="https://github.com/nlgal" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="https://unisat.io" target="_blank" rel="noopener noreferrer">UniSat</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__brand">
+      <span>© 2026 BTC Native</span>
+      <span>·</span>
+      <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Built on BNRP</a>
+      <span>·</span>
+      <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">Open source</a>
+      <span>·</span>
+      <span class="footer__status-dot live" id="footerStatus">Indexed just now</span>
+    </div>
+  </div>
+</footer>
+
+<script src="./app.js"></script>
+<script src="./nav-search.js"></script>
+</body>
+</html>

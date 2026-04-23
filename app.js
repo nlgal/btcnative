@@ -585,6 +585,29 @@ function buildCategoryCard(cat) {
   return card;
 }
 
+// ── Category floor updater ────────────────────────────────────────────────────────
+// Fills [data-floor-slug] spans with 3 states:
+//   loading  — "\u2014" dash (default from HTML)
+//   listed   — "0.001 BTC  $95" (BTC + USD in small text below)
+//   no-list  — "No listings" in muted style
+async function updateCategoryFloors(domainTypes) {
+  if (!domainTypes) return;
+  const btcRate = await getBtcUsd().catch(() => 95000);
+  const tldToKey = { 'tld-btc': 'btc', 'tld-sats': 'sats', 'tld-x': 'x', 'tld-ord': 'ord' };
+  Object.entries(tldToKey).forEach(([slug, key]) => {
+    const dt = domainTypes[key];
+    const els = qsa(`[data-floor-slug="${slug}"]`);
+    els.forEach(el => {
+      if (dt && dt.curPrice && dt.curPrice > 0) {
+        const usd = formatUsd(dt.curPrice, btcRate);
+        el.innerHTML = `${formatSats(dt.curPrice)}<span style="display:block;font-size:10px;font-weight:400;color:var(--color-text-faint);margin-top:1px;">${usd}</span>`;
+      } else {
+        el.innerHTML = `<span style="font-size:var(--text-xs);font-weight:400;color:var(--color-text-faint);">No listings</span>`;
+      }
+    });
+  });
+}
+
 // ── Demo / seed data (shown while live data loads) ────────────────────────────
 const SEED_NAMES = [
   { name: 'trump.btc',   inscriptionId: 'ac975126b9a6138238bb3a42b1a9c5b9b4da91bca6bacb6539bc34dbed2cf329i0', address: 'bc1pkdqs4ksyha8n2ugxtyywku35pwmv7t60yrru0f860aaf3u5faujq9a6hmc', bnrp: { records: { avatar: 'ord:a859c487d16725cea4c9ccc6d87dda3168e03b388d5e4c9f2acc1ab42dd3d471i0', display: 'Trump', description: 'Protocol architect.', 'com.twitter': 'ordinalpunk72', url: 'https://www.bnrp.name' } } },
@@ -619,21 +642,9 @@ async function initIndex() {
   // Populate stats with loading states
   updateStats();
 
-  // Load live floor prices into category cards if API key set
+  // Load live floor prices into category cards
   if (UNISAT_API_KEY) {
-    fetchDomainTypes().then(domainTypes => {
-      if (!domainTypes) return;
-      // Map TLD slug to UniSat domainType key
-      const tldToKey = { 'tld-btc': 'btc', 'tld-sats': 'sats', 'tld-x': 'x', 'tld-ord': 'ord' };
-      Object.entries(tldToKey).forEach(([slug, key]) => {
-        const dt = domainTypes[key];
-        if (dt && dt.curPrice) {
-          qsa(`[data-floor-slug="${slug}"]`).forEach(el => {
-            el.textContent = formatSats(dt.curPrice);
-          });
-        }
-      });
-    });
+    fetchDomainTypes().then(domainTypes => updateCategoryFloors(domainTypes));
   }
 
   // Try to load live trump.btc for BNRP section
@@ -805,6 +816,30 @@ async function initProfilePage() {
   if (typeof window.renderRarityChips === 'function') {
     window.renderRarityChips(base + tld, window._currentInscriptionNumber, resolvedData);
   }
+
+  // Fetch inscription number from UniSat auction/info for rarity chip accuracy
+  // Fire-and-forget: re-renders chips once data arrives without blocking profile render
+  (async () => {
+    try {
+      const tldRaw = getTld(name).replace('.', '');
+      const baseRaw = getBase(name);
+      const infoRes = await fetch(
+        `${UNISAT_API}/v3/market/btcname/auction/info?domainType=${encodeURIComponent(tldRaw)}&domain=${encodeURIComponent(baseRaw)}`,
+        {
+          headers: { 'Authorization': `Bearer ${UNISAT_API_KEY}` },
+          signal: AbortSignal.timeout(5000),
+        }
+      );
+      const infoJson = await infoRes.json();
+      const inscNum = infoJson?.data?.inscriptionNumber ?? infoJson?.data?.auctionInfo?.inscriptionNumber ?? null;
+      if (inscNum !== null && inscNum !== window._currentInscriptionNumber) {
+        window._currentInscriptionNumber = inscNum;
+        if (typeof window.renderRarityChips === 'function') {
+          window.renderRarityChips(base + tld, inscNum, resolvedData);
+        }
+      }
+    } catch { /* silent fallback — chips already rendered without number */ }
+  })();
 
   if (records.display) qs('#profileDisplayName').textContent = records.display;
   if (records.description) qs('#profileDesc').textContent = records.description;
@@ -986,13 +1021,41 @@ async function initBuyBtn(name, inscId) {
     } else {
       // Not listed
       if (listingPriceEl) listingPriceEl.textContent = 'Not listed';
-      if (listingStatusEl) listingStatusEl.textContent = 'Not currently for sale. Make an offer via UniSat.';
+      if (listingStatusEl) {
+        listingStatusEl.innerHTML = `
+          <span style="color:var(--color-text-muted);font-size:var(--text-xs);">Not currently for sale</span>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button id="watchNameBtn" style="
+              flex:1; padding:9px 12px; border:1px solid var(--color-border);
+              border-radius:8px; background:var(--color-surface-offset);
+              color:var(--color-text); font-size:var(--text-xs); font-weight:600;
+              cursor:pointer; transition:all .15s;
+            ">Watch</button>
+            <button id="makeOfferBtn" style="
+              flex:1; padding:9px 12px; border:none; border-radius:8px;
+              background:var(--color-primary); color:#000;
+              font-size:var(--text-xs); font-weight:700;
+              cursor:pointer; transition:opacity .15s;
+            ">Make Offer</button>
+          </div>
+        `;
+        // Wire buttons after DOM insertion
+        const watchNameBtn = qs('#watchNameBtn');
+        const makeOfferBtn = qs('#makeOfferBtn');
+        if (watchNameBtn) {
+          watchNameBtn.onmouseover = () => { watchNameBtn.style.background = 'var(--color-surface-dynamic)'; };
+          watchNameBtn.onmouseout  = () => { watchNameBtn.style.background = 'var(--color-surface-offset)'; };
+          watchNameBtn.onclick = () => openWatchModal(name);
+        }
+        if (makeOfferBtn) {
+          makeOfferBtn.onmouseover = () => { makeOfferBtn.style.opacity = '.85'; };
+          makeOfferBtn.onmouseout  = () => { makeOfferBtn.style.opacity = '1'; };
+          makeOfferBtn.onclick = () => openOfferModal();
+        }
+      }
       buyBtn.textContent = 'View on UniSat';
       buyBtn.style.background = 'var(--color-surface-offset)';
       buyBtn.style.color = 'var(--color-text-muted)';
-      // Show offer button
-      const offerBtn = qs('#offerBtn');
-      if (offerBtn) offerBtn.style.display = '';
     }
   } catch (e) {
     // Worker unreachable -- silent fallback to UniSat link
@@ -1005,139 +1068,189 @@ async function initBuyBtn(name, inscId) {
 }
 
 // ── Make an Offer Modal ──────────────────────────────────────────────────────
+// ── Shared modal styles ──────────────────────────────────────────────────────
+function _injectOfferStyles() {
+  if (document.getElementById('bn-offer-modal-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'bn-offer-modal-styles';
+  style.textContent = `
+    .bn-offer-backdrop {
+      position: fixed; inset: 0; z-index: 9000;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .bn-offer-modal {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 28px 28px 24px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.18);
+      position: relative;
+    }
+    [data-theme="dark"] .bn-offer-modal { background: #141414; border-color: #2a2a2a; }
+    .bn-offer__close {
+      position: absolute; top: 16px; right: 16px;
+      background: none; border: none; cursor: pointer;
+      color: var(--color-text-muted); font-size: 20px; line-height: 1;
+      padding: 4px 6px; border-radius: 6px;
+    }
+    .bn-offer__close:hover { background: var(--color-surface-offset); }
+    .bn-offer__title {
+      font-family: var(--font-mono);
+      font-size: 1.1rem; font-weight: 700;
+      margin: 0 0 6px;
+      color: var(--color-text);
+    }
+    .bn-offer__sub {
+      font-size: var(--text-sm); color: var(--color-text-muted);
+      margin: 0 0 20px;
+    }
+    .bn-offer__field { margin-bottom: 16px; }
+    .bn-offer__label {
+      display: block;
+      font-size: var(--text-xs); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+      margin-bottom: 6px;
+    }
+    .bn-offer__input {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      background: var(--color-surface-offset);
+      color: var(--color-text);
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      box-sizing: border-box;
+    }
+    [data-theme="dark"] .bn-offer__input { background: #1a1a1a; border-color: #333; }
+    .bn-offer__input:focus { outline: none; border-color: var(--color-primary); }
+    .bn-offer__actions { display: flex; gap: 10px; margin-top: 20px; }
+    .bn-offer__cta {
+      flex: 1; padding: 12px; border: none; border-radius: 10px;
+      background: var(--color-primary); color: #000;
+      font-weight: 700; font-size: var(--text-sm); cursor: pointer;
+      transition: opacity .15s;
+    }
+    .bn-offer__cta:hover { opacity: .88; }
+    .bn-offer__cta--secondary {
+      background: var(--color-surface-offset); color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+    .bn-offer__msg {
+      margin-top: 12px; padding: 10px 14px;
+      border-radius: 8px; font-size: var(--text-xs);
+      display: none;
+    }
+    .bn-offer__msg.info { display: block; background: #e8f4fd; color: #1a6fa8; }
+    .bn-offer__msg.success { display: block; background: #e6f9f0; color: #1a7a46; }
+    [data-theme="dark"] .bn-offer__msg.info { background: #0a2030; color: #4aaddf; }
+    [data-theme="dark"] .bn-offer__msg.success { background: #0a2016; color: #4ac97a; }
+  `;
+  document.head.appendChild(style);
+}
+
+// ── Watch Modal ───────────────────────────────────────────────────────────────────
+function openWatchModal(watchName) {
+  _injectOfferStyles();
+  const backdrop = document.createElement('div');
+  backdrop.className = 'bn-offer-backdrop';
+  backdrop.innerHTML = `
+    <div class="bn-offer-modal" role="dialog" aria-modal="true" aria-label="Watch ${watchName}">
+      <button class="bn-offer__close" aria-label="Close">&times;</button>
+      <div class="bn-offer__title">Watch ${watchName}</div>
+      <div class="bn-offer__sub">Get an email when this name is listed for sale.</div>
+      <div class="bn-offer__field">
+        <label class="bn-offer__label" for="watchEmail">Your email</label>
+        <input class="bn-offer__input" id="watchEmail" type="email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="bn-offer__msg" id="watchMsg"></div>
+      <div class="bn-offer__actions">
+        <button class="bn-offer__cta" id="watchSubmitBtn">Notify me</button>
+      </div>
+      <div style="margin-top:12px; font-size:10px; color:var(--color-text-faint); text-align:center;">
+        We only use this to notify you about this name. No marketing.
+      </div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
+  backdrop.querySelector('.bn-offer__close').onclick = () => backdrop.remove();
+  setTimeout(() => backdrop.querySelector('#watchEmail').focus(), 50);
+
+  backdrop.querySelector('#watchSubmitBtn').onclick = async () => {
+    const email = backdrop.querySelector('#watchEmail').value.trim();
+    const msgEl = backdrop.querySelector('#watchMsg');
+    const btn   = backdrop.querySelector('#watchSubmitBtn');
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      msgEl.className = 'bn-offer__msg info';
+      msgEl.textContent = 'Please enter a valid email address.';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+      const res = await fetch(`${MARKET_API}/api/watch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: watchName, email }),
+        signal: AbortSignal.timeout(6000),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        msgEl.className = 'bn-offer__msg success';
+        msgEl.textContent = data.alreadyWatching
+          ? 'You are already watching this name.'
+          : 'Done. You will be notified when this name is listed.';
+        btn.textContent = 'Saved';
+        setTimeout(() => backdrop.remove(), 2200);
+      } else {
+        throw new Error(data.error || 'Failed to save watch');
+      }
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Notify me';
+      msgEl.className = 'bn-offer__msg info';
+      msgEl.textContent = e.message || 'Could not save. Try again.';
+    }
+  };
+}
+
+// ── Make an Offer Modal ─────────────────────────────────────────────────────────────
 function openOfferModal() {
   const params = new URLSearchParams(location.search);
   const name = params.get('name') || '';
   const ownerAddress = window._profileOwnerAddress || '';
-
-  // Inject styles (reuse buy-modal pattern)
-  if (!document.getElementById('bn-offer-modal-styles')) {
-    const style = document.createElement('style');
-    style.id = 'bn-offer-modal-styles';
-    style.textContent = `
-      .bn-offer-backdrop {
-        position: fixed; inset: 0; z-index: 9000;
-        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-        display: flex; align-items: center; justify-content: center;
-        padding: 16px;
-      }
-      .bn-offer-modal {
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        border-radius: 16px;
-        padding: 28px 28px 24px;
-        width: 100%; max-width: 420px;
-        box-shadow: 0 24px 48px rgba(0,0,0,0.18);
-        position: relative;
-      }
-      [data-theme="dark"] .bn-offer-modal { background: #141414; border-color: #2a2a2a; }
-      .bn-offer__close {
-        position: absolute; top: 16px; right: 16px;
-        background: none; border: none; cursor: pointer;
-        color: var(--color-text-muted); font-size: 20px; line-height: 1;
-        padding: 4px 6px; border-radius: 6px;
-      }
-      .bn-offer__close:hover { background: var(--color-surface-offset); }
-      .bn-offer__title {
-        font-family: var(--font-mono);
-        font-size: 1.1rem; font-weight: 700;
-        margin: 0 0 6px;
-        color: var(--color-text);
-      }
-      .bn-offer__sub {
-        font-size: var(--text-sm); color: var(--color-text-muted);
-        margin: 0 0 20px;
-      }
-      .bn-offer__field { margin-bottom: 16px; }
-      .bn-offer__label {
-        display: block;
-        font-size: var(--text-xs); font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.05em;
-        color: var(--color-text-muted);
-        margin-bottom: 6px;
-      }
-      .bn-offer__input {
-        width: 100%; padding: 10px 12px;
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-        background: var(--color-surface-offset);
-        color: var(--color-text);
-        font-family: var(--font-mono);
-        font-size: var(--text-sm);
-        box-sizing: border-box;
-      }
-      [data-theme="dark"] .bn-offer__input { background: #1a1a1a; border-color: #333; }
-      .bn-offer__input:focus { outline: none; border-color: var(--color-primary); }
-      .bn-offer__actions {
-        display: flex; gap: 10px; margin-top: 20px;
-      }
-      .bn-offer__cta {
-        flex: 1; padding: 12px;
-        border: none; border-radius: 10px;
-        background: var(--color-primary); color: #000;
-        font-weight: 700; font-size: var(--text-sm); cursor: pointer;
-        transition: opacity .15s;
-      }
-      .bn-offer__cta:hover { opacity: .88; }
-      .bn-offer__cta--secondary {
-        background: var(--color-surface-offset); color: var(--color-text);
-        border: 1px solid var(--color-border);
-      }
-      .bn-offer__msg {
-        margin-top: 12px; padding: 10px 14px;
-        border-radius: 8px; font-size: var(--text-xs);
-        display: none;
-      }
-      .bn-offer__msg.info { display: block; background: #e8f4fd; color: #1a6fa8; }
-      .bn-offer__msg.success { display: block; background: #e6f9f0; color: #1a7a46; }
-      [data-theme="dark"] .bn-offer__msg.info { background: #0a2030; color: #4aaddf; }
-      [data-theme="dark"] .bn-offer__msg.success { background: #0a2016; color: #4ac97a; }
-      .bn-offer__copy-block {
-        background: var(--color-surface-offset);
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-        padding: 12px;
-        font-size: var(--text-xs);
-        font-family: var(--font-mono);
-        word-break: break-all;
-        margin-top: 12px;
-        display: none;
-        line-height: 1.5;
-      }
-      [data-theme="dark"] .bn-offer__copy-block { background: #1a1a1a; border-color: #333; }
-    `;
-    document.head.appendChild(style);
-  }
+  _injectOfferStyles();
 
   const backdrop = document.createElement('div');
   backdrop.className = 'bn-offer-backdrop';
 
-  // Get the TLD-specific UniSat market URL
   const tldRaw = getTld(name).replace('.', '');
-  const base = getBase(name);
+  const base   = getBase(name);
   const unisatOfferUrl = `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
 
   backdrop.innerHTML = `
     <div class="bn-offer-modal" role="dialog" aria-modal="true" aria-label="Make an offer for ${name}">
       <button class="bn-offer__close" aria-label="Close">&times;</button>
       <div class="bn-offer__title">Make an offer</div>
-      <div class="bn-offer__sub">${name} is not currently listed. Submit an offer to the owner.</div>
+      <div class="bn-offer__sub">${name} is not listed. Your offer is recorded and visible to the owner.</div>
 
       <div class="bn-offer__field">
         <label class="bn-offer__label" for="offerAmount">Your offer (BTC)</label>
         <input class="bn-offer__input" id="offerAmount" type="number" min="0.00001" step="0.0001" placeholder="0.001" />
       </div>
       <div class="bn-offer__field">
-        <label class="bn-offer__label" for="offerAddress">Your address (optional \u2014 for owner to respond)</label>
+        <label class="bn-offer__label" for="offerAddress">Your Bitcoin address (so owner can respond)</label>
         <input class="bn-offer__input" id="offerAddress" type="text" placeholder="bc1p..." autocomplete="off" spellcheck="false" />
       </div>
-
-      <div class="bn-offer__copy-block" id="offerCopyBlock"></div>
 
       <div class="bn-offer__msg" id="offerMsg"></div>
 
       <div class="bn-offer__actions">
-        <button class="bn-offer__cta" id="offerSendBtn">Generate Offer</button>
+        <button class="bn-offer__cta" id="offerSendBtn">Submit Offer</button>
         <a class="bn-offer__cta bn-offer__cta--secondary" href="${unisatOfferUrl}" target="_blank" rel="noopener noreferrer" style="text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center;">UniSat</a>
       </div>
 
@@ -1148,52 +1261,52 @@ function openOfferModal() {
   `;
 
   document.body.appendChild(backdrop);
-
-  // Close on backdrop click or X
   backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
   backdrop.querySelector('.bn-offer__close').onclick = () => backdrop.remove();
+  setTimeout(() => backdrop.querySelector('#offerAmount').focus(), 50);
 
-  // Generate offer message
-  backdrop.querySelector('#offerSendBtn').onclick = () => {
+  backdrop.querySelector('#offerSendBtn').onclick = async () => {
     const amount = parseFloat(backdrop.querySelector('#offerAmount').value);
-    const addr = backdrop.querySelector('#offerAddress').value.trim();
-    const msgEl = backdrop.querySelector('#offerMsg');
-    const copyBlock = backdrop.querySelector('#offerCopyBlock');
+    const addr   = backdrop.querySelector('#offerAddress').value.trim();
+    const msgEl  = backdrop.querySelector('#offerMsg');
+    const btn    = backdrop.querySelector('#offerSendBtn');
 
     if (!amount || amount <= 0) {
       msgEl.className = 'bn-offer__msg info';
       msgEl.textContent = 'Please enter an offer amount.';
       return;
     }
-
-    const sats = Math.round(amount * 1e8);
-    const offerText = [
-      `Offer for ${name}`,
-      `Amount: ${amount} BTC (${sats.toLocaleString()} sats)`,
-      addr ? `Contact: ${addr}` : '',
-      `Via: btcnative.name`,
-    ].filter(Boolean).join('\n');
-
-    copyBlock.style.display = 'block';
-    copyBlock.innerHTML = offerText.replace(/\n/g, '<br>');
-
-    // Copy to clipboard
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(offerText).then(() => {
-        msgEl.className = 'bn-offer__msg success';
-        msgEl.textContent = 'Offer message copied to clipboard. Send it to the owner via UniSat or on-chain message.';
-      }).catch(() => {
-        msgEl.className = 'bn-offer__msg info';
-        msgEl.textContent = 'Copy the offer text above and send to the owner.';
-      });
-    } else {
+    if (!addr) {
       msgEl.className = 'bn-offer__msg info';
-      msgEl.textContent = 'Copy the offer text above and send to the owner.';
+      msgEl.textContent = 'Please enter your Bitcoin address so the owner can respond.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    try {
+      const res = await fetch(`${MARKET_API}/api/offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, offerBtc: amount, contactAddress: addr }),
+        signal: AbortSignal.timeout(6000),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        msgEl.className = 'bn-offer__msg success';
+        msgEl.textContent = `Offer of ${amount} BTC recorded. The owner will see it on btcnative.name.`;
+        btn.textContent = 'Submitted';
+      } else {
+        throw new Error(data.error || 'Failed to submit offer');
+      }
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Submit Offer';
+      msgEl.className = 'bn-offer__msg info';
+      msgEl.textContent = e.message || 'Could not submit. Please try again.';
     }
   };
-
-  // Focus amount input
-  setTimeout(() => backdrop.querySelector('#offerAmount').focus(), 50);
 }
 
 function showProfileError() {
@@ -2613,18 +2726,7 @@ async function initIndexMVP() {
   updateStats();
 
   if (UNISAT_API_KEY) {
-    fetchDomainTypes().then(domainTypes => {
-      if (!domainTypes) return;
-      const tldToKey = { 'tld-btc': 'btc', 'tld-sats': 'sats', 'tld-x': 'x', 'tld-ord': 'ord' };
-      Object.entries(tldToKey).forEach(([slug, key]) => {
-        const dt = domainTypes[key];
-        if (dt && dt.curPrice) {
-          qsa(`[data-floor-slug="${slug}"]`).forEach(el => {
-            el.textContent = formatSats(dt.curPrice);
-          });
-        }
-      });
-    });
+    fetchDomainTypes().then(domainTypes => updateCategoryFloors(domainTypes));
   }
   const bnrpData = await resolveName('trump.btc');
   if (bnrpData && bnrpData.name) {
