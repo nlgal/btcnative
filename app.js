@@ -1130,7 +1130,34 @@ function showProfileError() {
   const sk = qs('#profileSkeleton');
   if (sk) sk.style.display = 'none';
   const err = qs('#profileError');
-  if (err) err.style.display = 'block';
+  if (!err) return;
+  err.style.display = 'block';
+
+  // Personalize with the actual name
+  const params = new URLSearchParams(location.search);
+  const name = params.get('name');
+  if (name) {
+    const base = getBase(name);
+    const tld  = getTld(name);
+
+    const titleEl = qs('#notFoundName');
+    if (titleEl) {
+      titleEl.innerHTML = `<span style="font-family:var(--font-mono);">${base}<span style="color:var(--color-primary);">${tld}</span></span> not found`;
+    }
+
+    const descEl = qs('#notFoundDesc');
+    if (descEl) {
+      descEl.textContent = `${name} doesn't appear to exist on Bitcoin yet. Be the first to register it.`;
+    }
+
+    const ctaEl = qs('#registerCta');
+    if (ctaEl) {
+      // Deep link to UniSat BNS search for this name
+      const tldRaw = tld.replace('.', '');
+      ctaEl.href = `https://unisat.io/bns?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
+      ctaEl.textContent = `Register ${name} on UniSat →`;
+    }
+  }
 }
 
 // ── Watchlist (localStorage-backed) ─────────────────────────────────────────────────────────────────────────────────
@@ -1948,6 +1975,7 @@ async function fetchAndRenderComps(name) {
   const el = document.getElementById('compsGrid');
   if (!el) return;
 
+  // Show skeleton
   el.innerHTML = Array(4).fill(0).map(() =>
     `<div class="name-card skeleton" style="height:88px; border-radius:var(--radius-lg);"></div>`
   ).join('');
@@ -1956,13 +1984,13 @@ async function fetchAndRenderComps(name) {
   const tldRaw = getTld(name).replace('.', '');
   const len    = base.length;
 
-  // Fetch names of same length + TLD
+  // Fetch a larger set for stats (up to 20)
   const data = UNISAT_API_KEY ? await fetchListings({
     domainType: tldRaw,
     minLength: len,
     maxLength: len,
     page: 0,
-    pageSize: 8,
+    pageSize: 20,
   }) : null;
 
   el.innerHTML = '';
@@ -1972,19 +2000,58 @@ async function fetchAndRenderComps(name) {
     return;
   }
 
-  const comps = data.list
-    .filter(item => {
-      const itemName = item.domain ? (item.domain.includes('.') ? item.domain : item.domain + '.' + tldRaw) : '';
-      return itemName !== name;
-    })
-    .slice(0, 6);
+  // Filter out the current name
+  const allComps = data.list.filter(item => {
+    const itemName = item.domain ? (item.domain.includes('.') ? item.domain : item.domain + '.' + tldRaw) : '';
+    return itemName.toLowerCase() !== name.toLowerCase();
+  });
 
-  if (comps.length === 0) {
+  if (allComps.length === 0) {
     el.innerHTML = `<p style="color:var(--color-text-faint); font-size:var(--text-sm); grid-column:1/-1;">No comparable listings found right now.</p>`;
     return;
   }
 
-  comps.forEach(item => {
+  // Calculate stats from all fetched comps
+  const prices = allComps.map(i => i.unitPrice || i.price || 0).filter(p => p > 0).sort((a, b) => a - b);
+  const floor  = prices[0];
+  const maxP   = prices[prices.length - 1];
+  const median = prices[Math.floor(prices.length / 2)];
+  const count  = prices.length;
+
+  // Insert stats bar BEFORE the grid
+  const statsDiv = document.createElement('div');
+  statsDiv.style.cssText = 'grid-column:1/-1; display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-3); margin-bottom:var(--space-4); padding:var(--space-3) var(--space-4); background:var(--color-surface-offset); border-radius:var(--radius-md); border:1px solid var(--color-border);';
+  statsDiv.innerHTML = `
+    <div>
+      <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--color-text-faint); margin-bottom:2px;">Floor</div>
+      <div style="font-family:var(--font-mono); font-weight:700; font-size:var(--text-sm); color:var(--color-primary);">${formatSats(floor)}</div>
+    </div>
+    <div>
+      <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--color-text-faint); margin-bottom:2px;">Median</div>
+      <div style="font-family:var(--font-mono); font-weight:700; font-size:var(--text-sm);">${formatSats(median)}</div>
+    </div>
+    <div>
+      <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--color-text-faint); margin-bottom:2px;">Max</div>
+      <div style="font-family:var(--font-mono); font-weight:600; font-size:var(--text-sm); color:var(--color-text-muted);">${formatSats(maxP)}</div>
+    </div>
+    <div>
+      <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.06em; color:var(--color-text-faint); margin-bottom:2px;">Listed</div>
+      <div style="font-family:var(--font-mono); font-weight:600; font-size:var(--text-sm); color:var(--color-text-muted);">${count}</div>
+    </div>
+  `;
+
+  // If this name is listed, show a summary note
+  if (window._profileListed && prices.length > 0) {
+    const note = document.createElement('div');
+    note.style.cssText = 'grid-column:1/-1; font-size:var(--text-xs); color:var(--color-text-faint); padding-top:var(--space-2); border-top:1px solid var(--color-border); margin-top:var(--space-1);';
+    note.textContent = `${len}-char .${tldRaw} names · ${count} listed · floor ${formatSats(floor)}`;
+    statsDiv.appendChild(note);
+  }
+
+  el.appendChild(statsDiv);
+
+  // Render up to 6 comp cards
+  allComps.slice(0, 6).forEach(item => {
     const card = buildNameCard(unisatListingToCard(item));
     el.appendChild(card);
   });

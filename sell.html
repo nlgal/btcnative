@@ -366,6 +366,7 @@
             </div>
             <div class="name-preview__status" id="previewStatus">—</div>
           </div>
+          <p class="sell-wallet-note" id="ownershipNote" style="margin-top:var(--space-2); min-height:1.2em;"></p>
         </div>
 
         <button class="sell-cta" id="lookupBtn" style="margin-top:var(--space-4);">Check name</button>
@@ -376,6 +377,7 @@
     <!-- Step 2: Set price (hidden until step 1 done) -->
     <div class="sell-card" id="panelStep2" style="display:none; margin-top:var(--space-4);">
       <div class="sell-card__section">
+        <button onclick="document.getElementById('panelStep2').style.display='none'; document.getElementById('panelStep1').style.display='block'; setStep(1);" style="background:none;border:none;color:var(--color-text-faint);font-size:var(--text-xs);cursor:pointer;margin-bottom:var(--space-4);">← Change name</button>
         <div class="sell-label">Listing price</div>
         <div class="sell-field">
           <div class="sell-input-wrap">
@@ -403,7 +405,7 @@
         </div>
       </div>
       <div class="sell-card__section">
-        <button class="sell-cta" id="listBtn">Connect wallet &amp; list</button>
+        <button class="sell-cta" id="listBtn">List for sale</button>
         <div class="sell-status" id="listStatus"></div>
         <p class="sell-wallet-note">Requires UniSat or Xverse extension. You sign a PSBT — no custody.</p>
       </div>
@@ -447,8 +449,7 @@
 <script src="./app.js"></script>
 <script>
 // ── Sell page logic ────────────────────────────────────────────────────────────
-const MARKET_API = 'https://btcnative-market.galanin.workers.dev';
-const UNISAT_API_KEY = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
+// MARKET_API and UNISAT_API_KEY are defined in app.js
 const UNISAT_BASE = 'https://open-api.unisat.io';
 
 // BTC/USD
@@ -560,6 +561,7 @@ async function lookupName() {
   btn.textContent = 'Checking...';
   clearStatus(statusEl);
   document.getElementById('namePreview').style.display = 'none';
+  document.getElementById('ownershipNote').textContent = '';
   document.getElementById('panelStep2').style.display = 'none';
   document.getElementById('panelDelist').style.display = 'none';
 
@@ -606,8 +608,38 @@ async function lookupName() {
       // Not listed — show price form
       document.getElementById('previewStatus').textContent = 'Not listed';
       document.getElementById('previewStatus').className = 'name-preview__status name-preview__status--unlisted';
-      document.getElementById('panelStep2').style.display = 'block';
-      setStep(2);
+
+      // Ownership check
+      const wallet = detectWallet();
+      if (!wallet) {
+        // No wallet connected — soft warning
+        document.getElementById('ownershipNote').textContent = 'Connect wallet at Step 2 to verify ownership.';
+        document.getElementById('ownershipNote').className = 'sell-wallet-note';
+        document.getElementById('panelStep2').style.display = 'block';
+        setStep(2);
+      } else {
+        btn.textContent = 'Verifying ownership...';
+        setStatus(statusEl, 'info', 'Checking wallet ownership...');
+        try {
+          const walletAddress = await getWalletAddress(wallet);
+          const ownerAddress = bnrpData?.data?.address || bnrpData?.address || null;
+          if (ownerAddress && walletAddress.toLowerCase() !== ownerAddress.toLowerCase()) {
+            setStatus(statusEl, 'error', `This name is owned by <code>${ownerAddress.slice(0,10)}...${ownerAddress.slice(-6)}</code>. Your wallet (<code>${walletAddress.slice(0,10)}...${walletAddress.slice(-6)}</code>) does not own it.`);
+            btn.disabled = false;
+            btn.textContent = 'Check another';
+            return; // stop here — do not show price panel
+          }
+          // Ownership confirmed
+          document.getElementById('ownershipNote').innerHTML = `<span style="color:#22c55e;">✓ Ownership verified</span>`;
+          document.getElementById('ownershipNote').className = 'sell-wallet-note';
+        } catch (e) {
+          // Wallet connect failed — soft warning, let them proceed
+          document.getElementById('ownershipNote').textContent = 'Could not verify ownership. You will need to sign at Step 2.';
+          document.getElementById('ownershipNote').className = 'sell-wallet-note';
+        }
+        document.getElementById('panelStep2').style.display = 'block';
+        setStep(2);
+      }
     }
 
     btn.textContent = 'Check another';

@@ -318,11 +318,15 @@
     </div>
 
     <!-- Error state -->
-    <div id="profileError" style="display:none; padding:var(--space-20) 0; text-align:center;">
-      <div style="font-size:40px; margin-bottom:var(--space-4);">₿</div>
-      <h2 style="font-family:var(--font-display); font-size:var(--text-xl); font-weight:800; margin-bottom:var(--space-3); color:var(--color-text);">Name not found</h2>
-      <p style="color:var(--color-text-muted); font-size:var(--text-sm); margin-bottom:var(--space-6);">This name doesn't appear to be registered, or isn't indexed yet.</p>
-      <a href="./index.html" class="btn btn--outline">Back to search</a>
+    <div id="profileError" style="display:none; padding:var(--space-20) 0; text-align:center; max-width:480px; margin:0 auto;">
+      <div style="font-size:48px; margin-bottom:var(--space-4);">₿</div>
+      <h2 style="font-family:var(--font-mono); font-size:var(--text-2xl); font-weight:700; margin-bottom:var(--space-3); overflow-wrap:break-word; word-break:break-all; padding:0 var(--space-4);" id="notFoundName">Name not found</h2>
+      <p style="color:var(--color-text-muted); font-size:var(--text-base); margin-bottom:var(--space-6); max-width:36ch; margin-left:auto; margin-right:auto;" id="notFoundDesc">This name doesn't appear to exist on Bitcoin yet.</p>
+      <div style="display:flex; flex-direction:column; gap:var(--space-3); align-items:center;">
+        <a id="registerCta" href="https://unisat.io/bns" target="_blank" rel="noopener noreferrer" class="btn btn--primary" style="min-width:200px;">Register on UniSat →</a>
+        <a href="./index.html" class="btn btn--outline" style="min-width:200px;">← Back to market</a>
+      </div>
+      <p style="font-size:var(--text-xs); color:var(--color-text-faint); margin-top:var(--space-6);">Bitcoin names are permanent Ordinal inscriptions. Once registered, they live on-chain forever.</p>
     </div>
 
   </div>

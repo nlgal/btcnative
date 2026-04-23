@@ -335,6 +335,65 @@
       font-size: var(--text-sm);
       color: var(--color-text-muted);
     }
+
+    /* ── My Names grid ───────────────────────────────────────── */
+    .name-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-3);
+    }
+    .name-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .name-card:hover {
+      border-color: var(--color-border-strong);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    [data-theme="dark"] .name-card:hover {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+    .name-card__header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .name-card__avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, var(--color-primary) 0%, #c0620a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-sm);
+      font-weight: 800;
+      color: #000;
+      flex-shrink: 0;
+      font-family: var(--font-mono);
+    }
+    .name-card__name {
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      word-break: break-all;
+      line-height: 1.3;
+    }
+    /* skeleton pulse — reuse existing .skeleton class from base.css if available */
+    .name-card.skeleton {
+      animation: skeleton-pulse 1.5s ease-in-out infinite;
+      background: var(--color-surface-offset);
+      border-color: transparent;
+    }
+    @keyframes skeleton-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.45; }
+    }
   </style>
 </head>
 <body>
@@ -384,6 +443,23 @@
       <h1>Portfolio</h1>
       <p>Enter a Bitcoin address to see all owned names.</p>
     </div>
+
+    <!-- My Names section (shown when wallet is connected) -->
+    <section id="myNamesSection" style="display:none; margin-bottom:var(--space-8);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-4);">
+        <div>
+          <h2 style="font-family:var(--font-display); font-size:var(--text-xl); font-weight:700; margin:0;">My Names</h2>
+          <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin:var(--space-1) 0 0;" id="myNamesAddr"></p>
+        </div>
+        <button class="btn btn--outline btn--sm" onclick="loadMyNamesRefresh()" id="myNamesRefreshBtn" title="Refresh"
+          style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:1px solid var(--color-border); border-radius:var(--radius-md); background:none; cursor:pointer; color:var(--color-text-muted); flex-shrink:0;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
+      </div>
+      <div id="myNamesGrid" class="name-grid">
+        <!-- populated by JS -->
+      </div>
+    </section>
 
     <!-- Address input -->
     <div class="port-search-row">
@@ -461,9 +537,8 @@
 <script src="./app.js"></script>
 <script>
 // ── Portfolio page ─────────────────────────────────────────────────────────────
-const UNISAT_API_KEY = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
+// MARKET_API and UNISAT_API_KEY are defined in app.js
 const UNISAT_BASE    = 'https://open-api.unisat.io';
-const MARKET_API     = 'https://btcnative-market.galanin.workers.dev';
 const PAGE_SIZE      = 20;
 const BTCNAME_TLDS   = ['.btc', '.sats', '.x', '.ord', '.gm', '.xbt', '.sat', '.unisat', '.fb'];
 
@@ -810,6 +885,128 @@ function showSkeleton() {
     `<div class="port-card skeleton" style="height:156px; border-radius:var(--radius-lg);"></div>`
   ).join('');
 }
+
+// ── My Names ──────────────────────────────────────────────────────
+
+// Wallet detection helper (mirrors buy-modal.js / sell.html)
+function detectWallet() {
+  if (typeof window === 'undefined') return null;
+  if (window.unisat) return { type: 'unisat', api: window.unisat };
+  if (window.XverseProviders?.BitcoinProvider) return { type: 'xverse', api: window.XverseProviders.BitcoinProvider };
+  if (window.btc) return { type: 'xverse', api: window.btc };
+  return null;
+}
+
+async function loadMyNames(address) {
+  const section = document.getElementById('myNamesSection');
+  const grid    = document.getElementById('myNamesGrid');
+  const addrEl  = document.getElementById('myNamesAddr');
+  if (!section || !grid) return;
+
+  section.style.display = 'block';
+  addrEl.textContent = address.slice(0, 12) + '...' + address.slice(-6);
+
+  // Skeleton
+  grid.innerHTML = Array(6).fill(0).map(() =>
+    `<div class="name-card skeleton" style="height:88px; border-radius:var(--radius-lg);"></div>`
+  ).join('');
+
+  try {
+    // Fetch all BNS names owned by this address via UniSat indexer
+    const res = await fetch(
+      `${UNISAT_BASE}/v1/indexer/address/${encodeURIComponent(address)}/bns/list?cursor=0&size=50`,
+      { headers: { 'Authorization': `Bearer ${UNISAT_API_KEY}` } }
+    );
+    const json = await res.json();
+    const names = json.data?.detail || json.data?.list || [];
+
+    if (names.length === 0) {
+      grid.innerHTML = `
+        <div style="grid-column:1/-1; text-align:center; padding:var(--space-12) 0; color:var(--color-text-faint);">
+          <div style="font-size:var(--text-lg); margin-bottom:var(--space-2);">No names found</div>
+          <div style="font-size:var(--text-sm);">Register a Bitcoin name on <a href="https://unisat.io/bns" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">UniSat</a></div>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = '';
+    names.forEach(item => {
+      const fullName = item.name || item.domain || '';
+      if (!fullName) return;
+
+      const card = document.createElement('div');
+      card.className = 'name-card';
+      card.style.cssText = 'cursor:default; position:relative;';
+
+      const base    = fullName.includes('.') ? fullName.split('.').slice(0, -1).join('.') : fullName;
+      const tld     = fullName.includes('.') ? '.' + fullName.split('.').pop() : '';
+      const initial = base[0] ? base[0].toUpperCase() : '?';
+
+      card.innerHTML = `
+        <div class="name-card__header">
+          <div class="name-card__avatar" data-initial="${initial}">${initial}</div>
+        </div>
+        <div class="name-card__name">
+          <span style="font-family:var(--font-mono); font-weight:700;">${base}</span><span style="color:var(--color-primary); font-family:var(--font-mono);">${tld}</span>
+        </div>
+        <div class="name-card__actions" style="display:flex; gap:var(--space-2); margin-top:var(--space-2);">
+          <a href="./name.html?name=${encodeURIComponent(fullName)}" class="port-card__btn port-card__btn--outline" style="flex:1; text-align:center; font-size:var(--text-xs); text-decoration:none; display:flex; align-items:center; justify-content:center;">View</a>
+          <a href="./sell.html?name=${encodeURIComponent(fullName)}" class="port-card__btn port-card__btn--primary" style="flex:1; text-align:center; font-size:var(--text-xs); text-decoration:none; display:flex; align-items:center; justify-content:center;">List</a>
+        </div>
+      `;
+
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    grid.innerHTML = `<div style="grid-column:1/-1; color:var(--color-error, #ef4444); font-size:var(--text-sm);">Failed to load names: ${e.message}</div>`;
+  }
+}
+
+function loadMyNamesRefresh() {
+  const wallet = detectWallet();
+  if (!wallet) return;
+  if (wallet.type === 'unisat') {
+    wallet.api.requestAccounts().then(accounts => {
+      if (accounts?.[0]) loadMyNames(accounts[0]);
+    }).catch(() => {});
+  } else if (wallet.type === 'xverse') {
+    wallet.api.request('getAccounts', { purposes: ['ordinals'] }).then(res => {
+      const addr = res?.result?.[0]?.address;
+      if (addr) loadMyNames(addr);
+    }).catch(() => {});
+  }
+}
+
+// Wire nav wallet button: after app.js sets the connected address, also load My Names
+// We wrap setNavWalletConnected (defined in app.js) to call loadMyNames on this page.
+(function patchNavWallet() {
+  // Wait for app.js to define setNavWalletConnected, then wrap it
+  const patch = () => {
+    if (typeof setNavWalletConnected === 'function') {
+      const _orig = setNavWalletConnected;
+      window.setNavWalletConnected = function(address) {
+        _orig(address);
+        loadMyNames(address);
+      };
+    }
+  };
+  // app.js runs before this script, so it should already be defined
+  patch();
+})();
+
+// Auto-detect wallet on load
+(function autoConnectWallet() {
+  const wallet = detectWallet();
+  if (!wallet) return;
+  // Silently check if already authorized (no prompt)
+  if (wallet.type === 'unisat' && wallet.api.getAccounts) {
+    wallet.api.getAccounts().then(accounts => {
+      if (accounts && accounts[0]) {
+        loadMyNames(accounts[0]);
+      }
+    }).catch(() => {});
+  }
+})();
 </script>
 </body>
 </html>
