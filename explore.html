@@ -433,65 +433,7 @@
 <script src="./app.js"></script>
 <script src="./nav-search.js"></script>
 
-<script>
-(function initFloorTicker() {
-  const UNISAT_API_KEY = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
-  const TLDS = ['btc', 'sats', 'x', 'ord', 'xbt'];
-
-  async function fetchFloor(tld) {
-    try {
-      const res = await fetch(`https://open-api.unisat.io/v3/market/btcname/auction/actions?domainType=${tld}&size=1&start=0&sortBy=price_asc&status=listed`, {
-        headers: { 'Authorization': `Bearer ${UNISAT_API_KEY}` },
-        signal: AbortSignal.timeout(6000),
-      });
-      const data = await res.json();
-      if (data.code !== 0) return null;
-      const items = data.data?.list || [];
-      return items[0]?.price || items[0]?.initPrice || null;
-    } catch { return null; }
-  }
-
-  function fmtBtc(sats) {
-    if (!sats) return '\u2014';
-    const btc = sats / 1e8;
-    if (btc >= 1) return btc.toFixed(4).replace(/\.?0+$/, '') + ' BTC';
-    if (btc >= 0.01) return btc.toFixed(4).replace(/0+$/, '') + ' BTC';
-    return btc.toFixed(8).replace(/0+$/, '') + ' BTC';
-  }
-
-  async function render() {
-    const el = document.getElementById('floorTicker');
-    if (!el) return;
-
-    // Show skeleton chips
-    el.innerHTML = TLDS.map(t => `
-      <div style="display:flex; align-items:center; gap:6px; padding:4px 12px; background:var(--color-surface); border:1px solid var(--color-border); border-radius:99px; font-size:11px; font-family:var(--font-mono);">
-        <span style="color:var(--color-text-faint);">.${t}</span>
-        <span style="color:var(--color-text-faint); width:56px; height:10px;" class="skeleton" id="floor-${t}">...</span>
-      </div>`).join('');
-
-    // Fetch all floors in parallel
-    await Promise.allSettled(TLDS.map(async tld => {
-      const floor = await fetchFloor(tld);
-      const chip = document.getElementById(`floor-${tld}`);
-      if (!chip) return;
-      chip.classList.remove('skeleton');
-      chip.style.width = '';
-      chip.style.height = '';
-      chip.style.color = 'var(--color-text)';
-      chip.style.fontWeight = '700';
-      chip.textContent = fmtBtc(floor);
-    }));
-  }
-
-  // Run after page loads
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', render);
-  } else {
-    render();
-  }
-})();
-</script>
+<!-- floor ticker removed: floors loaded via renderMarketIndexes when Market tab is active -->
 
 <script>
 async function subscribeFloorAlert() {

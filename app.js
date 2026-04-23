@@ -160,7 +160,17 @@ function _unisatSort(sort) {
   return { unitPrice: 1 }; // price_asc default
 }
 
+// In-flight dedup: if an identical fetchListings call is already in progress,
+// return the same promise rather than firing a second request.
+const _fetchListingsCache = new Map();
 async function fetchListings({ domainType = null, minLength = null, maxLength = null, page = 0, pageSize = 20, sort = 'price_asc' } = {}) {
+  const cacheKey = JSON.stringify({ domainType, minLength, maxLength, page, sort });
+  if (_fetchListingsCache.has(cacheKey)) return _fetchListingsCache.get(cacheKey);
+  const _promise = _doFetchListings({ domainType, minLength, maxLength, page, pageSize, sort, cacheKey });
+  _fetchListingsCache.set(cacheKey, _promise);
+  return _promise;
+}
+async function _doFetchListings({ domainType, minLength, maxLength, page, pageSize, sort, cacheKey }) {
   // Fetch from both our KV worker (native PSBT listings) and UniSat marketplace.
   // UniSat does NOT support minLength/maxLength/trait filters natively — all
   // filtering is done client-side after fetching. We always fetch a large batch
@@ -242,9 +252,12 @@ async function fetchListings({ domainType = null, minLength = null, maxLength = 
     const combined = [...kvListings, ...unisatListings];
     const total = (kvData && kvData.total ? kvData.total : 0) +
                   (unisatData ? (unisatData.total || 0) : 0);
-    return { list: combined, total };
+    const result = { list: combined, total };
+    _fetchListingsCache.delete(cacheKey);
+    return result;
   } catch (e) {
     console.warn('fetchListings error:', e.message);
+    _fetchListingsCache.delete(cacheKey);
     return null;
   }
 }
@@ -1642,8 +1655,8 @@ async function initExplorePage() {
     }
   }
 
-  // Populate market indexes
-  renderMarketIndexes();
+  // Market index stats — only load if Market tab is visible
+  if (tab === 'market') renderMarketIndexes();
 
   // Nav search
   const navSearch = qs('#navSearch');
@@ -1662,6 +1675,11 @@ function switchTab(tab) {
   const url = new URL(location.href);
   url.searchParams.set('tab', tab);
   history.replaceState({}, '', url.toString());
+  // Lazy-load market stats the first time user visits the Market tab
+  if (tab === 'market' && !switchTab._marketLoaded) {
+    switchTab._marketLoaded = true;
+    renderMarketIndexes();
+  }
 }
 
 let currentTld = 'all', currentLen = 'all', currentSpecial = null;
@@ -1801,7 +1819,7 @@ function unisatListingToCard(item) {
 
 function getFilteredNames() {
   // Use live listings if loaded (even if empty); fall back to seed only if not yet loaded
-  const pool = LIVE_LISTINGS !== null ? LIVE_LISTINGS : SEED_NAMES;
+  const pool = (LIVE_LISTINGS !== null && LIVE_LISTINGS !== undefined) ? LIVE_LISTINGS : SEED_NAMES;
   return pool.filter(n => {
     if (currentTld !== 'all' && getTld(n.name) !== currentTld) return false;
     const base = getBase(n.name);
@@ -3723,10 +3741,8 @@ async function initExplorePageMVP() {
       ).join('');
     }
     const result = await fetchListings(apiParams);
-    if (result && result.list) {
-      LIVE_LISTINGS = result.list;
-      if (result.total) LIVE_TOTAL = result.total;
-    }
+    LIVE_LISTINGS = (result && result.list) ? result.list : [];
+    if (result && result.total) LIVE_TOTAL = result.total;
     renderListings(getFilteredNamesMVP());
     const loadBtn = qs('#loadMoreBtn');
     if (loadBtn) loadBtn.style.display = '';
@@ -3734,18 +3750,17 @@ async function initExplorePageMVP() {
     renderListings(getFilteredNamesMVP());
     if (UNISAT_API_KEY) {
       fetchListings(apiParams).then(result => {
-        if (result && result.list) {
-          LIVE_LISTINGS = result.list;
-          if (result.total) LIVE_TOTAL = result.total;
-          renderListings(getFilteredNamesMVP());
-        }
+        LIVE_LISTINGS = (result && result.list) ? result.list : [];
+        if (result && result.total) LIVE_TOTAL = result.total;
+        renderListings(getFilteredNamesMVP());
         const loadBtn = qs('#loadMoreBtn');
         if (loadBtn) loadBtn.style.display = '';
       });
     }
   }
 
-  renderMarketIndexes();
+  // Market index stats (vol, floors) — only load if Market tab is visible
+  if (tab === 'market') renderMarketIndexes();
 
   // Nav search
   const navSearch  = qs('#navSearch');
