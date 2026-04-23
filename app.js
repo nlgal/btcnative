@@ -1824,6 +1824,8 @@ function clearAllFilters() {
   document.querySelectorAll('[data-len]').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('[data-special]').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === 'price_asc'));
+  const sel = document.getElementById('marketSortSelect');
+  if (sel) sel.value = 'price_asc';
   const minEl = document.getElementById('priceMin');
   const maxEl = document.getElementById('priceMax');
   if (minEl) minEl.value = '';
@@ -1834,7 +1836,10 @@ function clearAllFilters() {
 // Override sortNames to use new key scheme
 function sortNames(key, btn) {
   currentSort = key;
+  // Support both chip buttons (data-sort) and the select dropdown
   document.querySelectorAll('[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === key));
+  const sel = document.getElementById('marketSortSelect');
+  if (sel && sel.value !== key) sel.value = key;
   renderListings(getFilteredNamesMVP());
 }
 

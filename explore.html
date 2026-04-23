@@ -131,14 +131,14 @@
           <!-- Sort -->
           <div class="lfb-group">
             <span class="lfb-label">Sort</span>
-            <div class="lfb-chips">
-              <button class="lfb-chip active" data-sort="price_asc" onclick="sortNames('price_asc', this)">Lowest price</button>
-              <button class="lfb-chip" data-sort="price_desc" onclick="sortNames('price_desc', this)">Highest price</button>
-              <button class="lfb-chip" data-sort="score" onclick="sortNames('score', this)">Rank</button>
-              <button class="lfb-chip" data-sort="insc_asc" onclick="sortNames('insc_asc', this)">Lowest inscription</button>
-              <button class="lfb-chip" data-sort="insc_desc" onclick="sortNames('insc_desc', this)">Highest inscription</button>
-              <button class="lfb-chip" data-sort="recent" onclick="sortNames('recent', this)">Recently listed</button>
-            </div>
+            <select id="marketSortSelect" onchange="sortNames(this.value, this)" style="font-size:var(--text-xs); font-family:var(--font-mono); background:var(--color-surface-offset); border:1px solid var(--color-border); color:var(--color-text); border-radius:var(--radius-md); padding:6px 10px; cursor:pointer; outline:none; min-width:180px;">
+              <option value="price_asc">Lowest price</option>
+              <option value="price_desc">Highest price</option>
+              <option value="score">Rank</option>
+              <option value="insc_asc">Lowest inscription</option>
+              <option value="insc_desc">Highest inscription</option>
+              <option value="recent">Recently listed</option>
+            </select>
           </div>
 
           <div class="lfb-divider"></div>
