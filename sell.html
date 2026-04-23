@@ -624,6 +624,22 @@ async function lookupName() {
     const listData = await listRes.json();
     currentListing = listData;
 
+    if (listData.invalidReInscription) {
+      // The listed inscription is NOT the canonical first inscription — reject
+      const canonical = listData.canonicalInscriptionId || '';
+      const listed    = listData.listedInscriptionId    || '';
+      setStatus(statusEl, 'error',
+        `<strong>${name}</strong> has a re-inscription listed on the market. ` +
+        `Only the first inscription is a valid BNS name.<br>` +
+        `<span style="font-family:var(--font-mono);font-size:0.85em;">` +
+        `Canonical: ${canonical.slice(0,12)}...${canonical.slice(-6)}</span>`
+      );
+      document.getElementById('namePreview').style.display = 'none';
+      btn.disabled = false;
+      btn.textContent = 'Check another';
+      return;
+    }
+
     if (listData.ok && listData.listed) {
       // Already listed — show delist panel
       document.getElementById('previewStatus').textContent = 'Listed';

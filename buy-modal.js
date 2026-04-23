@@ -196,6 +196,24 @@ async function openBuyModal({ name, auctionId, priceSats }) {
     return;
   }
 
+  // Validate that the listing is for the canonical (first) inscription.
+  // Re-inscriptions must be rejected — they are not valid BNS names.
+  try {
+    const valRes = await fetch(`${MARKET_API_BM}/api/listing?name=${encodeURIComponent(name)}`);
+    const valData = await valRes.json();
+    if (valData.invalidReInscription) {
+      const canonical = valData.canonicalInscriptionId || '';
+      alert(
+        `Cannot buy ${name}: the listing is a re-inscription and is not the canonical BNS name.\n\n` +
+        `Canonical inscription: ${canonical.slice(0, 20)}...\n` +
+        `Only the first inscription of a name is valid.`
+      );
+      return;
+    }
+  } catch (_) {
+    // BNRP resolve failed — allow through (don't block buyers on BNRP downtime)
+  }
+
   // Platform fee shown to buyer (collected by UniSat on their end for domain listings)
   // We display a 0% buyer fee (UniSat charges 0.5% from seller side for domains)
   const feeSats = 0;

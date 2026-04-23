@@ -841,8 +841,9 @@ function renderCard(n) {
     : '';
 
   const badges = [];
-  if (n.listed) badges.push(`<span class="port-card__badge port-card__badge--listed">Listed</span>`);
-  if (n.hasBnrp) badges.push(`<span class="port-card__badge">Identity</span>`);
+  if (n.listed)          badges.push(`<span class="port-card__badge port-card__badge--listed">Listed</span>`);
+  if (n.hasBnrp)         badges.push(`<span class="port-card__badge">Identity</span>`);
+  if (n.isReInscription) badges.push(`<span class="port-card__badge" style="background:rgba(239,68,68,0.15);color:#ef4444;border-color:rgba(239,68,68,0.3);" title="This is a re-inscription. Only the first inscription is the canonical BNS name.">Re-inscription</span>`);
 
   const encodedName = encodeURIComponent(n.name);
 
@@ -860,7 +861,10 @@ function renderCard(n) {
     ${priceHtml}
     <div class="port-card__actions" onclick="event.preventDefault()">
       <a class="port-card__btn port-card__btn--primary" href="./name.html?name=${encodedName}">Profile</a>
-      <a class="port-card__btn port-card__btn--outline" href="./sell.html?name=${encodedName}" onclick="event.stopPropagation()">Sell</a>
+      ${n.isReInscription
+        ? `<span class="port-card__btn port-card__btn--outline" style="opacity:0.4;cursor:not-allowed;" title="Re-inscriptions cannot be listed">Sell</span>`
+        : `<a class="port-card__btn port-card__btn--outline" href="./sell.html?name=${encodedName}" onclick="event.stopPropagation()">Sell</a>`
+      }
     </div>
   </a>`;
 }
