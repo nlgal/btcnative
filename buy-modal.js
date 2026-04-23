@@ -1,38 +1,36 @@
 /**
- * btcnative Buy Modal — Sprint 5
+ * btcnative Buy Modal
  * Full PSBT buy flow via UniSat Domain Marketplace API.
  *
  * Flow:
- *   1. create_bid_prepare  — get buyer UTXOs needed
- *   2. create_bid          — UniSat builds the combined PSBT
- *   3. wallet.signPsbt     — buyer signs their inputs
- *   4. confirm_bid         — UniSat broadcasts, sale settles
+ *   1. /api/listing          — validate listing + canonical inscription (one call)
+ *   2. create_bid_prepare    — confirm auction live, get fee estimate
+ *   3. create_bid            — UniSat builds the combined PSBT
+ *   4. wallet.signPsbt       — buyer signs their inputs (hex output)
+ *   5. confirm_bid           — UniSat broadcasts, sale settles
  *
  * Usage:
  *   openBuyModal({ name: 'trump.btc', auctionId: '...', priceSats: 500000 });
  */
 
-const UNISAT_BASE_BM  = 'https://open-api.unisat.io';
-const UNISAT_KEY_BM   = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
-const MARKET_API_BM   = 'https://btcnative-market.galanin.workers.dev';
+const UNISAT_BASE_BM = 'https://open-api.unisat.io';
+const UNISAT_KEY_BM  = 'd6082c62b212e154fb506f50957506bfefea2df898e02f7670a83791dd42a870';
+const MARKET_API_BM  = 'https://btcnative-market.galanin.workers.dev';
 
-// ── BTC/USD ───────────────────────────────────────────────────────────────────
+// ── Formatting ────────────────────────────────────────────────────────────────
 let _bmBtcUsd = null;
 async function _bmGetBtcUsd() {
   if (_bmBtcUsd) return _bmBtcUsd;
   try {
     const r = await fetch('https://mempool.space/api/v1/prices', { signal: AbortSignal.timeout(4000) });
-    const d = await r.json();
-    _bmBtcUsd = d.USD || 95000;
+    _bmBtcUsd = (await r.json()).USD || 95000;
   } catch { _bmBtcUsd = 95000; }
   return _bmBtcUsd;
 }
 function _bmFmtUsd(sats, rate) {
   if (!sats || !rate) return '';
   const usd = (sats / 1e8) * rate;
-  if (usd >= 1000) return '$' + Math.round(usd).toLocaleString();
-  if (usd >= 1)    return '$' + usd.toFixed(2);
-  return '$' + usd.toFixed(2);
+  return '$' + (usd >= 1000 ? Math.round(usd).toLocaleString() : usd.toFixed(2));
 }
 function _bmFmtBtc(sats) {
   if (!sats || isNaN(sats)) return '—';
@@ -49,6 +47,7 @@ function _bmDetectWallet() {
   if (window.btc) return { type: 'xverse', api: window.btc };
   return null;
 }
+
 async function _bmGetAddress(wallet) {
   if (wallet.type === 'unisat') {
     const accs = await wallet.api.requestAccounts();
@@ -56,48 +55,87 @@ async function _bmGetAddress(wallet) {
   }
   if (wallet.type === 'xverse') {
     const res = await wallet.api.request('getAccounts', { purposes: ['ordinals', 'payment'] });
-    // ordinals address for receiving inscription, payment address for BTC inputs
     wallet._paymentAddress = res.result.find(a => a.purpose === 'payment')?.address || res.result[0].address;
     return res.result.find(a => a.purpose === 'ordinals')?.address || res.result[0].address;
   }
   throw new Error('Unsupported wallet');
 }
+
 async function _bmGetPubkey(wallet) {
-  if (wallet.type === 'unisat') return wallet.api.getPublicKey();
+  if (wallet.type === 'unisat') {
+    // UniSat returns compressed pubkey (02/03 + 32 bytes = 66 hex chars).
+    // For taproot (bc1p) addresses, UniSat's create_bid expects the x-only
+    // pubkey (32 bytes = 64 hex chars) — strip the 02/03 prefix.
+    const compressed = await wallet.api.getPublicKey();
+    if (compressed && compressed.length === 66) {
+      return compressed.slice(2); // x-only for taproot
+    }
+    return compressed;
+  }
   if (wallet.type === 'xverse') {
     const res = await wallet.api.request('getAccounts', { purposes: ['ordinals'] });
-    return res.result[0].publicKey;
+    const pk = res.result[0].publicKey;
+    // Xverse may also return compressed — strip prefix for taproot
+    if (pk && pk.length === 66) return pk.slice(2);
+    return pk;
   }
   throw new Error('Unsupported wallet');
 }
-async function _bmGetUtxos(wallet, address) {
-  // UniSat API: get spendable UTXOs for the buyer's payment address
-  const payAddr = wallet._paymentAddress || address;
-  const res = await fetch(
-    `${UNISAT_BASE_BM}/v1/indexer/address/${payAddr}/utxo-data?cursor=0&size=16`,
-    { headers: { 'Authorization': `Bearer ${UNISAT_KEY_BM}` } }
-  );
-  const data = await res.json();
-  if (data.code !== 0) throw new Error('Could not fetch UTXOs: ' + data.msg);
-  return (data.data?.utxo || []).filter(u => !u.inscriptions?.length).map(u => ({
-    txid: u.txid,
-    index: u.vout,
-  }));
-}
-async function _bmSignPsbt(wallet, psbtHex, signIndexes) {
-  const toSignInputs = signIndexes.map(i => ({ index: i, address: wallet._address }));
+
+async function _bmSignPsbt(wallet, psbtHex, bidSignIndexes, pubkey) {
   if (wallet.type === 'unisat') {
-    return wallet.api.signPsbt(psbtHex, { autoFinalized: false, toSignInputs });
+    // UniSat signPsbt: toSignInputs needs { index, publicKey } for taproot inputs.
+    // bidSignIndexes from create_bid tells us exactly which inputs to sign.
+    const toSignInputs = (bidSignIndexes && bidSignIndexes.length > 0)
+      ? bidSignIndexes.map(i => ({ index: i, publicKey: pubkey }))
+      : [{ index: 0, publicKey: pubkey }];
+
+    const signed = await wallet.api.signPsbt(psbtHex, {
+      autoFinalized: false,
+      toSignInputs,
+    });
+    return signed; // hex
   }
   if (wallet.type === 'xverse') {
     const res = await wallet.api.request('signPsbt', {
       psbt: psbtHex,
       broadcast: false,
-      signInputs: Object.fromEntries(signIndexes.map(i => [i, ['SIGHASH_DEFAULT']])),
+      signInputs: Object.fromEntries(
+        (bidSignIndexes || [0]).map(i => [String(i), ['SIGHASH_DEFAULT']])
+      ),
     });
-    return res.result.psbt;
+    return res.result.psbt; // hex
   }
   throw new Error('Unsupported wallet');
+}
+
+// ── UniSat API ────────────────────────────────────────────────────────────────
+async function _bmUnisat(path, body) {
+  const res = await fetch(`${UNISAT_BASE_BM}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${UNISAT_KEY_BM}`,
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(20000),
+  });
+  const data = await res.json();
+  if (data.code !== 0) {
+    // Map known error codes to user-friendly messages
+    const msg = data.msg || 'Unknown error';
+    if (msg.toLowerCase().includes('order not exist') || msg.toLowerCase().includes('not exist')) {
+      throw new Error('This listing is no longer active. It may have been sold or delisted.');
+    }
+    if (msg.toLowerCase().includes('public key') || msg.toLowerCase().includes('pubkey')) {
+      throw new Error('Wallet address mismatch. Make sure your wallet is unlocked and on the correct account.');
+    }
+    if (msg.toLowerCase().includes('balance') || msg.toLowerCase().includes('insufficient')) {
+      throw new Error('Insufficient balance. You need more BTC to complete this purchase.');
+    }
+    throw new Error(msg);
+  }
+  return data.data;
 }
 
 // ── Modal styles ──────────────────────────────────────────────────────────────
@@ -135,10 +173,10 @@ function _bmInjectStyles() {
       padding:10px 0;border-bottom:1px solid var(--color-border,#e5e7eb);
       font-size:0.875rem;
     }
-    .bn-modal__row:last-of-type{border-bottom:none;}
     .bn-modal__label{color:var(--color-text-muted,#888);}
     .bn-modal__value{font-weight:600;font-family:var(--font-mono,monospace);}
     .bn-modal__value--accent{color:#f7931a;}
+    .bn-modal__value--faint{color:var(--color-text-faint,#aaa);font-weight:400;}
     .bn-modal__total{
       margin-top:16px;padding:14px;
       background:var(--color-surface-offset,#f9fafb);border-radius:10px;
@@ -156,17 +194,18 @@ function _bmInjectStyles() {
     .bn-modal__cta:hover{opacity:.88;}
     .bn-modal__cta:disabled{opacity:.5;cursor:not-allowed;}
     .bn-modal__status{
-      margin-top:12px;padding:10px 14px;border-radius:8px;font-size:0.82rem;display:none;
+      margin-top:12px;padding:10px 14px;border-radius:8px;font-size:0.82rem;display:none;line-height:1.5;
     }
-    .bn-modal__status.info{display:block;background:#e8f4fd;color:#1a6fa8;}
-    .bn-modal__status.success{display:block;background:#e6f9f0;color:#1a7a46;}
-    .bn-modal__status.error{display:block;background:#fdecea;color:#a0190d;}
-    [data-theme="dark"] .bn-modal__status.info{background:#0a2030;color:#4aaddf;}
-    [data-theme="dark"] .bn-modal__status.success{background:#0a2016;color:#4ac97a;}
-    [data-theme="dark"] .bn-modal__status.error{background:#2a0a08;color:#f07060;}
+    .bn-modal__status.info{display:block;background:color-mix(in srgb,#3b82f6 12%,transparent);color:#1d4ed8;}
+    .bn-modal__status.success{display:block;background:color-mix(in srgb,#22c55e 12%,transparent);color:#15803d;}
+    .bn-modal__status.error{display:block;background:color-mix(in srgb,#ef4444 12%,transparent);color:#b91c1c;}
+    [data-theme="dark"] .bn-modal__status.info{background:#0a2030;color:#60a5fa;}
+    [data-theme="dark"] .bn-modal__status.success{background:#0a2016;color:#4ade80;}
+    [data-theme="dark"] .bn-modal__status.error{background:#2a0a08;color:#f87171;}
     .bn-modal__wallet-note{margin-top:10px;font-size:0.78rem;color:var(--color-text-faint,#aaa);text-align:center;}
     .bn-modal__txid{font-family:var(--font-mono,monospace);font-size:0.75rem;word-break:break-all;margin-top:6px;}
     .bn-modal__txid a{color:#f7931a;}
+    .bn-modal__step{font-size:0.72rem;color:var(--color-text-faint,#aaa);text-align:center;margin-top:8px;}
   `;
   document.head.appendChild(s);
 }
@@ -180,46 +219,33 @@ function _bmSetStatus(el, type, html) {
 async function openBuyModal({ name, auctionId, priceSats }) {
   _bmInjectStyles();
 
-  // Resolve auctionId / priceSats if not provided
-  if (!auctionId || !priceSats) {
-    try {
-      const res = await fetch(`${MARKET_API_BM}/api/listing?name=${encodeURIComponent(name)}`);
-      const data = await res.json();
-      if (data.ok && data.listed) {
-        auctionId = data.auctionId;
-        priceSats = data.priceSats;
-      }
-    } catch (_) {}
-  }
-  if (!auctionId || !priceSats) {
-    alert(`${name} is not currently listed for sale.`);
-    return;
-  }
-
-  // Validate that the listing is for the canonical (first) inscription.
-  // Re-inscriptions must be rejected — they are not valid BNS names.
+  // Single call: resolve listing + validate canonical inscription
   try {
-    const valRes = await fetch(`${MARKET_API_BM}/api/listing?name=${encodeURIComponent(name)}`);
-    const valData = await valRes.json();
-    if (valData.invalidReInscription) {
-      const canonical = valData.canonicalInscriptionId || '';
-      alert(
-        `Cannot buy ${name}: the listing is a re-inscription and is not the canonical BNS name.\n\n` +
-        `Canonical inscription: ${canonical.slice(0, 20)}...\n` +
-        `Only the first inscription of a name is valid.`
-      );
+    const res = await fetch(`${MARKET_API_BM}/api/listing?name=${encodeURIComponent(name)}`);
+    const data = await res.json();
+
+    if (data.invalidReInscription) {
+      const c = data.canonicalInscriptionId || '';
+      alert(`Cannot buy ${name}: this listing is a re-inscription.\n\nOnly the first inscription (${c.slice(0,14)}...) is the valid BNS name.`);
+      return;
+    }
+    if (data.ok && data.listed) {
+      // Always use fresh values from worker (canonical, up-to-date)
+      auctionId = data.auctionId;
+      priceSats = data.priceSats;
+    } else if (!auctionId || !priceSats) {
+      alert(`${name} is not currently listed for sale.`);
       return;
     }
   } catch (_) {
-    // BNRP resolve failed — allow through (don't block buyers on BNRP downtime)
+    // Worker unavailable — proceed with provided auctionId/priceSats if we have them
+    if (!auctionId || !priceSats) {
+      alert('Could not verify listing. Please try again.');
+      return;
+    }
   }
 
-  // Platform fee shown to buyer (collected by UniSat on their end for domain listings)
-  // We display a 0% buyer fee (UniSat charges 0.5% from seller side for domains)
-  const feeSats = 0;
-  const totalSats = priceSats + feeSats;
-
-  // Build modal
+  // Build modal with what we know — fees update after prepare
   const backdrop = document.createElement('div');
   backdrop.className = 'bn-modal-backdrop';
   backdrop.innerHTML = `
@@ -232,28 +258,33 @@ async function openBuyModal({ name, auctionId, priceSats }) {
       </div>
       <div class="bn-modal__row">
         <span class="bn-modal__label">Network fee</span>
-        <span class="bn-modal__value" style="font-size:0.8rem;color:var(--color-text-muted)">calculated at signing</span>
+        <span class="bn-modal__value bn-modal__value--faint" id="bnNetworkFee">estimated at signing</span>
+      </div>
+      <div class="bn-modal__row">
+        <span class="bn-modal__label">Platform fee</span>
+        <span class="bn-modal__value bn-modal__value--faint">0.5% (charged to seller)</span>
       </div>
       <div class="bn-modal__total">
         <span class="bn-modal__total-label">You pay</span>
-        <span class="bn-modal__total-value bn-modal__value--accent">${_bmFmtBtc(totalSats)}</span>
+        <span class="bn-modal__total-value bn-modal__value--accent" id="bnTotalVal">${_bmFmtBtc(priceSats)}</span>
       </div>
       <div class="bn-modal__usd" id="bnModalUsd"></div>
       <button class="bn-modal__cta" id="bnBuyBtn">Connect wallet &amp; buy</button>
       <div class="bn-modal__status" id="bnBuyStatus"></div>
-      <p class="bn-modal__wallet-note">Requires UniSat extension. Your wallet signs the transaction directly.</p>
+      <p class="bn-modal__wallet-note">UniSat extension required. Your wallet signs directly — no keys leave your device.</p>
+      <p class="bn-modal__step" id="bnStep"></p>
     </div>
   `;
   document.body.appendChild(backdrop);
 
-  // USD hint
   _bmGetBtcUsd().then(rate => {
     const el = document.getElementById('bnModalUsd');
-    if (el) el.textContent = '≈ ' + _bmFmtUsd(totalSats, rate);
+    if (el) el.textContent = '≈ ' + _bmFmtUsd(priceSats, rate);
   });
 
   const btn    = backdrop.querySelector('#bnBuyBtn');
   const status = backdrop.querySelector('#bnBuyStatus');
+  const stepEl = backdrop.querySelector('#bnStep');
 
   backdrop.querySelector('.bn-modal__close').onclick = () => backdrop.remove();
   backdrop.addEventListener('click', e => { if (e.target === backdrop) backdrop.remove(); });
@@ -262,92 +293,105 @@ async function openBuyModal({ name, auctionId, priceSats }) {
     btn.disabled = true;
 
     try {
-      // Step 1 — wallet
+      // ── Step 1: Detect + connect wallet ──────────────────────────────────
       _bmSetStatus(status, 'info', 'Detecting wallet...');
+      stepEl.textContent = 'Step 1 of 4';
       const wallet = _bmDetectWallet();
       if (!wallet) {
-        _bmSetStatus(status, 'error', 'No wallet detected. Install <a href="https://unisat.io/download" target="_blank">UniSat</a>.');
+        _bmSetStatus(status, 'error', 'No wallet detected. Install <a href="https://unisat.io/download" target="_blank" rel="noopener">UniSat</a> and refresh.');
         btn.disabled = false;
         return;
       }
 
       btn.textContent = 'Connecting...';
-      _bmSetStatus(status, 'info', `Connecting ${wallet.type}...`);
+      _bmSetStatus(status, 'info', `Connecting ${wallet.type === 'unisat' ? 'UniSat' : 'Xverse'}...`);
       const buyerAddress = await _bmGetAddress(wallet);
       wallet._address = buyerAddress;
       const buyerPubkey = await _bmGetPubkey(wallet);
 
-      // Step 2 — create_bid_prepare (get fee rate, confirm auction still live)
-      btn.textContent = 'Preparing...';
-      _bmSetStatus(status, 'info', 'Preparing purchase...');
-      const prepRes = await fetch(`${UNISAT_BASE_BM}/v3/market/domain/auction/create_bid_prepare`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${UNISAT_KEY_BM}` },
-        body: JSON.stringify({ auctionId, bidPrice: priceSats, address: buyerAddress, pubkey: buyerPubkey }),
-      });
-      const prepData = await prepRes.json();
-      if (prepData.code !== 0) throw new Error(prepData.msg || 'prepare failed');
+      // ── Step 2: Prepare bid (confirms auction still live, gets fee rate) ─
+      btn.textContent = 'Checking listing...';
+      _bmSetStatus(status, 'info', 'Verifying listing is still active...');
+      stepEl.textContent = 'Step 2 of 4';
 
-      // Step 3 — get buyer UTXOs
-      _bmSetStatus(status, 'info', 'Fetching UTXOs...');
-      const utxos = await _bmGetUtxos(wallet, buyerAddress);
-      if (!utxos.length) throw new Error('No spendable UTXOs in your wallet. Make sure you have BTC to cover the purchase.');
+      const prepData = await _bmUnisat(
+        '/v3/market/domain/auction/create_bid_prepare',
+        { auctionId, bidPrice: priceSats, address: buyerAddress, pubkey: buyerPubkey }
+      );
+      const feeRate = prepData.feeRate || prepData.fastestFeeRate || 5;
 
-      // Step 4 — create_bid (UniSat builds combined PSBT)
+      // ── Step 3: Build PSBT ───────────────────────────────────────────────
       btn.textContent = 'Building transaction...';
       _bmSetStatus(status, 'info', 'Building transaction...');
-      const bidRes = await fetch(`${UNISAT_BASE_BM}/v3/market/domain/auction/create_bid`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${UNISAT_KEY_BM}` },
-        body: JSON.stringify({
+      stepEl.textContent = 'Step 3 of 4';
+
+      const bidData = await _bmUnisat(
+        '/v3/market/domain/auction/create_bid',
+        {
           auctionId,
           bidPrice: priceSats,
           address: buyerAddress,
           pubkey: buyerPubkey,
-          feeRate: prepData.data?.feeRate || 10,
+          feeRate,
           nftAddress: buyerAddress,
-          utxos,
-        }),
-      });
-      const bidData = await bidRes.json();
-      if (bidData.code !== 0) throw new Error(bidData.msg || 'create bid failed');
+          // Omit utxos — let UniSat select them internally for reliability
+        }
+      );
 
-      const { bidId, psbtBid, psbtBid2, psbtSettle, bidSignIndexes } = bidData.data;
+      const { bidId, psbtBid, psbtBid2, psbtSettle, bidSignIndexes, networkFee } = bidData;
 
-      // Step 5 — buyer signs psbtBid
-      btn.textContent = 'Waiting for signature...';
-      _bmSetStatus(status, 'info', 'Sign the purchase in your wallet...');
-      const signedPsbtBid = await _bmSignPsbt(wallet, psbtBid, bidSignIndexes || []);
+      // Update fee display now that we have the real number
+      if (networkFee) {
+        const netFeeEl = document.getElementById('bnNetworkFee');
+        const totalEl  = document.getElementById('bnTotalVal');
+        const usdEl    = document.getElementById('bnModalUsd');
+        if (netFeeEl) netFeeEl.textContent = _bmFmtBtc(networkFee);
+        const total = priceSats + networkFee;
+        if (totalEl) totalEl.textContent = _bmFmtBtc(total);
+        _bmGetBtcUsd().then(rate => {
+          if (usdEl) usdEl.textContent = '≈ ' + _bmFmtUsd(total, rate);
+        });
+      }
 
-      // Step 6 — confirm_bid (UniSat broadcasts)
+      // ── Step 4: Sign ─────────────────────────────────────────────────────
+      btn.textContent = 'Sign in wallet...';
+      _bmSetStatus(status, 'info', 'Check your wallet — a signature request is waiting.');
+      stepEl.textContent = 'Step 4 of 4';
+
+      // psbtBid from UniSat is hex format
+      const signedPsbt = await _bmSignPsbt(wallet, psbtBid, bidSignIndexes || [], buyerPubkey);
+
+      // ── Step 5: Broadcast ─────────────────────────────────────────────────
       btn.textContent = 'Broadcasting...';
-      _bmSetStatus(status, 'info', 'Broadcasting transaction...');
-      const confirmRes = await fetch(`${UNISAT_BASE_BM}/v3/market/domain/auction/confirm_bid`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${UNISAT_KEY_BM}` },
-        body: JSON.stringify({
+      _bmSetStatus(status, 'info', 'Broadcasting to Bitcoin network...');
+
+      const confirmData = await _bmUnisat(
+        '/v3/market/domain/auction/confirm_bid',
+        {
           auctionId,
           bidId,
-          psbtBid: signedPsbtBid,
+          psbtBid: signedPsbt,       // hex from wallet.signPsbt
           psbtBid2: psbtBid2 || '',
           psbtSettle: psbtSettle || '',
-        }),
-      });
-      const confirmData = await confirmRes.json();
-      if (confirmData.code !== 0) throw new Error(confirmData.msg || 'broadcast failed');
+          fromBase64: false,          // explicitly hex
+        }
+      );
 
-      const txid = confirmData.data?.txid || confirmData.data?.bidTxid || '';
-      _bmSetStatus(status, 'success', `
-        Purchase complete!
-        ${txid ? `<div class="bn-modal__txid"><a href="https://mempool.space/tx/${txid}" target="_blank" rel="noopener">${txid}</a></div>` : ''}
-      `);
+      const txid = confirmData.txid || confirmData.bidTxid || '';
+      stepEl.textContent = '';
+      _bmSetStatus(status, 'success',
+        `Purchase complete! ${name} is now yours.` +
+        (txid ? `<div class="bn-modal__txid"><a href="https://mempool.space/tx/${txid}" target="_blank" rel="noopener">${txid}</a></div>` : '')
+      );
       btn.textContent = 'Done';
       btn.style.background = '#22c55e';
+      btn.style.color = '#fff';
 
     } catch (e) {
       const msg = e.message || String(e);
-      if (/reject|cancel|denied|dismiss/i.test(msg)) {
-        _bmSetStatus(status, 'info', 'Signature cancelled.');
+      stepEl.textContent = '';
+      if (/reject|cancel|denied|dismiss|user rejected/i.test(msg)) {
+        _bmSetStatus(status, 'info', 'Signature cancelled. Click below to try again.');
       } else {
         _bmSetStatus(status, 'error', msg);
       }
