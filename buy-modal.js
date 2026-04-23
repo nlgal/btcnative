@@ -397,6 +397,117 @@ async function _bmBuildCombinedPsbt({
   return { psbtB64, psbtHex: _bmBytesToHex(combined), buyerInputIndexes, networkFee, changeSats: changeSats > 546 ? changeSats : 0 };
 }
 
+// ── Manual PSBT → raw tx extraction (fallback) ─────────────────────────────
+
+/**
+ * Extract a raw segwit transaction from a finalized (or near-finalized) PSBT.
+ * Handles two witness sources per input:
+ *   0x08  PSBT_IN_FINAL_SCRIPTWITNESS  — already serialized witness stack
+ *   0x13  PSBT_IN_TAP_KEY_SIG          — Taproot Schnorr sig; wrap into [1][len][sig]
+ *
+ * Used as a fallback when @scure/btc-signer's finalize() throws because it
+ * doesn't recognize the seller's 0x13 entry as a finalized input.
+ */
+function _bmExtractRawTx(psbtB64) {
+  const psbt = _bmB64ToBytes(psbtB64);
+  const view = new DataView(psbt.buffer, psbt.byteOffset);
+
+  if (view.getUint32(0) !== 0x70736274 || psbt[4] !== 0xff)
+    throw new Error('_bmExtractRawTx: not a valid PSBT');
+
+  // Parse global map, find unsigned tx (key type 0x00, keyLen 1)
+  let off = 5;
+  let unsignedTx = null;
+  while (off < psbt.length) {
+    const kl = psbt[off];
+    if (kl === 0x00) { off++; break; }
+    const kt = psbt[off + 1];
+    off += 1 + kl;
+    const { value: vl, length: vls } = _bmReadVarint(view, off);
+    off += vls;
+    if (kt === 0x00 && kl === 1) unsignedTx = psbt.slice(off, off + vl);
+    off += vl;
+  }
+  if (!unsignedTx) throw new Error('_bmExtractRawTx: unsigned tx not found in PSBT global map');
+
+  // Parse unsigned tx
+  const txView = new DataView(unsignedTx.buffer, unsignedTx.byteOffset);
+  let txOff = 4; // skip version
+
+  const { value: inCount, length: icLen } = _bmReadVarint(txView, txOff);
+  txOff += icLen;
+
+  const inputs = [];
+  for (let i = 0; i < inCount; i++) {
+    const txid = unsignedTx.slice(txOff, txOff + 32);
+    const vout = txView.getUint32(txOff + 32, true);
+    const { value: scriptLen, length: slLen } = _bmReadVarint(txView, txOff + 36);
+    const seqStart = txOff + 36 + slLen + scriptLen;
+    const seq = unsignedTx.slice(seqStart, seqStart + 4);
+    inputs.push({ txid, vout, seq });
+    txOff = seqStart + 4;
+  }
+
+  const { value: outCount, length: ocLen } = _bmReadVarint(txView, txOff);
+  txOff += ocLen;
+  const outStart = txOff;
+  for (let i = 0; i < outCount; i++) {
+    txOff += 8;
+    const { value: scriptLen, length: slLen } = _bmReadVarint(txView, txOff);
+    txOff += slLen + scriptLen;
+  }
+  const outputsBytes = unsignedTx.slice(outStart, txOff);
+  const locktime = unsignedTx.slice(txOff, txOff + 4);
+
+  // Collect per-input witness from PSBT input maps
+  const witnesses = Array(inCount).fill(null);
+  for (let i = 0; i < inCount && off < psbt.length; i++) {
+    let tapKeySig = null;
+    while (off < psbt.length) {
+      const kl = psbt[off];
+      if (kl === 0x00) { off++; break; }
+      const kt = psbt[off + 1];
+      off += 1 + kl;
+      const { value: vl, length: vls } = _bmReadVarint(view, off);
+      const val = psbt.slice(off + vls, off + vls + vl);
+      off += vls + vl;
+      if (kt === 0x08 && kl === 1) {
+        witnesses[i] = val;  // already serialized
+      } else if (kt === 0x13 && kl === 1) {
+        tapKeySig = val;     // raw Taproot Schnorr sig
+      }
+    }
+    if (!witnesses[i] && tapKeySig) {
+      // Taproot key-path witness: [01][len][sig]
+      const wi = new Uint8Array(1 + 1 + tapKeySig.length);
+      wi[0] = 0x01;
+      wi[1] = tapKeySig.length;
+      wi.set(tapKeySig, 2);
+      witnesses[i] = wi;
+    }
+  }
+
+  // Assemble segwit raw tx
+  const version = unsignedTx.slice(0, 4);
+  const inputBytes = _bmConcat(
+    _bmWriteVarint(inCount),
+    ...inputs.map(inp =>
+      _bmConcat(inp.txid, _bmUint32LE(inp.vout), new Uint8Array([0x00]), inp.seq)
+    )
+  );
+  const outputBlock  = _bmConcat(_bmWriteVarint(outCount), outputsBytes);
+  const witnessBlock = _bmConcat(...witnesses.map(w => w || new Uint8Array([0x00])));
+
+  return _bmBytesToHex(_bmConcat(
+    version,
+    new Uint8Array([0x00, 0x01]),  // segwit marker + flag
+    inputBytes,
+    outputBlock,
+    witnessBlock,
+    locktime
+  ));
+}
+
 // ── Sign ──────────────────────────────────────────────────────────────────────
 
 async function _bmSignPsbt(wallet, psbtB64, signIndexes, buyerAddress, buyerPubkey) {
@@ -675,23 +786,49 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
 
       const signedPsbtB64 = await _bmSignPsbt(wallet, psbtB64, buyerInputIndexes, buyerAddress, buyerPubkey);
 
-      // ── Broadcast ─────────────────────────────────────────────────────────
-      btn.textContent = 'Broadcasting...';
-      _bmSetStatus(status, 'info', 'Broadcasting to Bitcoin network...');
+      // ── Extract raw tx client-side then broadcast ────────────────────────
+      btn.textContent = 'Finalizing...';
+      _bmSetStatus(status, 'info', 'Finalizing transaction...');
       stepEl.textContent = '';
 
-      // Convert signed PSBT to raw tx hex for mempool.space broadcast
-      // When autoFinalized: true, UniSat returns a complete signed PSBT that
-      // we can extract the raw tx from. We send psbt hex to our worker
-      // which finalizes and broadcasts.
+      // Finalize PSBT → raw tx entirely client-side.
+      // Strategy: try @scure/btc-signer first (cleanest), fall back to manual
+      // extraction if scure throws (e.g. it doesn't recognize 0x13 TAP_KEY_SIG
+      // on input 0 as a valid finalized witness).
+      let rawTxHex;
+
+      // Normalise: UniSat may return base64 or hex
+      const isHex = /^[0-9a-fA-F]+$/.test(signedPsbtB64);
+      const signedPsbtBytes = isHex ? _bmHexToBytes(signedPsbtB64) : _bmB64ToBytes(signedPsbtB64);
+      const signedPsbtB64Norm = isHex ? _bmBytesToB64(signedPsbtBytes) : signedPsbtB64;
+
+      try {
+        const { Transaction: ScureTx } = await import('https://esm.sh/@scure/btc-signer@1.4.0');
+        const finalTx = ScureTx.fromPSBT(signedPsbtBytes);
+        finalTx.finalize();
+        rawTxHex = _bmBytesToHex(finalTx.extract());
+        console.log('broadcast: scure finalize succeeded, rawTxHex length:', rawTxHex.length);
+      } catch (finalizeErr) {
+        // Scure finalize() is strict about PSBT_IN_FINAL_SCRIPTWITNESS (0x08).
+        // Input 0 (seller) only has PSBT_IN_TAP_KEY_SIG (0x13) — so scure
+        // can't finalize it. Fall back to our manual extractor which handles
+        // both 0x08 and 0x13 as valid witness sources.
+        console.warn('scure finalize failed, using manual extraction:', finalizeErr.message);
+        rawTxHex = _bmExtractRawTx(signedPsbtB64Norm);
+        console.log('broadcast: manual extract succeeded, rawTxHex length:', rawTxHex.length);
+      }
+
+      btn.textContent = 'Broadcasting...';
+      _bmSetStatus(status, 'info', 'Broadcasting to Bitcoin network...');
+
+      // Send raw hex directly — no PSBT parsing needed on worker side
       const broadcastRes = await fetch(`${MARKET_API_BM}/api/psbt/broadcast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // Pass the raw signed PSBT — worker will finalize and extract tx hex
-          txHex: signedPsbtB64,
+          txHex: rawTxHex,
           name,
-          isPsbt: true,
+          isPsbt: false,
         }),
       });
       const broadcastData = await broadcastRes.json();
