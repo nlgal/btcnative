@@ -248,6 +248,7 @@ async function _bmBuildCombinedPsbt({
   priceSats,
   buyerUtxos,        // array of { txid, vout, value }
   buyerAddress,
+  buyerPubkey,       // x-only 32-byte pubkey hex (64 chars) for PSBT_IN_TAP_INTERNAL_KEY
   feeAddress,
   feeSats,
   feeRate,
@@ -354,51 +355,70 @@ async function _bmBuildCombinedPsbt({
     tx.addOutput({ script: buyerScript, amount: BigInt(changeSats) });
   }
 
-  // ── Step 4: Inject seller's Taproot sig into input 0 PSBT map ────────────
-  // @scure builds the PSBT without a sig for input 0 (we don't have seller key).
-  // We need to insert PSBT_IN_TAP_KEY_SIG (key 0x13) before input 0's separator.
-  //
-  // PSBT byte layout for input 0 after building:
-  //   [key-value pairs...] [0x00 separator]
-  // We insert our sig entry just before the 0x00 separator.
+  // ── Step 4: Inject entries into PSBT input maps ───────────────────────────
+  // @scure builds the PSBT without:
+  //   - input 0: PSBT_IN_TAP_KEY_SIG (0x13) — seller's Schnorr sig
+  //   - input 1..N: PSBT_IN_TAP_INTERNAL_KEY (0x16) — buyer's x-only pubkey
+  // UniSat needs 0x16 to know which key to use for Taproot key-path signing.
   const rawPsbt = tx.toPSBT();
+  const rv = new DataView(rawPsbt.buffer, rawPsbt.byteOffset);
 
-  // Locate input 0's separator byte in the PSBT
-  // Strategy: parse PSBT to find input 0 map end, insert before it
+  // Build entries to inject
   const sigEntry = _bmConcat(
-    new Uint8Array([0x01, 0x13]),                      // key_len=1, key=0x13
-    _bmWriteVarint(sellerSig.length), sellerSig        // val_len + val
+    new Uint8Array([0x01, 0x13]),
+    _bmWriteVarint(sellerSig.length), sellerSig
   );
 
-  // Find input 0 map end by parsing from global map end
-  const rv = new DataView(rawPsbt.buffer, rawPsbt.byteOffset);
-  let roff = 5; // skip magic
-  // Skip global map
-  while (roff < rawPsbt.length) {
-    const kl = rawPsbt[roff];
-    if (kl === 0x00) { roff++; break; }
-    roff += 1 + kl;
-    const { value: vl, length: vls } = _bmReadVarint(rv, roff);
-    roff += vls + vl;
+  // buyer x-only pubkey (32 bytes) for PSBT_IN_TAP_INTERNAL_KEY (0x16)
+  // buyerPubkey is either 64-char hex (x-only) or 66-char (compressed, drop leading 02/03)
+  let buyerKeyBytes = null;
+  if (buyerPubkey) {
+    const pkHex = buyerPubkey.length === 66 ? buyerPubkey.slice(2) : buyerPubkey;
+    buyerKeyBytes = _bmHexToBytes(pkHex); // 32 bytes
   }
-  // Now at input 0 map start — scan to its separator
-  while (roff < rawPsbt.length) {
-    const kl = rawPsbt[roff];
-    if (kl === 0x00) {
-      // Insert sigEntry before this separator
-      const before = rawPsbt.slice(0, roff);
-      const after  = rawPsbt.slice(roff);
-      const combined = _bmConcat(before, sigEntry, after);
-      const psbtB64 = _bmBytesToB64(combined);
-      const buyerInputIndexes = selectedUtxos.map((_, i) => i + 1);
-      return { psbtB64, psbtHex: _bmBytesToHex(combined), buyerInputIndexes, networkFee, changeSats: changeSats > 546 ? changeSats : 0 };
+  const tapKeyEntry = buyerKeyBytes ? _bmConcat(
+    new Uint8Array([0x01, 0x16]),
+    _bmWriteVarint(buyerKeyBytes.length), buyerKeyBytes
+  ) : null;
+
+  // Inject entries into each input map before its separator.
+  // Re-parse after each injection since offsets shift.
+  // injectBeforeInputSep(psbt, targetInputIndex, entryBytes) -> new psbt
+  function injectBeforeInputSep(psbtArr, targetInput, entry) {
+    const view = new DataView(psbtArr.buffer, psbtArr.byteOffset);
+    let o = 5;
+    // skip global
+    while (o < psbtArr.length) { const kl=psbtArr[o]; if(kl===0){o++;break;} o+=1+kl; const{value:vl,length:vls}=_bmReadVarint(view,o); o+=vls+vl; }
+    // skip input maps 0..targetInput-1
+    for (let i = 0; i < targetInput; i++) {
+      while (o < psbtArr.length) { const kl=psbtArr[o]; if(kl===0){o++;break;} o+=1+kl; const{value:vl,length:vls}=_bmReadVarint(view,o); o+=vls+vl; }
     }
-    roff += 1 + kl;
-    const { value: vl, length: vls } = _bmReadVarint(rv, roff);
-    roff += vls + vl;
+    // scan to targetInput's separator
+    while (o < psbtArr.length) {
+      const kl = psbtArr[o];
+      if (kl === 0x00) {
+        return _bmConcat(psbtArr.slice(0, o), entry, psbtArr.slice(o));
+      }
+      o += 1 + kl;
+      const { value: vl, length: vls } = _bmReadVarint(view, o);
+      o += vls + vl;
+    }
+    throw new Error('Separator not found for input ' + targetInput);
   }
 
-  throw new Error('Could not locate input 0 map separator in combined PSBT');
+  let combined = rawPsbt;
+  // Inject seller sig into input 0
+  combined = injectBeforeInputSep(combined, 0, sigEntry);
+  // Inject tap internal key into each buyer input
+  if (tapKeyEntry) {
+    for (let i = 1; i <= selectedUtxos.length; i++) {
+      combined = injectBeforeInputSep(combined, i, tapKeyEntry);
+    }
+  }
+
+  const psbtB64 = _bmBytesToB64(combined);
+  const buyerInputIndexes = selectedUtxos.map((_, i) => i + 1);
+  return { psbtB64, psbtHex: _bmBytesToHex(combined), buyerInputIndexes, networkFee, changeSats: changeSats > 546 ? changeSats : 0 };
 }
 
 // ── Sign ──────────────────────────────────────────────────────────────────────
@@ -644,6 +664,7 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
           priceSats,
           buyerUtxos,
           buyerAddress,
+          buyerPubkey,
           feeAddress,
           feeSats,
           feeRate,
