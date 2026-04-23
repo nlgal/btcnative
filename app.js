@@ -152,38 +152,81 @@ async function fetchRecentSales(limit = 10) {
 
 // Returns active listings array for the explore grid
 async function fetchListings({ domainType = null, minLength = null, maxLength = null, page = 0, pageSize = 20, sort = 'price_asc' } = {}) {
-  // Own-PSBT marketplace: fetch from our KV worker instead of UniSat
+  // Fetch from both our KV worker (native PSBT listings) and UniSat marketplace
+  // KV listings shown first; UniSat fills the rest
   try {
-    const params = new URLSearchParams({
+    // 1. Our KV worker
+    const kvParams = new URLSearchParams({
       sort,
       limit: String(pageSize),
       ...(domainType ? { tld: domainType } : {}),
     });
-    const res = await fetch(`${MARKET_API}/api/market/listings?${params}`, {
+    const kvPromise = fetch(`${MARKET_API}/api/market/listings?${kvParams}`, {
       signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data.ok || !data.listings) return null;
-    // Map to shape expected by unisatListingToCard + renderListings
-    // { name, priceSats, feeSats, sellerAddress, inscriptionId, inscriptionUtxo, createdAt }
-    const mapped = data.listings.filter(l => {
-      if (!l.name) return false;
-      const base = getBase(l.name);
-      if (minLength && base.length < minLength) return false;
-      if (maxLength && base.length > maxLength) return false;
-      return true;
-    }).slice(page * pageSize, (page + 1) * pageSize).map(l => ({
-      name:          l.name,
-      price:         l.priceSats,
-      priceSats:     l.priceSats,
-      feeSats:       l.feeSats,
-      inscriptionId: l.inscriptionId,
-      address:       l.sellerAddress,
-      auctionId:     null,  // no UniSat auction ID
-      bnrp:          null,
-    }));
-    return { list: mapped, total: data.total };
+    }).then(r => r.ok ? r.json() : null).catch(() => null);
+
+    // 2. UniSat marketplace
+    const unisatPromise = UNISAT_API_KEY ? unisatPost('/v3/market/domain/auction/list', {
+      filter: {
+        nftType: 'domain',
+        ...(domainType ? { domainType } : {}),
+      },
+      start: page * pageSize,
+      limit: pageSize,
+      sort: { unitPrice: 1 },
+    }).catch(() => null) : Promise.resolve(null);
+
+    const [kvData, unisatData] = await Promise.all([kvPromise, unisatPromise]);
+
+    // Map KV listings
+    const kvListings = (kvData && kvData.ok && kvData.listings)
+      ? kvData.listings.filter(l => {
+          if (!l.name) return false;
+          const base = getBase(l.name);
+          if (minLength && base.length < minLength) return false;
+          if (maxLength && base.length > maxLength) return false;
+          return true;
+        }).map(l => ({
+          name:          l.name,
+          price:         l.priceSats,
+          priceSats:     l.priceSats,
+          feeSats:       l.feeSats,
+          inscriptionId: l.inscriptionId,
+          address:       l.sellerAddress,
+          auctionId:     null,
+          bnrp:          null,
+          source:        'kv',
+        }))
+      : [];
+
+    // Map UniSat listings, excluding names already in KV
+    // unisatPost returns json.data directly, so unisatData = { list, total }
+    const kvNames = new Set(kvListings.map(l => l.name.toLowerCase()));
+    const unisatListings = (unisatData && unisatData.list)
+      ? unisatData.list.filter(l => {
+          const name = (l.domain || '').toLowerCase();
+          if (!name || kvNames.has(name)) return false;
+          const base = getBase(name);
+          if (minLength && base.length < minLength) return false;
+          if (maxLength && base.length > maxLength) return false;
+          return true;
+        }).map(l => ({
+          name:          l.domain,
+          price:         l.price,
+          priceSats:     l.price,
+          feeSats:       0,
+          inscriptionId: l.inscriptionId,
+          address:       l.address,
+          auctionId:     l.auctionId,
+          bnrp:          null,
+          source:        'unisat',
+        }))
+      : [];
+
+    const combined = [...kvListings, ...unisatListings];
+    const total = (kvData && kvData.total ? kvData.total : 0) +
+                  (unisatData ? (unisatData.total || 0) : 0);
+    return { list: combined, total };
   } catch (e) {
     console.warn('fetchListings error:', e.message);
     return null;
@@ -1464,7 +1507,7 @@ async function initExplorePage() {
     }
     fetchListings(apiParams).then(result => {
       if (result && result.list) {
-        LIVE_LISTINGS = result.list.map(unisatListingToCard);
+        LIVE_LISTINGS = result.list;
       }
       renderListings(getFilteredNames());
       const countEl = qs('#listingCount');
@@ -1475,7 +1518,7 @@ async function initExplorePage() {
     if (UNISAT_API_KEY) {
       fetchListings(apiParams).then(result => {
         if (result && result.list) {
-          LIVE_LISTINGS = result.list.map(unisatListingToCard);
+          LIVE_LISTINGS = result.list;
           renderListings(getFilteredNames());
           const countEl = qs('#listingCount');
           if (countEl && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
@@ -1618,7 +1661,7 @@ async function loadMore() {
   if (!UNISAT_API_KEY) return;
   const result = await fetchListings();
   if (result && result.list) {
-    LIVE_LISTINGS = result.list.map(unisatListingToCard);
+    LIVE_LISTINGS = result.list;
     renderListings(getFilteredNames());
   }
 }
@@ -3486,7 +3529,7 @@ async function initExplorePageMVP() {
     }
     const result = await fetchListings(apiParams);
     if (result && result.list) {
-      LIVE_LISTINGS = result.list.map(unisatListingToCard);
+      LIVE_LISTINGS = result.list;
     }
     renderListings(getFilteredNamesMVP());
     const countEl = qs('#listingCount');
@@ -3498,7 +3541,7 @@ async function initExplorePageMVP() {
     if (UNISAT_API_KEY) {
       fetchListings(apiParams).then(result => {
         if (result && result.list) {
-          LIVE_LISTINGS = result.list.map(unisatListingToCard);
+          LIVE_LISTINGS = result.list;
           renderListings(getFilteredNamesMVP());
           const countEl = qs('#listingCount');
           if (countEl && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
@@ -3523,7 +3566,7 @@ async function loadMore() {
   const page = LIVE_LISTINGS ? Math.floor(LIVE_LISTINGS.length / 20) : 0;
   const result = await fetchListings({ page, pageSize: 20 });
   if (result && result.list) {
-    const newItems = result.list.map(unisatListingToCard);
+    const newItems = result.list;
     LIVE_LISTINGS = [...(LIVE_LISTINGS || []), ...newItems];
     renderListings(getFilteredNamesMVP());
   }
