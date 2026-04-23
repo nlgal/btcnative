@@ -241,89 +241,62 @@ async function _bmGetUtxos(wallet, address) {
  *
  * Returns { psbtB64, buyerInputIndexes } for wallet signing.
  */
-function _bmBuildCombinedPsbt({
+async function _bmBuildCombinedPsbt({
   sellerPsbtHex,
   inscriptionUtxo,   // { txid, vout, value }
   sellerAddress,
   priceSats,
-  buyerUtxos,        // array of { txid, vout, value } — funding inputs
-  buyerAddress,      // inscription delivery
+  buyerUtxos,        // array of { txid, vout, value }
+  buyerAddress,
   feeAddress,
   feeSats,
   feeRate,
 }) {
-  // ── Parse seller PSBT ───────────────────────────────────────────────────────
-  // We need to extract the partial sig from the seller's signed PSBT.
+  // Load @scure/btc-signer for proper PSBT construction
+  const { Transaction, OutScript, Address, NETWORK, SigHash } = await import('https://esm.sh/@scure/btc-signer@1.4.0');
+  const { hex: scureHex, base64: scureBase64 } = await import('https://esm.sh/@scure/base@1.2.1');
+
+  // ── Step 1: Extract seller Taproot sig from stored PSBT ──────────────────
   const sellerPsbt = _bmHexToBytes(sellerPsbtHex);
   const sellerView = new DataView(sellerPsbt.buffer, sellerPsbt.byteOffset);
 
-  // Validate magic
-  if (sellerView.getUint32(0) !== 0x70736274 || sellerPsbt[4] !== 0xff) {
+  if (sellerView.getUint32(0) !== 0x70736274 || sellerPsbt[4] !== 0xff)
     throw new Error('Invalid seller PSBT format');
-  }
 
-  // Find global map end (skip unsigned tx)
+  // Skip global map
   let off = 5;
-  let sellerUnsignedTx = null;
   while (off < sellerPsbt.length) {
-    const keyLen = sellerPsbt[off];
-    if (keyLen === 0x00) { off++; break; }
-    const keyType = sellerPsbt[off + 1];
-    off += 1 + keyLen;
-    const { value: valLen, length: valLenSize } = _bmReadVarint(sellerView, off);
-    off += valLenSize;
-    if (keyType === 0x00 && keyLen === 1) {
-      sellerUnsignedTx = sellerPsbt.slice(off, off + valLen);
-    }
-    off += valLen;
-  }
-  if (!sellerUnsignedTx) throw new Error('Could not parse seller PSBT unsigned tx');
-
-  // Parse input 0 map from seller PSBT — find partial_sig (key type 0x02)
-  // and witness_utxo (key type 0x01)
-  let partialSig = null;
-  let sigPubkey  = null;
-  while (off < sellerPsbt.length) {
-    const keyLen = sellerPsbt[off];
-    if (keyLen === 0x00) { off++; break; }
-    const keyType = sellerPsbt[off + 1];
-    const fullKey = sellerPsbt.slice(off + 1, off + 1 + keyLen);
-    off += 1 + keyLen;
-    const { value: valLen, length: valLenSize } = _bmReadVarint(sellerView, off);
-    const valData = sellerPsbt.slice(off + valLenSize, off + valLenSize + valLen);
-    off += valLenSize + valLen;
-
-    if (keyType === 0x13 && keyLen === 1) {
-      // PSBT_IN_TAP_KEY_SIG (0x13): Taproot key-path Schnorr signature (64 or 65 bytes)
-      partialSig = valData;
-      sigPubkey  = null; // not used for tap_key_sig — key is just [0x13]
-    } else if (keyType === 0x02 && keyLen >= 1) {
-      // Legacy partial_sig fallback (non-taproot)
-      sigPubkey  = fullKey.slice(1);
-      partialSig = valData;
-    }
+    const kl = sellerPsbt[off];
+    if (kl === 0x00) { off++; break; }
+    off += 1 + kl;
+    const { value: vl, length: vls } = _bmReadVarint(sellerView, off);
+    off += vls + vl;
   }
 
-  if (!partialSig) throw new Error('Seller PSBT does not contain a partial signature. Was it signed?');
+  // Parse input 0 map — find tap_key_sig (0x13) or partial_sig (0x02)
+  let sellerSig = null;
+  while (off < sellerPsbt.length) {
+    const kl = sellerPsbt[off];
+    if (kl === 0x00) { off++; break; }
+    const kt = sellerPsbt[off + 1];
+    off += 1 + kl;
+    const { value: vl, length: vls } = _bmReadVarint(sellerView, off);
+    const val = sellerPsbt.slice(off + vls, off + vls + vl);
+    off += vls + vl;
+    if (kt === 0x13 || kt === 0x02) sellerSig = val;
+  }
 
-  // ── Build combined PSBT ─────────────────────────────────────────────────────
-  // Calculate transaction weight for fee estimation
-  // P2TR input: 41 bytes (outpoint+seq) + 65 bytes witness = ~106 vbytes
-  // P2TR output: 43 bytes each
-  // We estimate: 10 overhead + 68 * numInputs + 43 * numOutputs (vbytes)
-  const numInputs  = 1 + buyerUtxos.length;  // seller + buyer funding
-  const numOutputs = 4;                       // seller + buyer + fee + change
+  if (!sellerSig) throw new Error('Seller PSBT does not contain a partial signature. Was it signed?');
+
+  // ── Step 2: Fee + UTXO selection ─────────────────────────────────────────
+  const numInputs  = 1 + buyerUtxos.length;
+  const numOutputs = 4;
   const estVbytes  = 10 + 68 * numInputs + 43 * numOutputs;
   const networkFee = Math.ceil(estVbytes * feeRate);
 
-  // Select UTXOs: need priceSats + feeSats + INSCRIPTION_DUST + networkFee
   const totalNeeded = priceSats + feeSats + INSCRIPTION_DUST + networkFee;
-  let selectedUtxos = [];
-  let selectedTotal = 0;
-  // Sort by value descending for efficient selection
-  const sortedUtxos = [...buyerUtxos].sort((a, b) => b.value - a.value);
-  for (const u of sortedUtxos) {
-    // Skip the inscription UTXO if it appears in buyer's list
+  let selectedUtxos = [], selectedTotal = 0;
+  for (const u of [...buyerUtxos].sort((a, b) => b.value - a.value)) {
     if (u.txid === inscriptionUtxo.txid && u.vout === inscriptionUtxo.vout) continue;
     selectedUtxos.push(u);
     selectedTotal += u.value;
@@ -342,114 +315,90 @@ function _bmBuildCombinedPsbt({
 
   const changeSats = selectedTotal - priceSats - feeSats - INSCRIPTION_DUST - networkFee;
 
-  // ── Build unsigned tx ───────────────────────────────────────────────────────
-  const inscTxid = _bmHexToBytes(inscriptionUtxo.txid).reverse();
-  const seqRBF = new Uint8Array([0xff, 0xff, 0xff, 0xfd]);
+  // ── Step 3: Build combined PSBT with @scure/btc-signer ───────────────────
+  const toScript = addr => OutScript.encode(Address(NETWORK).decode(addr));
 
-  // inputs
-  const sellerInput = _bmConcat(inscTxid, _bmUint32LE(inscriptionUtxo.vout), new Uint8Array([0x00]), seqRBF);
-  const buyerInputs = selectedUtxos.map(u =>
-    _bmConcat(_bmHexToBytes(u.txid).reverse(), _bmUint32LE(u.vout), new Uint8Array([0x00]), seqRBF)
-  );
-  const allInputBytes = _bmConcat(sellerInput, ...(buyerInputs.length ? buyerInputs : []));
+  const sellerScript = toScript(sellerAddress);
+  const buyerScript  = toScript(buyerAddress);
+  const feeScript    = toScript(feeAddress);
 
-  // outputs
-  const sellerScript = _bmP2trScript(sellerAddress);
-  const buyerScript  = _bmP2trScript(buyerAddress);
-  const feeScript    = _bmP2trScript(feeAddress);
+  const tx = new Transaction({ allowUnknownOutputs: true });
 
-  const sellerOut = _bmConcat(_bmUint64LE(priceSats), _bmWriteVarint(sellerScript.length), sellerScript);
-  const buyerOut  = _bmConcat(_bmUint64LE(INSCRIPTION_DUST), _bmWriteVarint(buyerScript.length), buyerScript);
-  const feeOut    = _bmConcat(_bmUint64LE(feeSats), _bmWriteVarint(feeScript.length), feeScript);
-
-  let changeOut = new Uint8Array(0);
-  let outputCount = 3;
-  if (changeSats > 546) {
-    outputCount = 4;
-    const changeScript = _bmP2trScript(buyerAddress);
-    changeOut = _bmConcat(_bmUint64LE(changeSats), _bmWriteVarint(changeScript.length), changeScript);
-  }
-
-  const unsignedTx = _bmConcat(
-    new Uint8Array([0x02, 0x00, 0x00, 0x00]),                 // version 2
-    _bmWriteVarint(numInputs),
-    allInputBytes,
-    _bmWriteVarint(outputCount),
-    sellerOut, buyerOut, feeOut,
-    ...(changeSats > 546 ? [changeOut] : []),
-    new Uint8Array([0x00, 0x00, 0x00, 0x00])                  // locktime 0
-  );
-
-  // ── Build PSBT ───────────────────────────────────────────────────────────────
-  // Global map: magic + unsigned tx
-  const txLenVarint = _bmWriteVarint(unsignedTx.length);
-  const globalMap = _bmConcat(
-    new Uint8Array([0x70, 0x73, 0x62, 0x74, 0xff]),
-    new Uint8Array([0x01, 0x00]),                              // key type 0x00 = unsigned tx
-    txLenVarint, unsignedTx,
-    new Uint8Array([0x00])                                     // end global map
-  );
-
-  // Input 0 map: seller's inscription UTXO
-  // witness_utxo (0x01) + tap_key_sig (0x13) or legacy partial_sig (0x02 + pubkey)
-  const inscValue     = _bmUint64LE(inscriptionUtxo.value);
-  const inscScript    = _bmP2trScript(sellerAddress);
-  const witnessUtxo0  = _bmConcat(inscValue, _bmWriteVarint(inscScript.length), inscScript);
-
-  // Build the signature entry for input 0.
-  // If sigPubkey is null it was a Taproot key-path sig (PSBT_IN_TAP_KEY_SIG, key 0x13).
-  // Otherwise it's a legacy partial_sig (key 0x02 + pubkey).
-  let sigKeyBytes, sigValBytes;
-  if (sigPubkey === null) {
-    // Taproot: key = [0x13] (1 byte, no pubkey appended)
-    sigKeyBytes = new Uint8Array([0x13]);
-    sigValBytes = partialSig;
-  } else {
-    // Legacy: key = [0x02, ...pubkey]
-    sigKeyBytes = _bmConcat(new Uint8Array([0x02]), sigPubkey);
-    sigValBytes = partialSig;
-  }
-
-  const input0Map = _bmConcat(
-    new Uint8Array([0x01, 0x01]), _bmWriteVarint(witnessUtxo0.length), witnessUtxo0,
-    _bmWriteVarint(sigKeyBytes.length), sigKeyBytes,
-    _bmWriteVarint(sigValBytes.length), sigValBytes,
-    new Uint8Array([0x00])                                     // end input 0 map
-  );
-
-  // Input 1..N maps: buyer funding UTXOs (witness_utxo for each)
-  const buyerInputMaps = selectedUtxos.map(u => {
-    const utxoVal    = _bmUint64LE(u.value);
-    const utxoScript = _bmP2trScript(buyerAddress);
-    const witnessUtxo = _bmConcat(utxoVal, _bmWriteVarint(utxoScript.length), utxoScript);
-    return _bmConcat(
-      new Uint8Array([0x01, 0x01]), _bmWriteVarint(witnessUtxo.length), witnessUtxo,
-      new Uint8Array([0x00])
-    );
+  // input[0]: seller's inscription UTXO (SIGHASH_SINGLE|ANYONECANPAY — already signed)
+  tx.addInput({
+    txid:        inscriptionUtxo.txid,
+    index:       inscriptionUtxo.vout,
+    sequence:    0xfffffffd,
+    witnessUtxo: { script: sellerScript, amount: BigInt(inscriptionUtxo.value) },
+    sighashType: SigHash.SINGLE_ANYONECANPAY,
   });
 
-  // Output maps: all empty
-  const outputMaps = new Uint8Array(outputCount).fill(0x00); // N empty maps
+  // input[1..N]: buyer funding UTXOs
+  for (const u of selectedUtxos) {
+    tx.addInput({
+      txid:        u.txid,
+      index:       u.vout,
+      sequence:    0xfffffffd,
+      witnessUtxo: { script: buyerScript, amount: BigInt(u.value) },
+    });
+  }
 
-  const combinedPsbt = _bmConcat(
-    globalMap,
-    input0Map,
-    ...(buyerInputMaps.length ? buyerInputMaps : []),
-    outputMaps
+  // output[0]: seller receives price
+  tx.addOutput({ script: sellerScript, amount: BigInt(priceSats) });
+  // output[1]: buyer receives inscription (dust)
+  tx.addOutput({ script: buyerScript, amount: BigInt(INSCRIPTION_DUST) });
+  // output[2]: platform fee
+  tx.addOutput({ script: feeScript, amount: BigInt(feeSats) });
+  // output[3]: change (only if worth sending)
+  if (changeSats > 546) {
+    tx.addOutput({ script: buyerScript, amount: BigInt(changeSats) });
+  }
+
+  // ── Step 4: Inject seller's Taproot sig into input 0 PSBT map ────────────
+  // @scure builds the PSBT without a sig for input 0 (we don't have seller key).
+  // We need to insert PSBT_IN_TAP_KEY_SIG (key 0x13) before input 0's separator.
+  //
+  // PSBT byte layout for input 0 after building:
+  //   [key-value pairs...] [0x00 separator]
+  // We insert our sig entry just before the 0x00 separator.
+  const rawPsbt = tx.toPSBT();
+
+  // Locate input 0's separator byte in the PSBT
+  // Strategy: parse PSBT to find input 0 map end, insert before it
+  const sigEntry = _bmConcat(
+    new Uint8Array([0x01, 0x13]),                      // key_len=1, key=0x13
+    _bmWriteVarint(sellerSig.length), sellerSig        // val_len + val
   );
 
-  const psbtB64 = _bmBytesToB64(combinedPsbt);
+  // Find input 0 map end by parsing from global map end
+  const rv = new DataView(rawPsbt.buffer, rawPsbt.byteOffset);
+  let roff = 5; // skip magic
+  // Skip global map
+  while (roff < rawPsbt.length) {
+    const kl = rawPsbt[roff];
+    if (kl === 0x00) { roff++; break; }
+    roff += 1 + kl;
+    const { value: vl, length: vls } = _bmReadVarint(rv, roff);
+    roff += vls + vl;
+  }
+  // Now at input 0 map start — scan to its separator
+  while (roff < rawPsbt.length) {
+    const kl = rawPsbt[roff];
+    if (kl === 0x00) {
+      // Insert sigEntry before this separator
+      const before = rawPsbt.slice(0, roff);
+      const after  = rawPsbt.slice(roff);
+      const combined = _bmConcat(before, sigEntry, after);
+      const psbtB64 = _bmBytesToB64(combined);
+      const buyerInputIndexes = selectedUtxos.map((_, i) => i + 1);
+      return { psbtB64, psbtHex: _bmBytesToHex(combined), buyerInputIndexes, networkFee, changeSats: changeSats > 546 ? changeSats : 0 };
+    }
+    roff += 1 + kl;
+    const { value: vl, length: vls } = _bmReadVarint(rv, roff);
+    roff += vls + vl;
+  }
 
-  // Buyer must sign inputs 1..N (the funding inputs they added)
-  const buyerInputIndexes = selectedUtxos.map((_, i) => i + 1);
-
-  return {
-    psbtB64,
-    psbtHex: _bmBytesToHex(combinedPsbt),
-    buyerInputIndexes,
-    networkFee,
-    changeSats: changeSats > 546 ? changeSats : 0,
-  };
+  throw new Error('Could not locate input 0 map separator in combined PSBT');
 }
 
 // ── Sign ──────────────────────────────────────────────────────────────────────
@@ -688,7 +637,7 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
 
       let psbtData;
       try {
-        psbtData = _bmBuildCombinedPsbt({
+        psbtData = await _bmBuildCombinedPsbt({
           sellerPsbtHex,
           inscriptionUtxo,
           sellerAddress,
