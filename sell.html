@@ -957,7 +957,7 @@ async function lookupName() {
     document.getElementById('namePreview').style.display = 'block';
 
     // 3. Check listing status via market worker
-    const listRes = await fetch(`${MARKET_API}/api/listing?name=${encodeURIComponent(name)}`);
+    const listRes = await fetch(`${MARKET_API}/api/psbt/listing?name=${encodeURIComponent(name)}`);
     const listData = await listRes.json();
     currentListing = listData;
 

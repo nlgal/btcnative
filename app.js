@@ -951,7 +951,7 @@ async function initBuyBtn(name, inscId) {
   if (listingPriceEl) listingPriceEl.textContent = 'Checking...';
 
   try {
-    const res = await fetch(`${MARKET_API}/api/listing?name=${encodeURIComponent(name)}`, { signal: AbortSignal.timeout(6000) });
+    const res = await fetch(`${MARKET_API}/api/psbt/listing?name=${encodeURIComponent(name)}`, { signal: AbortSignal.timeout(6000) });
     const data = await res.json();
 
     if (data.ok && data.listed) {
