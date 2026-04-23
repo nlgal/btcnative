@@ -1677,7 +1677,14 @@ function _refetchListings() {
   ).join('');
   LIVE_LISTINGS = null; // mark as loading
   LIVE_TOTAL    = null;
-  const apiParams = { sort: typeof currentSort !== 'undefined' ? currentSort : 'price_asc' };
+  // For rare/expensive traits (999, allsame, palindrome) the cheapest-200 batch
+  // will never contain matches because these names command high prices. Instead,
+  // use inscription-age order which is uncorrelated with price and surfaces
+  // established name classes reliably.
+  const RARE_TRAITS = ['999', 'allsame', 'palindrome', 'letters', 'dictionary'];
+  const isRareTrait = typeof currentSpecial !== 'undefined' && RARE_TRAITS.includes(currentSpecial);
+  const fetchSort = isRareTrait ? 'insc_asc' : (typeof currentSort !== 'undefined' ? currentSort : 'price_asc');
+  const apiParams = { sort: fetchSort };
   if (currentTld && currentTld !== 'all') apiParams.domainType = currentTld.replace('.', '');
   if (currentLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
   if (currentLen === '3')   { apiParams.minLength = 3; apiParams.maxLength = 3; }
@@ -1720,9 +1727,15 @@ function renderListings(names) {
   if (!el) return;
   el.innerHTML = '';
   const countEl = qs('#listingCount');
-  // Show API total when available; fall back to local filtered count
+  // Show filtered count when a trait/length/TLD filter is narrowing results;
+  // only show raw LIVE_TOTAL when no active filter would reduce it.
   if (countEl) {
-    if (LIVE_TOTAL !== null) {
+    const hasActiveFilter = (
+      (typeof currentSpecial !== 'undefined' && currentSpecial) ||
+      (typeof currentLen !== 'undefined' && currentLen && currentLen !== 'all') ||
+      (typeof currentTld !== 'undefined' && currentTld && currentTld !== 'all')
+    );
+    if (!hasActiveFilter && LIVE_TOTAL !== null) {
       countEl.textContent = `${LIVE_TOTAL.toLocaleString()} names`;
     } else {
       countEl.textContent = `${names.length} names`;
@@ -2271,7 +2284,13 @@ function _refetchListingsMVP() {
   ).join('');
   LIVE_LISTINGS = null;
   LIVE_TOTAL    = null;
-  const apiParams = { sort: typeof currentSort !== 'undefined' ? currentSort : 'price_asc' };
+  // For rare/expensive traits (999, allsame, palindrome, letters) the cheapest-200
+  // batch will rarely contain matches. Fetch by inscription age instead — those
+  // name classes are among the oldest inscriptions and show up reliably there.
+  const _RARE_TRAITS = ['999', 'allsame', 'palindrome', 'letters', 'dictionary'];
+  const _isRareTrait = typeof currentSpecial !== 'undefined' && _RARE_TRAITS.includes(currentSpecial);
+  const _fetchSort   = _isRareTrait ? 'insc_asc' : (typeof currentSort !== 'undefined' ? currentSort : 'price_asc');
+  const apiParams = { sort: _fetchSort };
   if (currentTld && currentTld !== 'all') apiParams.domainType = currentTld.replace('.', '');
   if (currentLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
   if (currentLen === '3')   { apiParams.minLength = 3; apiParams.maxLength = 3; }
