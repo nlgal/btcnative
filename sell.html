@@ -1246,14 +1246,32 @@ async function quickDelist(btn) {
     return;
   }
 
+  // Silent address fetch — no popup. UniSat: getAccounts() returns already-authorized accounts.
+  let address = null;
+  try {
+    if (wallet.type === 'unisat' && typeof wallet.api.getAccounts === 'function') {
+      const accounts = await wallet.api.getAccounts();
+      address = accounts?.[0] || null;
+    } else if (wallet.type === 'xverse') {
+      // Xverse: try silent getAccounts first
+      try {
+        const res = await wallet.api.request('getAccounts', { purposes: ['ordinals'] });
+        address = res?.result?.[0]?.address || null;
+      } catch { address = null; }
+    }
+  } catch { address = null; }
+
+  if (!address) {
+    showConnectPrompt();
+    return;
+  }
+
   showSkeleton();
 
+  // Load active listings in parallel (independent of names fetch)
+  loadYourListings(address);
+
   try {
-    const address = await getWalletAddress(wallet);
-
-    // Load active listings in parallel (independent of names fetch)
-    loadYourListings(address);
-
     const res = await fetch(`${MARKET_API}/api/names?address=${encodeURIComponent(address)}`, {
       signal: AbortSignal.timeout(60000),
     });
