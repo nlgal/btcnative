@@ -293,9 +293,13 @@ function _bmBuildCombinedPsbt({
     const valData = sellerPsbt.slice(off + valLenSize, off + valLenSize + valLen);
     off += valLenSize + valLen;
 
-    if (keyType === 0x02 && keyLen >= 1) {
-      // partial_sig: key = [0x02, pubkey...], value = DER signature
-      sigPubkey  = fullKey.slice(1); // drop key type byte
+    if (keyType === 0x13 && keyLen === 1) {
+      // PSBT_IN_TAP_KEY_SIG (0x13): Taproot key-path Schnorr signature (64 or 65 bytes)
+      partialSig = valData;
+      sigPubkey  = null; // not used for tap_key_sig — key is just [0x13]
+    } else if (keyType === 0x02 && keyLen >= 1) {
+      // Legacy partial_sig fallback (non-taproot)
+      sigPubkey  = fullKey.slice(1);
       partialSig = valData;
     }
   }
@@ -387,21 +391,29 @@ function _bmBuildCombinedPsbt({
   );
 
   // Input 0 map: seller's inscription UTXO
-  // witness_utxo (0x01) + partial_sig (0x02 + pubkey = sig)
+  // witness_utxo (0x01) + tap_key_sig (0x13) or legacy partial_sig (0x02 + pubkey)
   const inscValue     = _bmUint64LE(inscriptionUtxo.value);
   const inscScript    = _bmP2trScript(sellerAddress);
   const witnessUtxo0  = _bmConcat(inscValue, _bmWriteVarint(inscScript.length), inscScript);
 
-  // partial_sig key: [0x02] + pubkey (33 bytes for compressed, 32 for x-only)
-  // We stored the seller sig from their signed PSBT. Reconstruct key from sigPubkey.
-  const sigKey = sigPubkey
-    ? _bmConcat(new Uint8Array([0x02]), sigPubkey)
-    : new Uint8Array([0x02, ...new Array(33).fill(0)]); // fallback placeholder
+  // Build the signature entry for input 0.
+  // If sigPubkey is null it was a Taproot key-path sig (PSBT_IN_TAP_KEY_SIG, key 0x13).
+  // Otherwise it's a legacy partial_sig (key 0x02 + pubkey).
+  let sigKeyBytes, sigValBytes;
+  if (sigPubkey === null) {
+    // Taproot: key = [0x13] (1 byte, no pubkey appended)
+    sigKeyBytes = new Uint8Array([0x13]);
+    sigValBytes = partialSig;
+  } else {
+    // Legacy: key = [0x02, ...pubkey]
+    sigKeyBytes = _bmConcat(new Uint8Array([0x02]), sigPubkey);
+    sigValBytes = partialSig;
+  }
 
   const input0Map = _bmConcat(
     new Uint8Array([0x01, 0x01]), _bmWriteVarint(witnessUtxo0.length), witnessUtxo0,
-    _bmWriteVarint(sigKey.length), sigKey,
-    _bmWriteVarint(partialSig.length), partialSig,
+    _bmWriteVarint(sigKeyBytes.length), sigKeyBytes,
+    _bmWriteVarint(sigValBytes.length), sigValBytes,
     new Uint8Array([0x00])                                     // end input 0 map
   );
 
