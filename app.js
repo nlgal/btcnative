@@ -44,8 +44,9 @@ const UNISAT_TLD_MAP = {
 
 // ── Theme toggle ──────────────────────────────────────────────────────────────
 (function initTheme() {
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const theme = prefersDark ? 'dark' : 'light';
+  // Saved preference wins; dark is the site default for new visitors
+  const saved = localStorage.getItem('btcn-theme');
+  const theme = saved || 'dark';
   document.documentElement.setAttribute('data-theme', theme);
   document.querySelectorAll('[data-theme-toggle]').forEach(btn => {
     updateThemeIcon(btn, theme);
@@ -53,6 +54,7 @@ const UNISAT_TLD_MAP = {
       const cur = document.documentElement.getAttribute('data-theme');
       const next = cur === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('btcn-theme', next);
       document.querySelectorAll('[data-theme-toggle]').forEach(b => updateThemeIcon(b, next));
     });
   });
