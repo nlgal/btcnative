@@ -11,7 +11,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="./base.css" />
   <link rel="stylesheet" href="./style.css" />
-  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
   <style>
     .about-hero {
       padding: var(--space-20) 0 var(--space-12);
@@ -188,6 +187,13 @@
     }
   </style>
   <script>document.documentElement.setAttribute("data-theme",localStorage.getItem("btcn-theme")||"dark");</script>
+  <!-- BTC Native brand favicons -->
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./icon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
+  <link rel="preload" as="image" href="./logo-icon.svg">
+  <meta name="theme-color" content="#0D0D0D">
 </head>
 <body>
 
@@ -195,12 +201,33 @@
 <nav class="nav">
   <div class="container">
     <div class="nav__inner">
-      <a href="./index.html" class="nav__logo">
-        <svg class="nav__logo-mark" viewBox="0 0 28 28" fill="none" aria-label="BTC Native logo">
-          <rect width="28" height="28" rx="6" fill="#f7931a"/>
-          <path d="M8 7h7.5c2.5 0 4 1.2 4 3.2 0 1.4-.8 2.4-2 2.8v.1c1.6.3 2.7 1.4 2.7 3 0 2.3-1.7 3.9-4.5 3.9H8V7zm3 5h4c1 0 1.6-.5 1.6-1.4 0-.8-.6-1.3-1.6-1.3H11v2.7zm0 5.2h4.3c1.1 0 1.8-.6 1.8-1.5 0-.9-.7-1.5-1.8-1.5H11v3z" fill="#000"/>
+      <a href="./index.html" class="nav__logo" aria-label="BTC Native home">
+        <svg class="nav__logo-mark" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="navG" x1="20" y1="10" x2="90" y2="110" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#FFB100"/>
+              <stop offset="100%" stop-color="#FF8A00"/>
+            </linearGradient>
+          </defs>
+          <rect x="14" y="8"  width="10" height="10" rx="2"   fill="url(#navG)"/>
+          <rect x="27" y="5"  width="8"  height="8"  rx="1.5" fill="url(#navG)"/>
+          <rect x="38" y="9"  width="9"  height="9"  rx="2"   fill="url(#navG)"/>
+          <rect x="10" y="22" width="8"  height="8"  rx="1.5" fill="url(#navG)" opacity="0.85"/>
+          <rect x="22" y="19" width="7"  height="7"  rx="1.5" fill="url(#navG)" opacity="0.7"/>
+          <rect x="16" y="34" width="6"  height="6"  rx="1"   fill="url(#navG)" opacity="0.55"/>
+          <rect x="29" y="29" width="5"  height="5"  rx="1"   fill="url(#navG)" opacity="0.45"/>
+          <path d="M 68 15 A 44 44 0 0 1 110 62" stroke="url(#navG)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+          <path d="M 52 16 A 44 44 0 0 1 60 15" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+          <path d="M 22 74 A 40 40 0 0 0 98 74" stroke="url(#navG)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.7"/>
+          <rect x="47" y="30" width="7"  height="56" rx="2"   fill="url(#navG)"/>
+          <rect x="43" y="28" width="14" height="7"  rx="2"   fill="url(#navG)"/>
+          <rect x="43" y="80" width="14" height="7"  rx="2"   fill="url(#navG)"/>
+          <path d="M54 30 Q77 30 77 43 Q77 56 54 56 Z" fill="url(#navG)"/>
+          <path d="M54 56 Q81 56 81 69 Q81 82 54 82 Z" fill="url(#navG)"/>
         </svg>
-        BTC Native
+        <span class="nav__logo-text">
+          <span class="nav__logo-btc">BTC</span><span class="nav__logo-native">NATIVE</span>
+        </span>
       </a>
             <ul class="nav__links" role="list">
         <li class="nav__item">
@@ -441,53 +468,72 @@
 </main>
 
 <!-- Footer -->
-<footer class="footer footer--rich">
+<!-- ── FOOTER ──────────────────────────────────────────────────── -->
+<footer class="site-footer">
   <div class="container">
-    <div class="footer__grid">
+    <div class="footer__inner">
       <div>
-        <span class="footer__col-label">Protocol</span>
-        <ul class="footer__col-links">
-          <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">BNRP spec</a></li>
-          <li><a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Resolver</a></li>
-          <li><a href="./index.html#how-it-works">How it works</a></li>
-          <li><a href="./about.html">About</a></li>
-        </ul>
+        <a href="./index.html" class="footer__logo">
+          <svg class="footer__logo-mark" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+            <defs><linearGradient id="footG" x1="20" y1="10" x2="90" y2="110" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFB100"/><stop offset="100%" stop-color="#FF8A00"/></linearGradient></defs>
+            <rect x="14" y="8" width="10" height="10" rx="2" fill="url(#footG)"/>
+            <rect x="27" y="5" width="8" height="8" rx="1.5" fill="url(#footG)"/>
+            <rect x="38" y="9" width="9" height="9" rx="2" fill="url(#footG)"/>
+            <rect x="10" y="22" width="8" height="8" rx="1.5" fill="url(#footG)" opacity="0.85"/>
+            <rect x="22" y="19" width="7" height="7" rx="1.5" fill="url(#footG)" opacity="0.7"/>
+            <path d="M 68 15 A 44 44 0 0 1 110 62" stroke="url(#footG)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+            <path d="M 52 16 A 44 44 0 0 1 60 15" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+            <path d="M 22 74 A 40 40 0 0 0 98 74" stroke="url(#footG)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.7"/>
+            <rect x="47" y="30" width="7" height="56" rx="2" fill="url(#footG)"/>
+            <rect x="43" y="28" width="14" height="7" rx="2" fill="url(#footG)"/>
+            <rect x="43" y="80" width="14" height="7" rx="2" fill="url(#footG)"/>
+            <path d="M54 30 Q77 30 77 43 Q77 56 54 56 Z" fill="url(#footG)"/>
+            <path d="M54 56 Q81 56 81 69 Q81 82 54 82 Z" fill="url(#footG)"/>
+          </svg>
+          <div>
+            <div class="footer__logo-btc">BTC</div>
+            <div class="footer__logo-native">NATIVE</div>
+          </div>
+        </a>
+        <p class="footer__tagline">Built on Bitcoin. Native to the future.</p>
       </div>
       <div>
-        <span class="footer__col-label">Market</span>
-        <ul class="footer__col-links">
-          <li><a href="./explore.html?tab=listings">Browse names</a></li>
-          <li><a href="./explore.html?tab=market">Market data</a></li>
-          <li><a href="./sell.html">List a name</a></li>
-          <li><a href="./explore.html?tab=listings&sort=price_asc">Floor names</a></li>
-        </ul>
+        <div class="footer__col-title">Explore</div>
+        <div class="footer__links">
+          <a href="./explore.html" class="footer__link">Categories</a>
+          <a href="./explore.html?tab=listings" class="footer__link">Listings</a>
+          <a href="./explore.html?tab=market" class="footer__link">Market Data</a>
+          <a href="./bulk.html" class="footer__link">Bulk Search</a>
+        </div>
       </div>
       <div>
-        <span class="footer__col-label">Tools</span>
-        <ul class="footer__col-links">
-          <li><a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-          <li><a href="./bulk.html">Bulk search</a></li>
-          <li><a href="https://api.bnrp.name/v1/resolve/satoshi.btc" target="_blank" rel="noopener noreferrer">API</a></li>
-          <li><a href="https://github.com/nlgal/bnrp-spec" target="_blank" rel="noopener noreferrer">Open source</a></li>
-        </ul>
+        <div class="footer__col-title">Account</div>
+        <div class="footer__links">
+          <a href="./sell.html" class="footer__link">List a Name</a>
+          <a href="./portfolio.html" class="footer__link">My Names</a>
+        </div>
       </div>
       <div>
-        <span class="footer__col-label">Community</span>
-        <ul class="footer__col-links">
-          <li><a href="https://x.com" target="_blank" rel="noopener noreferrer">Twitter / X</a></li>
-          <li><a href="https://github.com/nlgal" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-          <li><a href="https://unisat.io" target="_blank" rel="noopener noreferrer">UniSat</a></li>
-        </ul>
+        <div class="footer__col-title">Protocol</div>
+        <div class="footer__links">
+          <a href="./about.html" class="footer__link">About BNRP</a>
+          <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
+          <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
+        </div>
       </div>
     </div>
-    <div class="footer__brand">
-      <span>© 2026 BTC Native</span>
-      <span>·</span>
-      <a href="https://bnrp.name" target="_blank" rel="noopener noreferrer">Built on BNRP</a>
-      <span>·</span>
-      <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer">Open source</a>
-      <span>·</span>
-      <span class="footer__status-dot live" id="footerStatus">Indexed just now</span>
+    <div class="footer__bottom">
+      <span class="footer__copy">&copy; 2026 BTC Native. Trustless by design.</span>
+      <div class="footer__trust">
+        <span class="footer__trust-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Verifiable on Bitcoin
+        </span>
+        <span class="footer__trust-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Open Protocol
+        </span>
+      </div>
     </div>
   </div>
 </footer>

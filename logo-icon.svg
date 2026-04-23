@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" aria-label="BTC Native icon">
+  <defs>
+    <linearGradient id="btcGrad" x1="30" y1="20" x2="90" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFB100"/>
+      <stop offset="100%" stop-color="#FF8A00"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Pixel dispersion — upper-left scatter -->
+  <rect x="14" y="8"  width="10" height="10" rx="2" fill="url(#btcGrad)"/>
+  <rect x="27" y="5"  width="8"  height="8"  rx="1.5" fill="url(#btcGrad)"/>
+  <rect x="38" y="9"  width="9"  height="9"  rx="2" fill="url(#btcGrad)"/>
+  <rect x="10" y="22" width="8"  height="8"  rx="1.5" fill="url(#btcGrad)" opacity="0.85"/>
+  <rect x="22" y="19" width="7"  height="7"  rx="1.5" fill="url(#btcGrad)" opacity="0.7"/>
+  <rect x="16" y="34" width="6"  height="6"  rx="1" fill="url(#btcGrad)" opacity="0.55"/>
+  <rect x="29" y="29" width="5"  height="5"  rx="1" fill="url(#btcGrad)" opacity="0.45"/>
+  <rect x="10" y="36" width="4"  height="4"  rx="1" fill="url(#btcGrad)" opacity="0.35"/>
+
+  <!-- Outer ring arc (top-right, broken) -->
+  <path d="M 68 15 A 44 44 0 0 1 110 62" stroke="url(#btcGrad)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- Inner ring arc (bottom) -->
+  <path d="M 22 72 A 40 40 0 0 0 98 72" stroke="url(#btcGrad)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <!-- Small top break arc -->
+  <path d="M 55 17 A 44 44 0 0 1 62 17" stroke="#ffffff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.9"/>
+
+  <!-- ₿ symbol -->
+  <!-- Vertical stem -->
+  <rect x="47" y="30" width="7" height="56" rx="2" fill="url(#btcGrad)"/>
+  <!-- Top serif -->
+  <rect x="44" y="28" width="13" height="7" rx="2" fill="url(#btcGrad)"/>
+  <!-- Bottom serif -->
+  <rect x="44" y="80" width="13" height="7" rx="2" fill="url(#btcGrad)"/>
+  <!-- Upper bump -->
+  <path d="M54 30 Q76 30 76 43 Q76 56 54 56 Z" fill="url(#btcGrad)"/>
+  <!-- Lower bump (slightly wider) -->
+  <path d="M54 56 Q80 56 80 69 Q80 82 54 82 Z" fill="url(#btcGrad)"/>
+  <!-- Upper horizontal serifs on ₿ top prongs -->
+  <rect x="47" y="35" width="5" height="5" rx="1" fill="url(#btcGrad)"/>
+  <rect x="47" y="72" width="5" height="5" rx="1" fill="url(#btcGrad)"/>
+</svg>

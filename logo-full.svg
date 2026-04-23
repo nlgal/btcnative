@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" fill="none" aria-label="BTC Native — Names Marketplace">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFB100"/>
+      <stop offset="100%" stop-color="#FF8A00"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ── Icon mark ── -->
+  <!-- Pixel scatter upper-left -->
+  <rect x="8"  y="6"   width="12" height="12" rx="2.5" fill="url(#g1)"/>
+  <rect x="24" y="3"   width="10" height="10" rx="2"   fill="url(#g1)"/>
+  <rect x="37" y="7"   width="11" height="11" rx="2"   fill="url(#g1)"/>
+  <rect x="6"  y="22"  width="9"  height="9"  rx="2"   fill="url(#g1)" opacity="0.85"/>
+  <rect x="20" y="19"  width="8"  height="8"  rx="1.5" fill="url(#g1)" opacity="0.7"/>
+  <rect x="13" y="34"  width="7"  height="7"  rx="1.5" fill="url(#g1)" opacity="0.55"/>
+  <rect x="27" y="30"  width="6"  height="6"  rx="1"   fill="url(#g1)" opacity="0.45"/>
+  <rect x="8"  y="38"  width="5"  height="5"  rx="1"   fill="url(#g1)" opacity="0.35"/>
+
+  <!-- Outer arc top-right -->
+  <path d="M 64 14 A 54 54 0 0 1 128 76" stroke="url(#g1)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <!-- White highlight arc -->
+  <path d="M 50 15 A 54 54 0 0 1 60 14" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <!-- Inner arc bottom -->
+  <path d="M 20 88 A 50 50 0 0 0 118 88" stroke="url(#g1)" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.7"/>
+
+  <!-- ₿ body -->
+  <rect x="47" y="36" width="8"  height="66" rx="2.5" fill="url(#g1)"/>
+  <rect x="42" y="34" width="16" height="8"  rx="2"   fill="url(#g1)"/>
+  <rect x="42" y="95" width="16" height="8"  rx="2"   fill="url(#g1)"/>
+  <path d="M55 36 Q80 36 80 52 Q80 68 55 68 Z" fill="url(#g1)"/>
+  <path d="M55 68 Q84 68 84 84 Q84 99 55 99 Z" fill="url(#g1)"/>
+  <!-- ₿ prong ticks -->
+  <rect x="44" y="42" width="6" height="6" rx="1.5" fill="url(#g1)"/>
+  <rect x="44" y="86" width="6" height="6" rx="1.5" fill="url(#g1)"/>
+
+  <!-- ── Wordmark ── -->
+  <!-- "BTC" in white, bold condensed -->
+  <text x="150" y="82"
+    font-family="'Space Grotesk','Arial Black',sans-serif"
+    font-weight="800"
+    font-size="64"
+    letter-spacing="-1"
+    fill="#FFFFFF">BTC</text>
+
+  <!-- "NATIVE" in orange gradient — simulate with solid #FF8A00 -->
+  <text x="150" y="142"
+    font-family="'Space Grotesk','Arial Black',sans-serif"
+    font-weight="800"
+    font-size="64"
+    letter-spacing="-1"
+    fill="#FF8A00">NATIVE</text>
+
+  <!-- "— NAMES MARKETPLACE —" small-caps below NATIVE -->
+  <line x1="150" y1="152" x2="163" y2="152" stroke="#FF8A00" stroke-width="2"/>
+  <text x="168" y="155"
+    font-family="'Space Grotesk','Arial',sans-serif"
+    font-weight="600"
+    font-size="13"
+    letter-spacing="3.5"
+    fill="#FF8A00">NAMES MARKETPLACE</text>
+  <line x1="438" y1="152" x2="452" y2="152" stroke="#FF8A00" stroke-width="2"/>
+</svg>
