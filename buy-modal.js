@@ -86,8 +86,8 @@ async function _bmGetPubkey(wallet) {
 async function _bmSignPsbt(wallet, psbtHex, signIndexes, pubkey) {
   if (wallet.type === 'unisat') {
     const toSignInputs = (signIndexes && signIndexes.length > 0)
-      ? signIndexes.map(i => ({ index: i, publicKey: pubkey }))
-      : [{ index: 0, publicKey: pubkey }];
+      ? signIndexes.map(i => ({ index: i, publicKey: pubkey, disableToSignCheck: true }))
+      : [{ index: 0, publicKey: pubkey, disableToSignCheck: true }];
     const signed = await wallet.api.signPsbt(psbtHex, {
       autoFinalized: false,
       toSignInputs,
@@ -418,7 +418,8 @@ async function openBuyModal({ name, auctionId, priceSats }) {
     } catch (e) {
       const msg = e.message || String(e);
       stepEl.textContent = '';
-      if (/reject|cancel|denied|dismiss|user rejected/i.test(msg)) {
+      // True user cancellation — wallet dismissed by user
+      if (/user reject|user cancel|user denied|user dismissed/i.test(msg)) {
         _bmSetStatus(status, 'info', 'Signature cancelled.');
       } else {
         _bmSetStatus(status, 'error', msg);
