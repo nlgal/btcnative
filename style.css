@@ -209,6 +209,7 @@
   font-weight: 500;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
+  white-space: nowrap;
 }
 .nav__link:hover { color: var(--color-text); background: var(--color-surface-offset); }
 .nav__link.active { color: var(--color-primary); }
