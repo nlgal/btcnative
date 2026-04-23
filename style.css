@@ -709,7 +709,11 @@
 }
 .profile-card__field-value a { color: var(--color-primary); text-decoration: none; }
 .profile-card__field-value a:hover { color: var(--color-primary-hover); }
-.profile-card__actions { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
+.profile-card__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+.profile-card__actions .btn--full { flex: 1 1 100%; min-width: 0; }
+#ownerActionRow { display: none; width: 100%; gap: var(--space-2); }
+#ownerActionRow.visible { display: flex; }
+#ownerActionRow .btn { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--text-xs); }
 .btn {
   display: inline-flex; align-items: center; justify-content: center;
   gap: var(--space-2);
@@ -954,7 +958,6 @@
   .explore-layout { grid-template-columns: 1fr; }
   .stats-bar__inner { flex-wrap: wrap; gap: var(--space-3); }
   .profile-card__actions { flex-wrap: wrap; }
-  .profile-card__actions .btn--full { order: -1; }
 }
 
 /* ── Mobile nav hamburger ── */

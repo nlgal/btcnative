@@ -872,9 +872,7 @@ async function initProfilePage() {
   }
 
   // Buy button + listing status — native modal via market worker
-  initBuyBtn(name, inscId);
-
-
+  window._initBuyBtnPromise = initBuyBtn(name, inscId);
 
   // Activity (placeholder)
   const actEl = qs('#activityFeed');
@@ -953,6 +951,7 @@ async function initBuyBtn(name, inscId) {
       }
       window._profileListed = true;
       window._profileListedPrice = formatSats(priceSats);
+      window._profileListedAuctionId = auctionId;
       buyBtn.textContent = `Buy for ${formatSats(totalSats)}`;
       buyBtn.onclick = (e) => {
         e.preventDefault();
@@ -2632,13 +2631,14 @@ function renderMinimalProfile(name, data) {
   // Buy button + listing status — native modal via market worker
   const sellBtnMin = qs('#sellBtn');
   if (sellBtnMin) sellBtnMin.href = `./sell.html?name=${encodeURIComponent(name)}`;
-  initBuyBtn(name, inscId);
+  window._initBuyBtnPromise = initBuyBtn(name, inscId);
 
   // Check if connected wallet owns this name
-  checkWalletOwnership(name, inscId, addr).then(isOwner => {
+  checkWalletOwnership(name, inscId, addr).then(async isOwner => {
     if (!isOwner) return;
+    // Wait for listing fetch to complete before deciding which owner actions to show
+    await (window._initBuyBtnPromise || Promise.resolve());
     const buyBtn = qs('#buyBtn');
-    const sellBtn = qs('#sellBtn');
     const watchBtn = qs('#watchBtn');
     if (buyBtn) {
       buyBtn.textContent = 'You own this';
@@ -2648,12 +2648,8 @@ function renderMinimalProfile(name, data) {
       buyBtn.style.cursor = 'default';
       buyBtn.onclick = null;
     }
-    if (sellBtn) {
-      sellBtn.className = 'btn btn--primary btn--full';
-      sellBtn.innerHTML = 'List for sale';
-      sellBtn.href = `./sell.html?name=${encodeURIComponent(name)}`;
-    }
     if (watchBtn) watchBtn.style.display = 'none';
+    setOwnerActions(name);
   });
 
   // Activity
@@ -2677,6 +2673,103 @@ function renderMinimalProfile(name, data) {
         <span class="score-bar-label">${c.label}</span>
         <div class="score-bar-track"><div class="score-bar-fill" style="width:${c.pct}%"></div></div>
       </div>`).join('');
+  }
+}
+
+// ── Owner action row ────────────────────────────────────────────────────────
+// Renders the correct owner buttons into #ownerActionRow based on listing state.
+// Called after wallet ownership is confirmed.
+function setOwnerActions(name) {
+  const row = document.getElementById('ownerActionRow');
+  if (!row) return;
+
+  const isListed = !!window._profileListed;
+  const auctionId = window._profileListedAuctionId || null;
+
+  if (isListed) {
+    // Already listed: Change price + Delist
+    row.innerHTML = `
+      <a class="btn btn--outline" href="./sell.html?name=${encodeURIComponent(name)}" title="Change listing price">Change price</a>
+      <button class="btn btn--outline" id="delistBtn" title="Remove listing">Delist</button>
+    `;
+    const delistBtn = row.querySelector('#delistBtn');
+    if (delistBtn) delistBtn.onclick = () => delistName(name, auctionId);
+  } else {
+    // Not listed: List for sale (full width)
+    row.innerHTML = `<a class="btn btn--primary" href="./sell.html?name=${encodeURIComponent(name)}">List for sale</a>`;
+  }
+
+  row.classList.add('visible');
+}
+
+// Delist flow: create_put_off -> wallet signs -> confirm_put_off
+async function delistName(name, auctionId) {
+  if (!auctionId) {
+    alert('Listing data not available. Try refreshing.');
+    return;
+  }
+  const delistBtn = document.getElementById('delistBtn');
+  if (delistBtn) { delistBtn.textContent = 'Delisting...'; delistBtn.disabled = true; }
+
+  try {
+    const wallet = window.unisat;
+    if (!wallet) throw new Error('UniSat wallet not connected.');
+
+    const accounts = await wallet.getAccounts();
+    const address = accounts && accounts[0];
+    if (!address) throw new Error('No wallet address found.');
+
+    const pubkeyHex = await wallet.getPublicKey();
+    // For taproot (bc1p) use x-only pubkey (strip 02/03 prefix)
+    const pubkey = pubkeyHex.length === 66 ? pubkeyHex.slice(2) : pubkeyHex;
+
+    // Step 1: create_put_off
+    const res = await fetch('https://open-api.unisat.io/v3/market/domain/auction/create_put_off', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${UNISAT_API_KEY}`,
+      },
+      body: JSON.stringify({ auctionId, nftAddress: address, btcPubkey: pubkey }),
+    });
+    const data = await res.json();
+    if (!data || data.code !== 0) throw new Error(data?.msg || 'Delist prepare failed.');
+
+    const psbt = data.data?.psbt;
+    const signIndexes = data.data?.signIndexes || [0];
+    if (!psbt) throw new Error('No PSBT returned from delist prepare.');
+
+    // Step 2: wallet signs
+    const signed = await wallet.signPsbt(psbt, {
+      autoFinalized: false,
+      toSignInputs: signIndexes.map(i => ({ index: i, address })),
+    });
+
+    // Step 3: confirm_put_off
+    const confirmRes = await fetch('https://open-api.unisat.io/v3/market/domain/auction/confirm_put_off', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${UNISAT_API_KEY}`,
+      },
+      body: JSON.stringify({ auctionId, psbt: signed, fromBase64: false }),
+    });
+    const confirmData = await confirmRes.json();
+    if (!confirmData || confirmData.code !== 0) throw new Error(confirmData?.msg || 'Delist confirm failed.');
+
+    // Success
+    window._profileListed = false;
+    window._profileListedAuctionId = null;
+    const listingStatusEl = document.getElementById('listingStatus');
+    const listingPriceEl = document.getElementById('listingPrice');
+    if (listingPriceEl) listingPriceEl.textContent = 'Not listed';
+    if (listingStatusEl) listingStatusEl.textContent = 'Delisted successfully.';
+    // Refresh owner row to show "List for sale"
+    setOwnerActions(name);
+  } catch (e) {
+    console.error('Delist error:', e);
+    if (delistBtn) { delistBtn.textContent = 'Delist'; delistBtn.disabled = false; }
+    alert('Delist failed: ' + (e.message || 'Unknown error'));
   }
 }
 
@@ -2842,7 +2935,7 @@ async function initProfilePageMVP() {
   // Buy button + listing status — native modal via market worker
   const sellBtn = qs('#sellBtn');
   if (sellBtn) sellBtn.href = `./sell.html?name=${encodeURIComponent(name)}`;
-  initBuyBtn(name, inscId);
+  window._initBuyBtnPromise = initBuyBtn(name, inscId);
 
   // Restore watchlist state
   const watchBtn = qs('#watchBtn');
@@ -2851,10 +2944,11 @@ async function initProfilePageMVP() {
   }
 
   // Check if connected wallet owns this name
-  checkWalletOwnership(name, inscId, addr).then(isOwner => {
+  checkWalletOwnership(name, inscId, addr).then(async isOwner => {
     if (!isOwner) return;
+    // Wait for listing fetch to complete before deciding which owner actions to show
+    await (window._initBuyBtnPromise || Promise.resolve());
     const buyBtn = qs('#buyBtn');
-    const sellBtn = qs('#sellBtn');
     const watchBtn = qs('#watchBtn');
     if (buyBtn) {
       buyBtn.textContent = 'You own this';
@@ -2864,12 +2958,8 @@ async function initProfilePageMVP() {
       buyBtn.style.cursor = 'default';
       buyBtn.onclick = null;
     }
-    if (sellBtn) {
-      sellBtn.className = 'btn btn--primary btn--full';
-      sellBtn.innerHTML = 'List for sale';
-      sellBtn.href = `./sell.html?name=${encodeURIComponent(name)}`;
-    }
     if (watchBtn) watchBtn.style.display = 'none';
+    setOwnerActions(name);
     // Show BNRP editor tab
     showBnrpEditorForOwner(records);
   });
