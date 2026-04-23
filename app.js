@@ -151,76 +151,92 @@ async function fetchRecentSales(limit = 10) {
 }
 
 // Returns active listings array for the explore grid
+// Map our internal sort key to UniSat sort object
+function _unisatSort(sort) {
+  if (sort === 'price_desc') return { unitPrice: -1 };
+  if (sort === 'recent')     return { onSaleTime: -1 };
+  if (sort === 'insc_asc')   return { inscriptionNumber: 1 };
+  if (sort === 'insc_desc')  return { inscriptionNumber: -1 };
+  return { unitPrice: 1 }; // price_asc default
+}
+
 async function fetchListings({ domainType = null, minLength = null, maxLength = null, page = 0, pageSize = 20, sort = 'price_asc' } = {}) {
-  // Fetch from both our KV worker (native PSBT listings) and UniSat marketplace
-  // KV listings shown first; UniSat fills the rest
+  // Fetch from both our KV worker (native PSBT listings) and UniSat marketplace.
+  // UniSat does NOT support minLength/maxLength/trait filters natively — all
+  // filtering is done client-side after fetching. We always fetch a large batch
+  // (UNISAT_BATCH) so client-side filtering has enough data to work with.
+  const UNISAT_BATCH = 200;
   try {
     // 1. Our KV worker
     const kvParams = new URLSearchParams({
       sort,
-      limit: String(pageSize),
+      limit: '200',
       ...(domainType ? { tld: domainType } : {}),
     });
     const kvPromise = fetch(`${MARKET_API}/api/market/listings?${kvParams}`, {
       signal: AbortSignal.timeout(8000),
     }).then(r => r.ok ? r.json() : null).catch(() => null);
 
-    // 2. UniSat marketplace
+    // 2. UniSat marketplace — fetch large batch, filter client-side
     const unisatPromise = UNISAT_API_KEY ? unisatPost('/v3/market/domain/auction/list', {
       filter: {
         nftType: 'domain',
         ...(domainType ? { domainType } : {}),
       },
-      start: page * pageSize,
-      limit: pageSize,
-      sort: { unitPrice: 1 },
+      start: page * UNISAT_BATCH,
+      limit: UNISAT_BATCH,
+      sort: _unisatSort(sort),
     }).catch(() => null) : Promise.resolve(null);
 
     const [kvData, unisatData] = await Promise.all([kvPromise, unisatPromise]);
 
-    // Map KV listings
+    // Client-side filter helper (applied to both sources)
+    function passesLengthFilter(name) {
+      if (!minLength && !maxLength) return true;
+      const base = getBase(name);
+      if (minLength && base.length < minLength) return false;
+      if (maxLength && base.length > maxLength) return false;
+      return true;
+    }
+
+    // Map KV listings (apply length filter only — traits filtered downstream)
     const kvListings = (kvData && kvData.ok && kvData.listings)
-      ? kvData.listings.filter(l => {
-          if (!l.name) return false;
-          const base = getBase(l.name);
-          if (minLength && base.length < minLength) return false;
-          if (maxLength && base.length > maxLength) return false;
-          return true;
-        }).map(l => ({
-          name:          l.name,
-          price:         l.priceSats,
-          priceSats:     l.priceSats,
-          feeSats:       l.feeSats,
-          inscriptionId: l.inscriptionId,
-          address:       l.sellerAddress,
-          auctionId:     null,
-          bnrp:          null,
-          source:        'kv',
-        }))
+      ? kvData.listings
+          .filter(l => l.name && passesLengthFilter(l.name))
+          .map(l => ({
+            name:              l.name,
+            price:             l.priceSats,
+            priceSats:         l.priceSats,
+            feeSats:           l.feeSats,
+            inscriptionId:     l.inscriptionId,
+            inscriptionNumber: l.inscriptionNumber || null,
+            address:           l.sellerAddress,
+            auctionId:         null,
+            bnrp:              null,
+            source:            'kv',
+          }))
       : [];
 
-    // Map UniSat listings, excluding names already in KV
-    // unisatPost returns json.data directly, so unisatData = { list, total }
+    // Map UniSat listings (apply length filter; skip names already in KV)
     const kvNames = new Set(kvListings.map(l => l.name.toLowerCase()));
     const unisatListings = (unisatData && unisatData.list)
-      ? unisatData.list.filter(l => {
-          const name = (l.domain || '').toLowerCase();
-          if (!name || kvNames.has(name)) return false;
-          const base = getBase(name);
-          if (minLength && base.length < minLength) return false;
-          if (maxLength && base.length > maxLength) return false;
-          return true;
-        }).map(l => ({
-          name:          l.domain,
-          price:         l.price,
-          priceSats:     l.price,
-          feeSats:       0,
-          inscriptionId: l.inscriptionId,
-          address:       l.address,
-          auctionId:     l.auctionId,
-          bnrp:          null,
-          source:        'unisat',
-        }))
+      ? unisatData.list
+          .filter(l => {
+            const name = (l.domain || '').toLowerCase();
+            return name && !kvNames.has(name) && passesLengthFilter(name);
+          })
+          .map(l => ({
+            name:              l.domain,
+            price:             l.price,
+            priceSats:         l.price,
+            feeSats:           0,
+            inscriptionId:     l.inscriptionId,
+            inscriptionNumber: l.inscriptionNumber || null,
+            address:           l.address,
+            auctionId:         l.auctionId,
+            bnrp:              null,
+            source:            'unisat',
+          }))
       : [];
 
     const combined = [...kvListings, ...unisatListings];
@@ -1561,15 +1577,13 @@ function _refetchListings() {
     `<div class="name-card skeleton" style="height:96px;border-radius:var(--radius-lg);"></div>`
   ).join('');
   LIVE_LISTINGS = null; // mark as loading
-  const apiParams = {};
+  const apiParams = { sort: typeof currentSort !== 'undefined' ? currentSort : 'price_asc' };
   if (currentTld && currentTld !== 'all') apiParams.domainType = currentTld.replace('.', '');
   if (currentLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
   if (currentLen === '3')   { apiParams.minLength = 3; apiParams.maxLength = 3; }
   if (currentLen === '4')   { apiParams.minLength = 4; apiParams.maxLength = 4; }
   if (currentLen === '5')   { apiParams.minLength = 5; apiParams.maxLength = 5; }
   if (currentLen === '6+')  { apiParams.minLength = 6; }
-  const needsBigBatch = currentSpecial && currentSpecial !== 'bnrp';
-  apiParams.pageSize = needsBigBatch ? 100 : 20;
   fetchListings(apiParams).then(result => {
     if (result && result.list) {
       LIVE_LISTINGS = result.list;
@@ -2140,7 +2154,7 @@ function sortNames(key, btn) {
   document.querySelectorAll('[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === key));
   const sel = document.getElementById('marketSortSelect');
   if (sel && sel.value !== key) sel.value = key;
-  renderListings(getFilteredNamesMVP());
+  _refetchListingsMVP(); // re-fetch so UniSat sort order changes too
 }
 
 // Re-fetch for MVP variant when TLD, length, or special filter changes
@@ -2153,18 +2167,13 @@ function _refetchListingsMVP() {
     `<div class="name-card skeleton" style="height:96px;border-radius:var(--radius-lg);"></div>`
   ).join('');
   LIVE_LISTINGS = null;
-  const apiParams = {};
+  const apiParams = { sort: typeof currentSort !== 'undefined' ? currentSort : 'price_asc' };
   if (currentTld && currentTld !== 'all') apiParams.domainType = currentTld.replace('.', '');
   if (currentLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
   if (currentLen === '3')   { apiParams.minLength = 3; apiParams.maxLength = 3; }
   if (currentLen === '4')   { apiParams.minLength = 4; apiParams.maxLength = 4; }
   if (currentLen === '5')   { apiParams.minLength = 5; apiParams.maxLength = 5; }
   if (currentLen === '6+')  { apiParams.minLength = 6; }
-  // Fetch a larger batch when a trait filter is active — UniSat results are
-  // dominated by numeric names, so we need more raw data to find letter-only,
-  // palindromes, etc. after client-side filtering
-  const needsBigBatch = currentSpecial && currentSpecial !== 'bnrp';
-  apiParams.pageSize = needsBigBatch ? 100 : 20;
   fetchListings(apiParams).then(result => {
     LIVE_LISTINGS = (result && result.list) ? result.list : [];
     renderListings(getFilteredNamesMVP());
