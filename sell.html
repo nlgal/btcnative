@@ -407,7 +407,7 @@
       <div class="sell-card__section">
         <button class="sell-cta" id="listBtn">List for sale</button>
         <div class="sell-status" id="listStatus"></div>
-        <p class="sell-wallet-note">Requires UniSat or Xverse extension. You sign a PSBT — no custody.</p>
+        <p class="sell-wallet-note">Requires UniSat or Xverse extension. You sign a PSBT, no custody.</p>
       </div>
     </div>
 
@@ -519,20 +519,47 @@ async function getWalletAddress(wallet) {
   }
   throw new Error('Unsupported wallet');
 }
-async function signPsbt(wallet, psbtBase64, inputsToSign) {
+async function getWalletPubkey(wallet) {
   if (wallet.type === 'unisat') {
-    return wallet.api.signPsbt(psbtBase64, {
-      autoFinalized: false,
-      toSignInputs: inputsToSign.length ? inputsToSign : undefined,
-    });
+    return wallet.api.getPublicKey();
+  }
+  if (wallet.type === 'xverse') {
+    const res = await wallet.api.request('getAccounts', { purposes: ['ordinals'] });
+    return res.result[0].publicKey;
+  }
+  throw new Error('Unsupported wallet');
+}
+// signPsbt for LISTING: uses SIGHASH_SINGLE|ANYONECANPAY (131) so anyone can add inputs
+async function signPsbtListing(wallet, psbtHex, signIndexes) {
+  const toSignInputs = signIndexes.map(i => ({
+    index: i,
+    address: wallet._address,
+    sighashTypes: [131], // SIGHASH_SINGLE | SIGHASH_ANYONECANPAY
+  }));
+  if (wallet.type === 'unisat') {
+    return wallet.api.signPsbt(psbtHex, { autoFinalized: false, toSignInputs });
   }
   if (wallet.type === 'xverse') {
     const res = await wallet.api.request('signPsbt', {
-      psbt: psbtBase64,
+      psbt: psbtHex,
       broadcast: false,
-      signInputs: inputsToSign.length
-        ? Object.fromEntries(inputsToSign.map(i => [i.index, ['SIGHASH_DEFAULT']]))
-        : undefined,
+      signInputs: Object.fromEntries(signIndexes.map(i => [i, ['SIGHASH_SINGLE_ANYONECANPAY']])),
+    });
+    return res.result.psbt;
+  }
+  throw new Error('Unsupported wallet');
+}
+// signPsbt for BUYING: standard SIGHASH_ALL
+async function signPsbtBuy(wallet, psbtHex, signIndexes) {
+  const toSignInputs = signIndexes.map(i => ({ index: i, address: wallet._address }));
+  if (wallet.type === 'unisat') {
+    return wallet.api.signPsbt(psbtHex, { autoFinalized: false, toSignInputs });
+  }
+  if (wallet.type === 'xverse') {
+    const res = await wallet.api.request('signPsbt', {
+      psbt: psbtHex,
+      broadcast: false,
+      signInputs: Object.fromEntries(signIndexes.map(i => [i, ['SIGHASH_DEFAULT']])),
     });
     return res.result.psbt;
   }
@@ -709,59 +736,57 @@ async function listName() {
     btn.textContent = 'Connecting wallet...';
     setStatus(statusEl, 'info', `Connecting ${wallet.type}...`);
     const sellerAddress = await getWalletAddress(wallet);
+    wallet._address = sellerAddress;
+    const sellerPubkey = await getWalletPubkey(wallet);
 
-    // 2. Generate listing PSBT via UniSat API
+    // 2. Create listing order — UniSat returns auctionId + PSBT hex + signIndexes
     btn.textContent = 'Generating listing...';
-    setStatus(statusEl, 'info', 'Generating listing PSBT...');
+    setStatus(statusEl, 'info', 'Generating listing...');
 
-    const genRes = await fetch(`${UNISAT_BASE}/v3/market/btcname/auction/create_listed_psbt`, {
+    const createRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/create_put_on`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${UNISAT_API_KEY}`,
       },
       body: JSON.stringify({
+        nftType: 'domain',
         inscriptionId: currentInscId,
-        initPrice: priceSats,
-        unitPrice: priceSats,
-        sellerAddress: sellerAddress,
+        initPrice: String(priceSats),
+        unitPrice: String(priceSats),
+        pubkey: sellerPubkey,
+        marketType: 'fixedPrice',
       }),
     });
 
-    const genData = await genRes.json();
-    if (genData.code !== 0 || !genData.data?.psbtBase64) {
-      throw new Error(genData.msg || 'Failed to generate listing PSBT');
+    const createData = await createRes.json();
+    if (createData.code !== 0 || !createData.data?.psbt) {
+      throw new Error(createData.msg || 'Failed to generate listing');
     }
 
-    const psbtBase64 = genData.data.psbtBase64;
-    const inputsToSign = genData.data.toSignInputs || [];
+    const { auctionId, psbt: psbtHex, signIndexes } = createData.data;
 
-    // 3. Sign PSBT with wallet
+    // 3. Seller signs — SIGHASH_SINGLE|ANYONECANPAY so buyer can add their inputs
     btn.textContent = 'Waiting for signature...';
-    setStatus(statusEl, 'info', 'Check your wallet to sign the listing...');
-    const signedPsbt = await signPsbt(wallet, psbtBase64, inputsToSign);
+    setStatus(statusEl, 'info', 'Sign the listing in your wallet...');
+    const signedPsbt = await signPsbtListing(wallet, psbtHex, signIndexes || [0]);
 
-    // 4. Submit signed PSBT to UniSat
+    // 4. Confirm listing — submit signed PSBT
     btn.textContent = 'Submitting...';
     setStatus(statusEl, 'info', 'Submitting listing...');
 
-    const submitRes = await fetch(`${UNISAT_BASE}/v3/market/btcname/auction/confirm_listed_psbt`, {
+    const confirmRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/confirm_put_on`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${UNISAT_API_KEY}`,
       },
-      body: JSON.stringify({
-        inscriptionId: currentInscId,
-        initPrice: priceSats,
-        signedPsbt: signedPsbt,
-        sellerAddress: sellerAddress,
-      }),
+      body: JSON.stringify({ auctionId, psbt: signedPsbt }),
     });
 
-    const submitData = await submitRes.json();
+    const submitData = await confirmRes.json();
     if (submitData.code !== 0) {
-      throw new Error(submitData.msg || 'Failed to submit listing');
+      throw new Error(submitData.msg || 'Failed to confirm listing');
     }
 
     // 5. Success
@@ -805,10 +830,12 @@ async function delistName() {
     }
     setStatus(statusEl, 'info', 'Connecting wallet...');
     const sellerAddress = await getWalletAddress(wallet);
+    wallet._address = sellerAddress;
+    const sellerPubkey = await getWalletPubkey(wallet);
 
-    // Generate cancel PSBT via UniSat
-    setStatus(statusEl, 'info', 'Generating cancellation PSBT...');
-    const cancelRes = await fetch(`${UNISAT_BASE}/v3/market/btcname/auction/create_cancel_psbt`, {
+    // 1. Create delist order — UniSat returns PSBT + sign indexes
+    setStatus(statusEl, 'info', 'Generating cancellation...');
+    const cancelRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/create_put_off`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -816,34 +843,34 @@ async function delistName() {
       },
       body: JSON.stringify({
         auctionId: currentListing.auctionId,
-        inscriptionId: currentInscId,
-        sellerAddress: sellerAddress,
+        nftAddress: sellerAddress,
+        btcAddress: sellerAddress,
+        btcPubkey: sellerPubkey,
       }),
     });
     const cancelData = await cancelRes.json();
-    if (cancelData.code !== 0 || !cancelData.data?.psbtBase64) {
-      throw new Error(cancelData.msg || 'Could not generate cancel PSBT');
+    if (cancelData.code !== 0 || !cancelData.data?.psbt) {
+      throw new Error(cancelData.msg || 'Could not generate cancellation');
     }
+    const { psbt: delistPsbtHex, nftSignIndexes = [], btcSignIndexes = [] } = cancelData.data;
+    const allSignIndexes = [...new Set([...nftSignIndexes, ...btcSignIndexes])];
 
-    setStatus(statusEl, 'info', 'Check your wallet to sign...');
-    const signedPsbt = await signPsbt(wallet, cancelData.data.psbtBase64, cancelData.data.toSignInputs || []);
+    // 2. Sign — delist uses standard signing (not SIGHASH_SINGLE)
+    setStatus(statusEl, 'info', 'Sign the cancellation in your wallet...');
+    const signedPsbt = await signPsbtBuy(wallet, delistPsbtHex, allSignIndexes.length ? allSignIndexes : [0]);
 
+    // 3. Confirm delist
     setStatus(statusEl, 'info', 'Submitting cancellation...');
-    const confirmRes = await fetch(`${UNISAT_BASE}/v3/market/btcname/auction/confirm_cancel_psbt`, {
+    const confirmRes = await fetch(`${UNISAT_BASE}/v3/market/domain/auction/confirm_put_off`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${UNISAT_API_KEY}`,
       },
-      body: JSON.stringify({
-        auctionId: currentListing.auctionId,
-        inscriptionId: currentInscId,
-        signedPsbt: signedPsbt,
-        sellerAddress: sellerAddress,
-      }),
+      body: JSON.stringify({ auctionId: currentListing.auctionId, psbt: signedPsbt }),
     });
     const confirmData = await confirmRes.json();
-    if (confirmData.code !== 0) throw new Error(confirmData.msg || 'Cancel failed');
+    if (confirmData.code !== 0) throw new Error(confirmData.msg || 'Cancellation failed');
 
     setStatus(statusEl, 'success', `<strong>${currentName}</strong> has been delisted.`);
     btn.textContent = 'Delisted';
