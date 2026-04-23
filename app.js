@@ -300,7 +300,6 @@ function buildNameCard(data) {
   card.className = 'name-card';
   card.href = `./name.html?name=${encodeURIComponent(name)}`;
   card.innerHTML = `
-    <div class="name-card__score">${s}</div>
     <div class="name-card__header">
       <div class="name-card__avatar" data-avatar="${avatarField || ''}" data-initial="${initial}" style="${gradStyle}">${initial}</div>
       <div>
