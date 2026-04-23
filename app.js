@@ -1896,7 +1896,9 @@ function getFilteredNamesMVP() {
   if (currentSort === 'price_asc')  filtered.sort((a, b) => (a.price || 99999999) - (b.price || 99999999));
   if (currentSort === 'price_desc') filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
   if (currentSort === 'score')      filtered.sort((a, b) => calcScore(b) - calcScore(a));
-  if (currentSort === 'recent')     filtered.reverse(); // reverse order = most recent first
+  if (currentSort === 'recent')     filtered.reverse();
+  if (currentSort === 'insc_asc')   filtered.sort((a, b) => (a.inscriptionNumber || a.inscriptionId || 99999999) - (b.inscriptionNumber || b.inscriptionId || 99999999));
+  if (currentSort === 'insc_desc')  filtered.sort((a, b) => (b.inscriptionNumber || b.inscriptionId || 0) - (a.inscriptionNumber || a.inscriptionId || 0));
 
   return filtered;
 }

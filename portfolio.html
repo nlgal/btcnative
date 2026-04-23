@@ -502,11 +502,20 @@
         </div>
       </div>
 
-      <!-- Tabs -->
-      <div class="port-tabs">
-        <button class="port-tab active" data-tab="all" id="tabAll">All <span class="port-tab-count" id="tabAllCount">0</span></button>
-        <button class="port-tab" data-tab="listed" id="tabListed">Listed <span class="port-tab-count" id="tabListedCount">0</span></button>
-        <button class="port-tab" data-tab="identity" id="tabIdentity">Identity <span class="port-tab-count" id="tabIdentityCount">0</span></button>
+      <!-- Tabs + Sort -->
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-3);">
+        <div class="port-tabs">
+          <button class="port-tab active" data-tab="all" id="tabAll">All <span class="port-tab-count" id="tabAllCount">0</span></button>
+          <button class="port-tab" data-tab="listed" id="tabListed">Listed <span class="port-tab-count" id="tabListedCount">0</span></button>
+          <button class="port-tab" data-tab="identity" id="tabIdentity">Identity <span class="port-tab-count" id="tabIdentityCount">0</span></button>
+        </div>
+        <select id="portSortSelect" onchange="portSortChange(this.value)" style="font-size:var(--text-xs); font-family:var(--font-mono); background:var(--color-surface-offset); border:1px solid var(--color-border); color:var(--color-text); border-radius:var(--radius-md); padding:5px 10px; cursor:pointer; outline:none;">
+          <option value="insc_asc">Lowest inscription</option>
+          <option value="insc_desc">Highest inscription</option>
+          <option value="name_asc">A to Z</option>
+          <option value="listed_first">Listed first</option>
+          <option value="identity_first">Identity first</option>
+        </select>
       </div>
 
       <!-- Grid -->
@@ -583,6 +592,12 @@ function isBtcName(content) {
 let allNames = [];         // all loaded name objects
 let listedMap = {};        // name -> { listed, priceSats, auctionId }
 let currentTab = 'all';
+let portSort = 'insc_asc';
+
+function portSortChange(val) {
+  portSort = val;
+  renderGrid();
+}
 let currentAddress = '';
 let currentPage = 0;
 let hasMore = false;
@@ -715,6 +730,7 @@ async function fetchPage(page) {
   const found = names.map(item => ({
     name: (item.name || '').trim().toLowerCase(),
     inscriptionId: item.inscriptionId || null,
+    inscriptionNumber: item.inscriptionNumber || null,
     satpoint: null,
     hasBnrp: false,
     listed: false,
@@ -778,11 +794,19 @@ async function fetchListingData() {
 }
 
 function getFilteredNames() {
+  let names;
   switch (currentTab) {
-    case 'listed':   return allNames.filter(n => n.listed);
-    case 'identity': return allNames.filter(n => n.hasBnrp);
-    default:         return allNames;
+    case 'listed':   names = allNames.filter(n => n.listed); break;
+    case 'identity': names = allNames.filter(n => n.hasBnrp); break;
+    default:         names = [...allNames];
   }
+  // Apply sort
+  if (portSort === 'insc_asc')       names.sort((a, b) => (a.inscriptionNumber || 99999999) - (b.inscriptionNumber || 99999999));
+  if (portSort === 'insc_desc')      names.sort((a, b) => (b.inscriptionNumber || 0) - (a.inscriptionNumber || 0));
+  if (portSort === 'name_asc')       names.sort((a, b) => a.name.localeCompare(b.name));
+  if (portSort === 'listed_first')   names.sort((a, b) => (b.listed ? 1 : 0) - (a.listed ? 1 : 0));
+  if (portSort === 'identity_first') names.sort((a, b) => (b.hasBnrp ? 1 : 0) - (a.hasBnrp ? 1 : 0));
+  return names;
 }
 
 function renderGrid() {
