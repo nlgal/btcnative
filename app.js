@@ -1758,9 +1758,11 @@ function renderListings(names) {
     return;
   }
   names.forEach(n => el.appendChild(buildNameCard({ ...n, score: calcScore(n) })));
-  // Async: silently remove any re-inscriptions from the grid
+  // Async: silently remove re-inscriptions and ghost/stale UniSat listings
   const _rlNames = names.map(n => n.name);
   filterMarketReInscriptions(_rlNames, name => el.querySelector(`[data-name="${name}"]`));
+  const _ghostItems = names.filter(n => n.source === 'unisat' && n.inscriptionId && n.address);
+  if (_ghostItems.length) filterGhostListings(_ghostItems, name => el.querySelector(`[data-name="${name}"]`));
 }
 
 // ── Re-inscription filter for market listings ────────────────────────────────
@@ -1781,6 +1783,46 @@ async function filterMarketReInscriptions(names, getCardEl) {
       if (el) el.remove();
     });
   } catch { /* silent — never block market load */ }
+}
+
+// ── Ghost listing filter ─────────────────────────────────────────────────────
+// UniSat's index can lag: a listing may appear in the API even after the
+// inscription has been transferred out of escrow (sold elsewhere, delisted, etc).
+// We verify by checking the inscription's current address via the indexer.
+// Any listing whose inscription has moved is silently removed from the grid.
+async function filterGhostListings(items, getCardEl) {
+  if (!items || items.length === 0) return;
+  // Batch: check up to 20 inscriptions concurrently, in chunks to avoid hammering
+  const CHUNK = 10;
+  for (let i = 0; i < items.length; i += CHUNK) {
+    const chunk = items.slice(i, i + CHUNK);
+    await Promise.all(chunk.map(async item => {
+      try {
+        const r = await fetch(
+          `${UNISAT_API}/v1/indexer/inscription/info/${encodeURIComponent(item.inscriptionId)}`,
+          {
+            headers: { 'Authorization': `Bearer ${UNISAT_API_KEY}` },
+            signal: AbortSignal.timeout(6000),
+          }
+        );
+        if (!r.ok) return;
+        const d = await r.json();
+        const currentAddr = d.data && d.data.utxo && d.data.utxo.address;
+        if (!currentAddr) return;
+        // If the inscription is no longer at the escrow address, remove the card
+        if (currentAddr.toLowerCase() !== item.address.toLowerCase()) {
+          console.log(`[btcn] ghost listing removed: ${item.name} — moved from ${item.address} to ${currentAddr}`);
+          const el = getCardEl(item.name);
+          if (el) el.remove();
+          // Also purge from LIVE_LISTINGS so filters don't re-add it
+          if (LIVE_LISTINGS) {
+            const idx = LIVE_LISTINGS.findIndex(l => l.name === item.name && l.source === 'unisat');
+            if (idx !== -1) LIVE_LISTINGS.splice(idx, 1);
+          }
+        }
+      } catch { /* silent */ }
+    }));
+  }
 }
 
 // Convert a UniSat listing item to our name card data shape
