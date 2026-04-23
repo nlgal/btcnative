@@ -1462,13 +1462,20 @@ function populateSalesRows(rows) {
 
 function timeAgo(ts) {
   if (!ts) return '';
-  const ms = Date.now() - (ts * 1000);
+  // UniSat returns ms-epoch (>1e12); fallback for s-epoch values
+  const msEpoch = ts > 1e12 ? ts : ts * 1000;
+  const ms = Date.now() - msEpoch;
+  if (ms < 0) return 'just now';
   const mins = Math.floor(ms / 60000);
+  if (mins < 1)   return 'just now';
   if (mins < 60)  return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24)   return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  if (days < 30)  return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
 }
 
 async function renderMarketIndexes() {

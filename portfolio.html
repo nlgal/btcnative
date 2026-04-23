@@ -443,7 +443,6 @@
   <div class="port-wrap">
     <div class="port-hero">
       <h1 style="letter-spacing:-0.03em;">Portfolio</h1>
-      <p>Enter a Bitcoin address to view all owned names.</p>
     </div>
 
     <!-- My Names section (shown when wallet is connected) -->
@@ -463,11 +462,14 @@
       </div>
     </section>
 
-    <!-- Address input -->
-    <div class="port-search-row">
-      <input class="port-addr-input" id="addrInput" type="text"
-        placeholder="bc1p... address or trump.btc name" spellcheck="false" autocomplete="off" />
-      <button class="port-search-btn" id="lookupBtn">Look up</button>
+    <!-- Look up another wallet -->
+    <div style="margin-bottom:var(--space-4);">
+      <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-3);">Look up any wallet or name</p>
+      <div class="port-search-row">
+        <input class="port-addr-input" id="addrInput" type="text"
+          placeholder="bc1p... address or trump.btc" spellcheck="false" autocomplete="off" />
+        <button class="port-search-btn" id="lookupBtn">Look up</button>
+      </div>
     </div>
 
     <!-- Results panel (hidden until searched) -->
