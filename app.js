@@ -1108,20 +1108,93 @@ async function initBuyBtn(name, inscId) {
   const _urlPrice   = _urlP.get('price');
   const _urlSrc     = _urlP.get('src');
 
-  // If we already know this is a UniSat listing from the URL, show it immediately
-  // without waiting for KV (KV won't have UniSat listings)
+  // URL params may carry a stale UniSat listing context (e.g. from a market card
+  // clicked before the listing expired). Always verify liveness against the
+  // UniSat API before showing a "for sale" state.
   if (_urlAuction && _urlPrice && _urlSrc === 'unisat') {
-    const priceSats = parseInt(_urlPrice, 10);
-    const unisatBuyUrl = `https://unisat.io/market/domain/${encodeURIComponent(name)}`;
-    if (listingPriceEl) {
-      listingPriceEl.innerHTML = formatSats(priceSats) + '<span class="listing-usd"></span>';
-      getBtcUsd().then(r => { const el = qs('.listing-usd'); if (el) el.textContent = ' · ' + formatUsd(priceSats, r); });
+    // Show checking state immediately while we verify
+    if (listingPriceEl) listingPriceEl.textContent = 'Checking...';
+    if (listingStatusEl) listingStatusEl.textContent = '';
+    buyBtn.textContent = 'Checking...';
+    buyBtn.disabled = true;
+
+    const domainType = UNISAT_TLD_MAP[getTld(name)] || null;
+    let liveListing = null;
+    try {
+      const verifyData = await unisatPost('/v3/market/domain/auction/list', {
+        filter: {
+          nftType: 'domain',
+          ...(domainType ? { domainType } : {}),
+        },
+        start: 0,
+        limit: 200,
+        sort: { unitPrice: 1 },
+      });
+      if (verifyData && verifyData.list) {
+        const nameLower = name.toLowerCase();
+        liveListing = verifyData.list.find(l => (l.domain || '').toLowerCase() === nameLower) || null;
+      }
+    } catch(e) {
+      console.warn('[btcn] UniSat verify failed, falling back to URL price', e);
+      // On network error, trust URL params rather than showing "not listed"
+      liveListing = { price: parseInt(_urlPrice, 10), auctionId: _urlAuction };
     }
+
+    buyBtn.disabled = false;
+
+    if (liveListing) {
+      const livePriceSats = liveListing.price || parseInt(_urlPrice, 10);
+      const unisatBuyUrl = `https://unisat.io/market/domain/${encodeURIComponent(name)}`;
+      if (listingPriceEl) {
+        listingPriceEl.innerHTML = formatSats(livePriceSats) + '<span class="listing-usd"></span>';
+        getBtcUsd().then(r => { const el = qs('.listing-usd'); if (el) el.textContent = ' · ' + formatUsd(livePriceSats, r); });
+      }
+      if (listingStatusEl) {
+        listingStatusEl.innerHTML = `Listed on UniSat &middot; <span style="color:var(--color-text-muted);font-size:var(--text-xs);">buy completes on UniSat</span>`;
+      }
+      buyBtn.textContent = `Buy for ${formatSats(livePriceSats)} on UniSat`;
+      buyBtn.onclick = () => window.open(unisatBuyUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // Listing not found in live UniSat data — show not-listed state and fall through
+    console.log(`[btcn] ${name} not found in live UniSat listings (URL params were stale)`);
+    if (listingPriceEl) listingPriceEl.textContent = 'Not listed';
     if (listingStatusEl) {
-      listingStatusEl.innerHTML = `Listed on UniSat &middot; <span style="color:var(--color-text-muted);font-size:var(--text-xs);">buy completes on UniSat</span>`;
+      listingStatusEl.innerHTML = `
+        <span style="color:var(--color-text-muted);font-size:var(--text-xs);">Not currently for sale</span>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button id="watchNameBtn" style="
+            flex:1; padding:9px 12px; border:1px solid var(--color-border);
+            border-radius:8px; background:var(--color-surface-offset);
+            color:var(--color-text); font-size:var(--text-xs); font-weight:600;
+            cursor:pointer; transition:all .15s;
+          ">Watch</button>
+          <button id="makeOfferBtn" style="
+            flex:1; padding:9px 12px; border:none; border-radius:8px;
+            background:var(--color-primary); color:#000;
+            font-size:var(--text-xs); font-weight:700;
+            cursor:pointer; transition:opacity .15s;
+          ">Make Offer</button>
+        </div>
+      `;
+      const watchNameBtn = qs('#watchNameBtn');
+      const makeOfferBtn = qs('#makeOfferBtn');
+      if (watchNameBtn) {
+        watchNameBtn.onmouseover = () => { watchNameBtn.style.background = 'var(--color-surface-dynamic)'; };
+        watchNameBtn.onmouseout  = () => { watchNameBtn.style.background = 'var(--color-surface-offset)'; };
+        watchNameBtn.onclick = () => openWatchModal(name);
+      }
+      if (makeOfferBtn) {
+        makeOfferBtn.onmouseover = () => { makeOfferBtn.style.opacity = '.85'; };
+        makeOfferBtn.onmouseout  = () => { makeOfferBtn.style.opacity = '1'; };
+        makeOfferBtn.onclick = () => openOfferModal();
+      }
     }
-    buyBtn.textContent = `Buy for ${formatSats(priceSats)} on UniSat`;
-    buyBtn.onclick = () => window.open(unisatBuyUrl, '_blank', 'noopener,noreferrer');
+    buyBtn.textContent = 'View on UniSat';
+    buyBtn.style.background = 'var(--color-surface-offset)';
+    buyBtn.style.color = 'var(--color-text-muted)';
+    buyBtn.onclick = () => window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
     return;
   }
 
