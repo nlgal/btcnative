@@ -430,7 +430,12 @@ function buildNameCard(data) {
 
   const card = document.createElement('a');
   card.className = 'name-card';
-  card.href = `./name.html?name=${encodeURIComponent(name)}`;
+  // Pass listing context through URL so profile page can show correct buy state
+  const _cardParams = new URLSearchParams({ name });
+  if (data.auctionId) _cardParams.set('auction', data.auctionId);
+  if (data.price)     _cardParams.set('price', String(data.price));
+  if (data.source)    _cardParams.set('src', data.source);
+  card.href = `./name.html?${_cardParams.toString()}`;
   card.dataset.name = name;
   card.innerHTML = `
     <div class="name-card__header">
@@ -1097,6 +1102,29 @@ async function initBuyBtn(name, inscId) {
     ? `https://unisat.io/market/ordinals/auction?inscriptionId=${inscId}`
     : `https://unisat.io/bns/market?type=${encodeURIComponent(tldRaw)}&search=${encodeURIComponent(base)}`;
 
+  // Check URL params — card may have passed listing context directly
+  const _urlP = new URLSearchParams(location.search);
+  const _urlAuction = _urlP.get('auction');
+  const _urlPrice   = _urlP.get('price');
+  const _urlSrc     = _urlP.get('src');
+
+  // If we already know this is a UniSat listing from the URL, show it immediately
+  // without waiting for KV (KV won't have UniSat listings)
+  if (_urlAuction && _urlPrice && _urlSrc === 'unisat') {
+    const priceSats = parseInt(_urlPrice, 10);
+    const unisatBuyUrl = `https://unisat.io/market/domain/${encodeURIComponent(name)}`;
+    if (listingPriceEl) {
+      listingPriceEl.innerHTML = formatSats(priceSats) + '<span class="listing-usd"></span>';
+      getBtcUsd().then(r => { const el = qs('.listing-usd'); if (el) el.textContent = ' · ' + formatUsd(priceSats, r); });
+    }
+    if (listingStatusEl) {
+      listingStatusEl.innerHTML = `Listed on UniSat &middot; <span style="color:var(--color-text-muted);font-size:var(--text-xs);">buy completes on UniSat</span>`;
+    }
+    buyBtn.textContent = `Buy for ${formatSats(priceSats)} on UniSat`;
+    buyBtn.onclick = () => window.open(unisatBuyUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
   // Start with fallback behaviour while we fetch listing
   buyBtn.textContent = 'Buy';
   buyBtn.onclick = () => window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
@@ -1524,10 +1552,9 @@ async function initExplorePage() {
     fetchListings(apiParams).then(result => {
       if (result && result.list) {
         LIVE_LISTINGS = result.list;
+        if (result.total) LIVE_TOTAL = result.total;
       }
       renderListings(getFilteredNames());
-      const countEl = qs('#listingCount');
-      if (countEl && result && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
     });
   } else {
     renderListings(getFilteredNames());
@@ -1535,9 +1562,8 @@ async function initExplorePage() {
       fetchListings(apiParams).then(result => {
         if (result && result.list) {
           LIVE_LISTINGS = result.list;
+          if (result.total) LIVE_TOTAL = result.total;
           renderListings(getFilteredNames());
-          const countEl = qs('#listingCount');
-          if (countEl && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
         }
       });
     }
@@ -1577,6 +1603,7 @@ function _refetchListings() {
     `<div class="name-card skeleton" style="height:96px;border-radius:var(--radius-lg);"></div>`
   ).join('');
   LIVE_LISTINGS = null; // mark as loading
+  LIVE_TOTAL    = null;
   const apiParams = { sort: typeof currentSort !== 'undefined' ? currentSort : 'price_asc' };
   if (currentTld && currentTld !== 'all') apiParams.domainType = currentTld.replace('.', '');
   if (currentLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
@@ -1585,14 +1612,9 @@ function _refetchListings() {
   if (currentLen === '5')   { apiParams.minLength = 5; apiParams.maxLength = 5; }
   if (currentLen === '6+')  { apiParams.minLength = 6; }
   fetchListings(apiParams).then(result => {
-    if (result && result.list) {
-      LIVE_LISTINGS = result.list;
-    } else {
-      LIVE_LISTINGS = [];
-    }
+    LIVE_LISTINGS = (result && result.list) ? result.list : [];
+    if (result && result.total) LIVE_TOTAL = result.total;
     renderListings(getFilteredNames());
-    const countEl = qs('#listingCount');
-    if (countEl && result && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
   });
 }
 
@@ -1618,13 +1640,21 @@ function sortNames(key, btn) {
 }
 // Live listings state
 let LIVE_LISTINGS = null;  // populated from UniSat if API key present
+let LIVE_TOTAL    = null;  // total count from API (may be much larger than LIVE_LISTINGS.length)
 
 function renderListings(names) {
   const el = qs('#listingsGrid');
   if (!el) return;
   el.innerHTML = '';
   const countEl = qs('#listingCount');
-  if (countEl) countEl.textContent = `${names.length} names`;
+  // Show API total when available; fall back to local filtered count
+  if (countEl) {
+    if (LIVE_TOTAL !== null) {
+      countEl.textContent = `${LIVE_TOTAL.toLocaleString()} names`;
+    } else {
+      countEl.textContent = `${names.length} names`;
+    }
+  }
   if (names.length === 0) {
     const marketEmpty = LIVE_LISTINGS !== null && LIVE_LISTINGS.length === 0;
     if (marketEmpty) {
@@ -2167,6 +2197,7 @@ function _refetchListingsMVP() {
     `<div class="name-card skeleton" style="height:96px;border-radius:var(--radius-lg);"></div>`
   ).join('');
   LIVE_LISTINGS = null;
+  LIVE_TOTAL    = null;
   const apiParams = { sort: typeof currentSort !== 'undefined' ? currentSort : 'price_asc' };
   if (currentTld && currentTld !== 'all') apiParams.domainType = currentTld.replace('.', '');
   if (currentLen === '1-2') { apiParams.minLength = 1; apiParams.maxLength = 2; }
@@ -2176,9 +2207,8 @@ function _refetchListingsMVP() {
   if (currentLen === '6+')  { apiParams.minLength = 6; }
   fetchListings(apiParams).then(result => {
     LIVE_LISTINGS = (result && result.list) ? result.list : [];
+    if (result && result.total) LIVE_TOTAL = result.total;
     renderListings(getFilteredNamesMVP());
-    const countEl = qs('#listingCount');
-    if (countEl && result && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
   });
 }
 
@@ -3602,10 +3632,9 @@ async function initExplorePageMVP() {
     const result = await fetchListings(apiParams);
     if (result && result.list) {
       LIVE_LISTINGS = result.list;
+      if (result.total) LIVE_TOTAL = result.total;
     }
     renderListings(getFilteredNamesMVP());
-    const countEl = qs('#listingCount');
-    if (countEl && result && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
     const loadBtn = qs('#loadMoreBtn');
     if (loadBtn) loadBtn.style.display = '';
   } else {
@@ -3614,9 +3643,8 @@ async function initExplorePageMVP() {
       fetchListings(apiParams).then(result => {
         if (result && result.list) {
           LIVE_LISTINGS = result.list;
+          if (result.total) LIVE_TOTAL = result.total;
           renderListings(getFilteredNamesMVP());
-          const countEl = qs('#listingCount');
-          if (countEl && result.total) countEl.textContent = `${result.total.toLocaleString()} names`;
         }
         const loadBtn = qs('#loadMoreBtn');
         if (loadBtn) loadBtn.style.display = '';
