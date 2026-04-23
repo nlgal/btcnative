@@ -375,11 +375,15 @@
   border-radius: var(--radius-full);
   flex-shrink: 0;
   object-fit: cover;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #f7931a 100%);
+  background: #1e1a12;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+/* Show orange gradient only when no pfp image is loaded */
+.nav__wallet-avatar:not(:has(img)) {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #f7931a 100%);
 }
 .nav__wallet-avatar img {
   width: 100%;
@@ -2463,8 +2467,12 @@
   border-color: var(--color-brand-orange);
 }
 
-/* ── Nav avatar gradient (no letter initials) ── */
+/* ── Nav avatar — neutral dark bg so real PFP images have contrast.
+   Orange gradient shows only when no image is present (empty span fallback). ── */
 .nav__wallet-avatar {
+  background: #2a2015 !important;
+}
+.nav__wallet-avatar:not(:has(img)) {
   background: linear-gradient(135deg, #FFB100 0%, #FF8A00 100%) !important;
 }
 

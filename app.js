@@ -3850,19 +3850,28 @@ async function setNavWalletConnected(address) {
         if (fwdRes.ok) fwdData = await fwdRes.json();
       } finally { clearTimeout(fwdTimer); }
       const rawAvatar = fwdData?.profile?.avatar || '';
-      const inscriptionId = rawAvatar.startsWith('ord:') ? rawAvatar.slice(4) : rawAvatar;
-      if (inscriptionId) {
-        avatarHtml = `<span class="nav__wallet-avatar"><img src="https://static.unisat.space/content/${inscriptionId}" alt="" onerror="this.style.display='none'"></span>`;
-      }
+      const avatarVal = rawAvatar || null;
+      if (avatarVal) avatarHtml = avatarVal;
     } catch { /* no avatar — gradient fallback */ }
-
-    if (!avatarHtml) avatarHtml = `<span class="nav__wallet-avatar"></span>`;
 
     // Guard: only update if this address is still the active wallet
     // (user may have switched again while we were resolving)
     if (btn.dataset.addr !== address) return;
 
-    btn.innerHTML = `${avatarHtml}<span class="nav__wallet-name">${name}</span>`;
+    const avatarSpan = document.createElement('span');
+    avatarSpan.className = 'nav__wallet-avatar';
+    if (avatarHtml) {
+      // Use initAvatar so image loads cleanly — same pattern as profile cards
+      initAvatar(avatarSpan, avatarHtml, '');
+    }
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'nav__wallet-name';
+    nameSpan.textContent = name;
+
+    btn.innerHTML = '';
+    btn.appendChild(avatarSpan);
+    btn.appendChild(nameSpan);
     btn.classList.add('nav__wallet-btn--has-identity');
     btn.title = `${name} (${address})`;
   } catch {
