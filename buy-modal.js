@@ -556,6 +556,7 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
       <button class="bn-modal__cta" id="bnBuyBtn">Connect wallet &amp; buy</button>
       <div class="bn-modal__status" id="bnBuyStatus"></div>
       <p class="bn-modal__wallet-note">UniSat or Xverse required. Your wallet signs directly — no keys leave your device.</p>
+      <p class="bn-modal__wallet-note" style="margin-top:6px;color:var(--color-text-faint)">Your wallet may show a "Changing inscription detected" warning. This is expected — type CONFIRM to proceed.</p>
       <p class="bn-modal__step" id="bnStep"></p>
     </div>
   `;
