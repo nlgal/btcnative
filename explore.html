@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Explore — BTC Native</title>
   <meta name="description" content="Browse and filter Bitcoin names by category, TLD, length, rarity, and BNRP status." />
-  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="./base.css" />
   <link rel="stylesheet" href="./style.css" />
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
@@ -90,103 +91,106 @@
 
     <!-- ── LISTINGS TAB ── -->
     <div id="tabListings" class="tab-panel" style="display:none;">
-      <div class="explore-layout">
 
-        <!-- Sidebar filters -->
-        <aside class="filter-sidebar">
-          <!-- TLD -->
-          <div class="filter-sidebar__section">
-            <span class="filter-sidebar__label">TLD</span>
-            <div class="filter-sidebar__chips">
-              <button class="filter-chip--sm active" data-tld="all" onclick="filterTld('all', this)">All</button>
-              <button class="filter-chip--sm" data-tld=".btc" onclick="filterTld('.btc', this)">.btc</button>
-              <button class="filter-chip--sm" data-tld=".sats" onclick="filterTld('.sats', this)">.sats</button>
-              <button class="filter-chip--sm" data-tld=".x" onclick="filterTld('.x', this)">.x</button>
-              <button class="filter-chip--sm" data-tld=".ord" onclick="filterTld('.ord', this)">.ord</button>
-              <button class="filter-chip--sm" data-tld=".gm" onclick="filterTld('.gm', this)">.gm</button>
-              <button class="filter-chip--sm" data-tld=".xbt" onclick="filterTld('.xbt', this)">.xbt</button>
-              <button class="filter-chip--sm" data-tld=".unisat" onclick="filterTld('.unisat', this)">.unisat</button>
+      <!-- Sticky filter bar -->
+      <div class="listings-filterbar" id="listingsFilterbar">
+
+        <!-- Row 1: TLD + Length + Sort + Price -->
+        <div class="lfb-row lfb-row--main">
+
+          <!-- TLD group -->
+          <div class="lfb-group">
+            <span class="lfb-label">TLD</span>
+            <div class="lfb-chips">
+              <button class="lfb-chip active" data-tld="all" onclick="filterTld('all', this)">All</button>
+              <button class="lfb-chip" data-tld=".btc" onclick="filterTld('.btc', this)">.btc</button>
+              <button class="lfb-chip" data-tld=".sats" onclick="filterTld('.sats', this)">.sats</button>
+              <button class="lfb-chip" data-tld=".x" onclick="filterTld('.x', this)">.x</button>
+              <button class="lfb-chip" data-tld=".ord" onclick="filterTld('.ord', this)">.ord</button>
+              <button class="lfb-chip" data-tld=".xbt" onclick="filterTld('.xbt', this)">.xbt</button>
+              <button class="lfb-chip" data-tld=".gm" onclick="filterTld('.gm', this)">.gm</button>
             </div>
           </div>
 
-          <!-- Length -->
-          <div class="filter-sidebar__section">
-            <span class="filter-sidebar__label">Name Length</span>
-            <div class="filter-sidebar__chips">
-              <button class="filter-chip--sm" data-len="1-2" onclick="filterLen('1-2', this)">1-2</button>
-              <button class="filter-chip--sm" data-len="3" onclick="filterLen('3', this)">3</button>
-              <button class="filter-chip--sm" data-len="4" onclick="filterLen('4', this)">4</button>
-              <button class="filter-chip--sm" data-len="5" onclick="filterLen('5', this)">5</button>
-              <button class="filter-chip--sm" data-len="6+" onclick="filterLen('6+', this)">6+</button>
+          <div class="lfb-divider"></div>
+
+          <!-- Length group -->
+          <div class="lfb-group">
+            <span class="lfb-label">Length</span>
+            <div class="lfb-chips">
+              <button class="lfb-chip" data-len="1-2" onclick="filterLen('1-2', this)">1-2</button>
+              <button class="lfb-chip" data-len="3" onclick="filterLen('3', this)">3</button>
+              <button class="lfb-chip" data-len="4" onclick="filterLen('4', this)">4</button>
+              <button class="lfb-chip" data-len="5" onclick="filterLen('5', this)">5</button>
+              <button class="lfb-chip" data-len="6+" onclick="filterLen('6+', this)">6+</button>
             </div>
           </div>
 
-          <!-- Price range -->
-          <div class="filter-sidebar__section">
-            <span class="filter-sidebar__label">Price (BTC)</span>
-            <div class="price-range-wrap">
-              <div>
-                <span class="price-range-label">Min</span>
-                <input class="price-range-input" id="priceMin" type="number" placeholder="0" min="0" step="0.0001" oninput="applyPriceFilter()" />
-              </div>
-              <div>
-                <span class="price-range-label">Max</span>
-                <input class="price-range-input" id="priceMax" type="number" placeholder="Any" min="0" step="0.0001" oninput="applyPriceFilter()" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Special filters -->
-          <div class="filter-sidebar__section">
-            <span class="filter-sidebar__label">Special</span>
-            <div class="filter-sidebar__chips">
-              <button class="filter-chip--sm" data-special="numeric" onclick="filterSpecial('numeric', this)">Numeric</button>
-              <button class="filter-chip--sm" data-special="letters" onclick="filterSpecial('letters', this)">Letters only</button>
-              <button class="filter-chip--sm" data-special="palindrome" onclick="filterSpecial('palindrome', this)">Palindrome</button>
-              <button class="filter-chip--sm" data-special="999" onclick="filterSpecial('999', this)">999 Club</button>
-              <button class="filter-chip--sm" data-special="allsame" onclick="filterSpecial('allsame', this)">All Same</button>
-              <button class="filter-chip--sm" data-special="dictionary" onclick="filterSpecial('dictionary', this)">Dictionary</button>
-              <button class="filter-chip--sm" data-special="bnrp" onclick="filterSpecial('bnrp', this)">BNRP only</button>
-            </div>
-          </div>
+          <div class="lfb-divider"></div>
 
           <!-- Sort -->
-          <div class="filter-sidebar__section">
-            <span class="filter-sidebar__label">Sort by</span>
-            <div class="filter-sidebar__chips" style="flex-direction:column; align-items:flex-start;">
-              <button class="filter-chip--sm active" data-sort="price_asc" onclick="sortNames('price_asc', this)">Price: low to high</button>
-              <button class="filter-chip--sm" data-sort="price_desc" onclick="sortNames('price_desc', this)">Price: high to low</button>
-              <button class="filter-chip--sm" data-sort="score" onclick="sortNames('score', this)">Collector score</button>
-              <button class="filter-chip--sm" data-sort="recent" onclick="sortNames('recent', this)">Recently listed</button>
+          <div class="lfb-group">
+            <span class="lfb-label">Sort</span>
+            <div class="lfb-chips">
+              <button class="lfb-chip active" data-sort="price_asc" onclick="sortNames('price_asc', this)">↑ Price</button>
+              <button class="lfb-chip" data-sort="price_desc" onclick="sortNames('price_desc', this)">↓ Price</button>
+              <button class="lfb-chip" data-sort="score" onclick="sortNames('score', this)">Score</button>
+              <button class="lfb-chip" data-sort="recent" onclick="sortNames('recent', this)">Recent</button>
             </div>
           </div>
 
-          <!-- Clear -->
-          <div class="filter-sidebar__section">
-            <button class="btn btn--outline btn--sm btn--full" onclick="clearAllFilters()">Clear all filters</button>
-          </div>
-        </aside>
+          <div class="lfb-divider"></div>
 
-        <!-- Results -->
-        <div>
-          <!-- Floor ticker -->
-          <div id="floorTicker" style="display:flex; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-4);">
-            <!-- populated by JS -->
+          <!-- Price range -->
+          <div class="lfb-group lfb-group--price">
+            <span class="lfb-label">Price (BTC)</span>
+            <div class="lfb-price-inputs">
+              <input class="lfb-price-input" id="priceMin" type="number" placeholder="Min" min="0" step="0.0001" oninput="applyPriceFilter()" />
+              <span class="lfb-price-sep">–</span>
+              <input class="lfb-price-input" id="priceMax" type="number" placeholder="Max" min="0" step="0.0001" oninput="applyPriceFilter()" />
+            </div>
           </div>
 
-          <div class="sort-bar">
-            <span class="sort-bar__count" id="listingCount">— names</span>
-            <button class="btn btn--outline btn--sm" onclick="toggleGridDensity(this)" id="densityBtn">
+          <!-- Actions -->
+          <div style="margin-left:auto; display:flex; align-items:center; gap:var(--space-2); flex-shrink:0;">
+            <button class="lfb-btn-icon" onclick="toggleGridDensity(this)" id="densityBtn" title="Toggle density">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-              Dense
             </button>
-          </div>
-          <div class="name-grid" id="listingsGrid" style="grid-template-columns:repeat(auto-fill, minmax(180px,1fr));"></div>
-          <div style="text-align:center; padding:var(--space-8);">
-            <button class="btn btn--outline" id="loadMoreBtn" onclick="loadMore()" style="display:none;">Load more</button>
+            <button class="lfb-clear" onclick="clearAllFilters()">Clear</button>
           </div>
         </div>
+
+        <!-- Row 2: Trait filters -->
+        <div class="lfb-row lfb-row--traits">
+          <span class="lfb-label">Traits</span>
+          <div class="lfb-chips">
+            <button class="lfb-chip" data-special="numeric" onclick="filterSpecial('numeric', this)">Numeric</button>
+            <button class="lfb-chip" data-special="letters" onclick="filterSpecial('letters', this)">Letters only</button>
+            <button class="lfb-chip" data-special="palindrome" onclick="filterSpecial('palindrome', this)">Palindrome</button>
+            <button class="lfb-chip" data-special="999" onclick="filterSpecial('999', this)">999 Club</button>
+            <button class="lfb-chip" data-special="allsame" onclick="filterSpecial('allsame', this)">All Same</button>
+            <button class="lfb-chip" data-special="dictionary" onclick="filterSpecial('dictionary', this)">Dictionary</button>
+            <button class="lfb-chip" data-special="bnrp" onclick="filterSpecial('bnrp', this)">BNRP</button>
+          </div>
+        </div>
+
+        <!-- Floor ticker -->
+        <div id="floorTicker" class="lfb-floors">
+          <!-- populated by JS -->
+        </div>
       </div>
+
+      <!-- Results area -->
+      <div class="listings-body">
+        <div class="listings-topbar">
+          <span class="sort-bar__count" id="listingCount">Loading...</span>
+        </div>
+        <div class="name-grid" id="listingsGrid" style="grid-template-columns:repeat(auto-fill, minmax(180px,1fr));"></div>
+        <div style="text-align:center; padding:var(--space-8);">
+          <button class="btn btn--outline" id="loadMoreBtn" onclick="loadMore()" style="display:none;">Load more</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- ── MARKET TAB ── -->

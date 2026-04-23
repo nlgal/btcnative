@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Portfolio — BTC Native</title>
   <meta name="description" content="View all Bitcoin names owned by a BTC address." />
-  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="./base.css" />
   <link rel="stylesheet" href="./style.css" />
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
@@ -327,9 +328,10 @@
     .port-hero h1 {
       font-size: var(--text-2xl);
       font-weight: 800;
-      font-family: var(--font-mono);
+      font-family: var(--font-display);
       color: var(--color-text);
       margin-bottom: var(--space-2);
+      letter-spacing: -0.03em;
     }
     .port-hero p {
       font-size: var(--text-sm);
@@ -440,16 +442,16 @@
 <main>
   <div class="port-wrap">
     <div class="port-hero">
-      <h1>Portfolio</h1>
-      <p>Enter a Bitcoin address to see all owned names.</p>
+      <h1 style="letter-spacing:-0.03em;">Portfolio</h1>
+      <p>Enter a Bitcoin address to view all owned names.</p>
     </div>
 
     <!-- My Names section (shown when wallet is connected) -->
     <section id="myNamesSection" style="display:none; margin-bottom:var(--space-8);">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-4);">
         <div>
-          <h2 style="font-family:var(--font-display); font-size:var(--text-xl); font-weight:700; margin:0;">My Names</h2>
-          <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin:var(--space-1) 0 0;" id="myNamesAddr"></p>
+          <h2 style="font-family:var(--font-display); font-size:var(--text-xl); font-weight:700; margin:0; letter-spacing:-0.02em;">My Names</h2>
+          <p style="font-size:var(--text-xs); color:var(--color-text-faint); margin:var(--space-1) 0 0; font-family:var(--font-mono);" id="myNamesAddr"></p>
         </div>
         <button class="btn btn--outline btn--sm" onclick="loadMyNamesRefresh()" id="myNamesRefreshBtn" title="Refresh"
           style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:1px solid var(--color-border); border-radius:var(--radius-md); background:none; cursor:pointer; color:var(--color-text-muted); flex-shrink:0;">

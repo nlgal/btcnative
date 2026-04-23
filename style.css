@@ -2,7 +2,7 @@
 /* Bitcoin-native dark terminal aesthetic: near-black bg, #f7931a orange accent, monospace data, clean sans body */
 
 /* ── Fonts ── */
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&f[]=cabinet-grotesk@400,500,700,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 /* ── Type Scale ── */
 :root {
@@ -14,8 +14,8 @@
   --text-2xl:  clamp(2rem,     1.2rem  + 2.5vw,  3.5rem);
   --text-3xl:  clamp(2.5rem,   1rem    + 4vw,    5rem);
 
-  --font-display: 'Cabinet Grotesk', 'Helvetica Neue', sans-serif;
-  --font-body:    'Satoshi', 'Inter', sans-serif;
+  --font-display: 'Space Grotesk', 'Helvetica Neue', sans-serif;
+  --font-body:    'Inter', system-ui, sans-serif;
   --font-mono:    'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 
   /* ── Spacing ── */
@@ -1031,7 +1031,7 @@
   border-radius: var(--radius-sm);
 }
 
-/* ── Explore: sidebar layout ── */
+/* ── Explore: old sidebar layout (kept for reference, not used) ── */
 .explore-layout {
   display: grid;
   grid-template-columns: 240px 1fr;
@@ -1082,6 +1082,173 @@
 }
 .filter-chip--sm:hover { border-color: var(--color-border-strong); color: var(--color-text); }
 .filter-chip--sm.active { border-color: var(--color-primary); color: var(--color-primary); background: var(--color-primary-dim); }
+
+/* ── Explore: horizontal filter bar (new) ── */
+.listings-filterbar {
+  position: sticky;
+  top: 56px;
+  z-index: 50;
+  background: color-mix(in oklch, var(--color-bg) 96%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-divider);
+  padding: var(--space-3) 0;
+  margin-bottom: var(--space-4);
+}
+.lfb-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-block: var(--space-2);
+}
+.lfb-row--main {
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: var(--space-1);
+}
+.lfb-row--main::-webkit-scrollbar { display: none; }
+.lfb-row--traits {
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-divider);
+}
+.lfb-floors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-divider);
+}
+.lfb-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+.lfb-group--price {
+  flex-shrink: 0;
+}
+.lfb-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.lfb-chips {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.lfb-row--traits .lfb-chips {
+  flex-wrap: wrap;
+}
+.lfb-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  background: transparent;
+  white-space: nowrap;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.lfb-chip:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+  background: var(--color-surface-offset);
+}
+.lfb-chip.active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-dim);
+}
+.lfb-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--color-divider);
+  flex-shrink: 0;
+}
+.lfb-price-inputs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.lfb-price-input {
+  width: 72px;
+  height: 28px;
+  padding: 0 var(--space-2);
+  background: var(--color-surface-offset);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.12s;
+}
+.lfb-price-input:focus { border-color: var(--color-primary); }
+.lfb-price-input::placeholder { color: var(--color-text-faint); }
+.lfb-price-sep {
+  font-size: 12px;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+.lfb-btn-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.12s, color 0.12s;
+}
+.lfb-btn-icon:hover { border-color: var(--color-border-strong); color: var(--color-text); }
+.lfb-clear {
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid var(--color-border);
+  color: var(--color-text-faint);
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.12s, color 0.12s;
+}
+.lfb-clear:hover { border-color: var(--color-error); color: var(--color-error); }
+.listings-body {
+  padding-top: var(--space-2);
+}
+.listings-topbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+@media (max-width: 640px) {
+  .lfb-row--main { gap: var(--space-2); }
+  .lfb-divider { display: none; }
+  .lfb-group { gap: var(--space-1); }
+}
 
 /* Price range inputs */
 .price-range-wrap {
