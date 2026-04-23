@@ -1537,10 +1537,9 @@ function renderListings(names) {
   const countEl = qs('#listingCount');
   if (countEl) countEl.textContent = `${names.length} names`;
   if (names.length === 0) {
-    const isLoaded = LIVE_LISTINGS !== null;
-    const hasFilters = currentTld !== 'all' || currentLen !== 'all' || currentSpecial !== null;
-    if (isLoaded && !hasFilters) {
-      // Market is genuinely empty — show warm CTA
+    const marketEmpty = LIVE_LISTINGS !== null && LIVE_LISTINGS.length === 0;
+    if (marketEmpty) {
+      // Market is genuinely empty — show warm CTA regardless of active filters
       el.innerHTML = `<div style="grid-column:1/-1; display:flex; flex-direction:column; align-items:center; text-align:center; padding:var(--space-16) var(--space-8); color:var(--color-text-muted);">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-text-faint); margin-bottom:var(--space-4);" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         <h3 style="color:var(--color-text); font-size:var(--text-base); font-weight:600; margin:0 0 var(--space-2);">No listings yet</h3>
@@ -1548,6 +1547,7 @@ function renderListings(names) {
         <a href="sell.html" class="btn btn-primary" style="font-size:var(--text-sm);">List a name &rarr;</a>
       </div>`;
     } else {
+      // Listings exist but none match the current filters
       el.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:var(--space-16) 0; color:var(--color-text-faint); font-size:var(--text-sm);">No names match these filters.</div>`;
     }
     return;
