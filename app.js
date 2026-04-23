@@ -302,7 +302,7 @@ function buildNameCard(data) {
   card.href = `./name.html?name=${encodeURIComponent(name)}`;
   card.innerHTML = `
     <div class="name-card__header">
-      <div class="name-card__avatar" data-avatar="${avatarField || ''}" data-initial="${initial}" style="${gradStyle}">${initial}</div>
+      <div class="name-card__avatar" data-avatar="${avatarField || ''}" data-initial="${initial}" style="${gradStyle}"></div>
       <div>
         <div class="name-card__name">${base}<span style="color:var(--color-primary);">${tld}</span></div>
         ${displayName ? `<div style="font-size:10px;color:var(--color-text-faint);">${displayName}</div>` : ''}
@@ -1680,7 +1680,8 @@ async function runSearch(q, input, resultsEl) {
         const av = document.createElement('div');
         av.className = 'search-result-avatar';
         av.dataset.initial = base[0].toUpperCase();
-        av.textContent = base[0].toUpperCase();
+        const _sg = (typeof nameGradient === 'function') ? nameGradient(base + getTld(name)) : { from: '#f7931a', to: '#c0620a', text: '#fff' };
+        av.style.cssText = `background:linear-gradient(135deg,${_sg.from},${_sg.to});`;
         row.prepend(av);
         initAvatar(av, records.avatar, base[0].toUpperCase());
       }
@@ -1725,7 +1726,7 @@ function showSearchResult(data, name, resultsEl) {
   item.className = 'search-result-item';
   item.onclick = () => navigateToName(name);
   item.innerHTML = `
-    <div class="search-result-avatar" data-initial="${base[0].toUpperCase()}">${base[0].toUpperCase()}</div>
+    <div class="search-result-avatar" data-initial="${base[0].toUpperCase()}" style="background:${(()=>{const g=nameGradient(name);return `linear-gradient(135deg,${g.from},${g.to})`;})()};"></div>
     <div>
       <div class="search-result-name">${base}<span style="color:var(--color-primary)">${tld}</span></div>
       <div class="search-result-sub">${records.display || ''} ${records['com.twitter'] ? '· @'+records['com.twitter'] : ''}</div>

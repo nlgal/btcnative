@@ -319,19 +319,6 @@
       background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-offset));
       color: var(--color-primary);
     }
-    .your-name-pill__avatar {
-      width: 16px;
-      height: 16px;
-      border-radius: var(--radius-full);
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 8px;
-      font-weight: 700;
-      color: #000;
-      overflow: hidden;
-    }
     /* Skeleton pills */
     .your-name-pill--skel {
       width: 80px;
@@ -1011,21 +998,6 @@ async function delistName() {
   const section  = document.getElementById('yourNamesSection');
   const grid     = document.getElementById('yourNamesGrid');
 
-  // Helper: gradient same as app.js nameGradient()
-  function pillGradient(name) {
-    if (typeof nameGradient === 'function') return nameGradient(name);
-    // Fallback inline if nameGradient somehow not available
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-    const hue = h % 360;
-    return `linear-gradient(135deg, hsl(${hue},60%,42%), hsl(${(hue+40)%360},55%,58%))`;
-  }
-
-  function isNumericName(name) {
-    const bare = name.split('.')[0];
-    return /^\d+$/.test(bare);
-  }
-
   // Show skeleton
   function showSkeleton() {
     section.style.display = 'block';
@@ -1051,12 +1023,7 @@ async function delistName() {
     if (!names.length) { showEmpty(); return; }
     section.style.display = 'block';
     grid.innerHTML = names.map(n => {
-      const grad = pillGradient(n.name);
-      const initial = isNumericName(n.name) ? '\u20BF' : n.name[0].toUpperCase();
-      return `<button class="your-name-pill" data-name="${n.name}" title="${n.name}">
-        <span class="your-name-pill__avatar" style="background:${grad};">${initial}</span>
-        ${n.name}
-      </button>`;
+      return `<button class="your-name-pill" data-name="${n.name}" title="${n.name}">${n.name}</button>`;
     }).join('');
     // Click: fill input + trigger lookup
     grid.querySelectorAll('.your-name-pill').forEach(btn => {
