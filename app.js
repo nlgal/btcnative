@@ -300,6 +300,7 @@ function buildNameCard(data) {
   const card = document.createElement('a');
   card.className = 'name-card';
   card.href = `./name.html?name=${encodeURIComponent(name)}`;
+  card.dataset.name = name;
   card.innerHTML = `
     <div class="name-card__header">
       <div>
@@ -1355,6 +1356,29 @@ function renderListings(names) {
     return;
   }
   names.forEach(n => el.appendChild(buildNameCard({ ...n, score: calcScore(n) })));
+  // Async: silently remove any re-inscriptions from the grid
+  const _rlNames = names.map(n => n.name);
+  filterMarketReInscriptions(_rlNames, name => el.querySelector(`[data-name="${name}"]`));
+}
+
+// ── Re-inscription filter for market listings ────────────────────────────────
+// Calls /api/validate-batch on a list of names, then removes cards for any
+// that are re-inscriptions. Called after rendering so the page loads instantly.
+async function filterMarketReInscriptions(names, getCardEl) {
+  if (!names || names.length === 0) return;
+  try {
+    const query = names.map(n => encodeURIComponent(n)).join(',');
+    const res = await fetch(
+      `${MARKET_API}/api/validate-batch?names=${query}`,
+      { signal: AbortSignal.timeout(12000) }
+    );
+    const data = await res.json();
+    if (!data.ok || !Array.isArray(data.reInscriptions)) return;
+    data.reInscriptions.forEach(name => {
+      const el = getCardEl(name);
+      if (el) el.remove();
+    });
+  } catch { /* silent — never block market load */ }
 }
 
 // Convert a UniSat listing item to our name card data shape
@@ -2119,10 +2143,13 @@ async function fetchAndRenderComps(name) {
   el.appendChild(statsDiv);
 
   // Render up to 6 comp cards
-  allComps.slice(0, 6).forEach(item => {
-    const card = buildNameCard(unisatListingToCard(item));
+  const _compItems = allComps.slice(0, 6).map(item => unisatListingToCard(item));
+  _compItems.forEach(cardData => {
+    const card = buildNameCard(cardData);
     el.appendChild(card);
   });
+  // Async: silently remove any re-inscriptions
+  filterMarketReInscriptions(_compItems.map(c => c.name), name => el.querySelector(`[data-name="${name}"]`));
 }
 
 // ── Metadata table render ─────────────────────────────────────────────────────
@@ -2218,12 +2245,14 @@ async function fetchAndRenderRecentlyListed() {
     return;
   }
 
-  data.list.slice(0, 10).forEach(item => {
-    const cardData = unisatListingToCard(item);
+  const _rlItems = data.list.slice(0, 10).map(item => unisatListingToCard(item));
+  _rlItems.forEach(cardData => {
     const card = buildNameCard({ ...cardData, score: calcScore(cardData) });
     card.style.flex = '0 0 180px';
     el.appendChild(card);
   });
+  // Async: silently remove any re-inscriptions
+  filterMarketReInscriptions(_rlItems.map(c => c.name), name => el.querySelector(`[data-name="${name}"]`));
 }
 
 // ── Price Drops: listings with price below floor estimates ───────────────────
@@ -2261,6 +2290,7 @@ async function fetchAndRenderPriceDrops() {
   }
 
   // Tag them as price drops (low price relative to category)
+  const _pdItems = [];
   data.list.slice(0, 8).forEach(item => {
     const cardData = unisatListingToCard(item);
     const score = calcScore(cardData);
@@ -2279,6 +2309,7 @@ async function fetchAndRenderPriceDrops() {
       priceEl.parentNode.insertBefore(tag, priceEl);
     }
     el.appendChild(card);
+    _pdItems.push(cardData);
   });
 
   if (el.children.length === 0) {
@@ -2287,6 +2318,9 @@ async function fetchAndRenderPriceDrops() {
       card.style.flex = '0 0 180px';
       el.appendChild(card);
     });
+  } else {
+    // Async: silently remove any re-inscriptions
+    filterMarketReInscriptions(_pdItems.map(c => c.name), name => el.querySelector(`[data-name="${name}"]`));
   }
 }
 
