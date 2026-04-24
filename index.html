@@ -20,43 +20,33 @@
   <meta name="twitter:title" content="BTC Native — Identity with Proof of Work" />
   <meta name="twitter:description" content="Buy, sell, and track .btc, .sats, .x, .ord Bitcoin names. Floor prices, BNRP identity cards." />
   <meta name="twitter:image" content="https://btcnative.name/assets/social-banner.png" />
-  <!-- Early access gate — fires before paint, async check against worker -->
-  <script>
-    (function() {
-      var EARLY_URL  = '/early';
-      var STORAGE_KEY = 'btcn_early_access';
-      var ADDR_KEY    = 'btcn_early_address';
-      var MARKET_API  = 'https://btcnative-market.galanin.workers.dev';
-
-      // Already verified this session — let through immediately
-      if (sessionStorage.getItem(STORAGE_KEY) === '1') return;
-
-      // Not verified — redirect to early page while we async-check
-      // (prevents flash of the full site for unverified visitors)
-      var addr = sessionStorage.getItem(ADDR_KEY);
-      if (!addr) {
-        window.location.replace(EARLY_URL);
-        return;
-      }
-
-      // Has an address in session — verify it's still approved in KV
-      fetch(MARKET_API + '/api/early/check?address=' + encodeURIComponent(addr))
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          if (d.ok) {
-            sessionStorage.setItem(STORAGE_KEY, '1');
-          } else {
-            sessionStorage.removeItem(STORAGE_KEY);
-            sessionStorage.removeItem(ADDR_KEY);
-            window.location.replace(EARLY_URL);
-          }
-        })
-        .catch(function() {
-          // Network error — fail open so a broken worker doesn't lock everyone out
-          sessionStorage.setItem(STORAGE_KEY, '1');
-        });
-    })();
-  </script>
+  <!-- Beta banner styles -->
+  <style>
+    .beta-banner {
+      width: 100%;
+      background: rgba(255,138,0,0.08);
+      border-bottom: 1px solid rgba(255,138,0,0.18);
+      padding: 9px 20px;
+      text-align: center;
+      font-size: 12.5px;
+      color: rgba(255,255,255,0.55);
+      font-family: system-ui, sans-serif;
+      letter-spacing: 0.01em;
+      position: relative;
+      z-index: 999;
+    }
+    .beta-banner strong {
+      color: #FF8A00;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+    .beta-banner a {
+      color: rgba(255,138,0,0.75);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      margin-left: 12px;
+    }
+  </style>
 
   <!-- Fonts: non-blocking load via print media swap -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -99,6 +89,12 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
 </head>
 <body>
+
+<!-- Beta banner -->
+<div class="beta-banner">
+  <strong>BETA</strong> BTCNative is under active development. Features may change.
+  <a href="./tutorial.html">How it works →</a>
+</div>
 
 <!-- ── NAV ──────────────────────────────────────────────────────── -->
 <nav class="nav">
