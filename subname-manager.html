@@ -1,0 +1,3173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subname Manager — BTC Native</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
+  <link rel="stylesheet" href="./base.css" />
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icon-32.png">
+  <link rel="canonical" href="https://btcnative.name/subname-manager.html" />
+  <meta name="description" content="Create and manage subnames under your Bitcoin name. Build your namespace on Bitcoin." />
+
+  <style>
+    /* ─────────────────────────────────────────────
+       Subname Manager — snm- scoped styles
+    ───────────────────────────────────────────── */
+
+    /* amber/warning colour not in main vars */
+    :root {
+      --color-amber: #f59e0b;
+      --color-amber-dim: rgba(245, 158, 11, 0.12);
+      --color-amber-border: rgba(245, 158, 11, 0.35);
+    }
+
+    /* ── Page shell ── */
+    .snm-page {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ── */
+    .snm-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-surface);
+      position: sticky;
+      top: 64px;
+      z-index: 50;
+    }
+    .snm-topbar__title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--color-text);
+      letter-spacing: -0.02em;
+    }
+    .snm-topbar__right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .snm-mode-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      padding: 3px;
+    }
+    .snm-mode-btn {
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      padding: 5px 14px;
+      border-radius: var(--radius-full);
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: var(--color-text-muted);
+      transition: background var(--transition-interactive), color var(--transition-interactive);
+      white-space: nowrap;
+    }
+    .snm-mode-btn.active {
+      background: var(--color-primary);
+      color: #000;
+    }
+    .snm-experimental-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      color: var(--color-amber);
+      background: var(--color-amber-dim);
+      border: 1px solid var(--color-amber-border);
+      border-radius: var(--radius-full);
+      padding: 3px 10px;
+    }
+
+    /* ── Body layout ── */
+    .snm-body {
+      display: flex;
+      flex: 1;
+    }
+
+    /* ── Sidebar ── */
+    .snm-sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--color-border);
+      background: var(--color-surface);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 107px; /* nav 64px + topbar 43px */
+      height: calc(100vh - 107px);
+      overflow-y: auto;
+    }
+    .snm-sidebar__section {
+      padding: 20px 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .snm-sidebar__label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-faint);
+      margin-bottom: 10px;
+    }
+
+    /* wallet connect */
+    .snm-wallet-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .snm-wallet-empty p {
+      font-size: 13px;
+      color: var(--color-text-muted);
+      max-width: none;
+    }
+    .snm-wallet-connected {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .snm-wallet-connected.visible {
+      display: flex;
+    }
+    .snm-wallet-empty.hidden {
+      display: none;
+    }
+    .snm-wallet-addr {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-primary);
+      background: var(--color-primary-dim);
+      border: 1px solid rgba(255,138,0,0.2);
+      border-radius: var(--radius-sm);
+      padding: 4px 8px;
+      word-break: break-all;
+    }
+    .snm-wallet-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--color-success);
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+
+    /* name selector */
+    .snm-name-search {
+      width: 100%;
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--color-text);
+      outline: none;
+      transition: border-color var(--transition-interactive);
+    }
+    .snm-name-search:focus {
+      border-color: var(--color-primary);
+    }
+    .snm-name-list {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .snm-name-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      cursor: pointer;
+      background: var(--color-surface-offset);
+      transition: border-color var(--transition-interactive), background var(--transition-interactive);
+    }
+    .snm-name-item:hover {
+      border-color: var(--color-border-strong);
+    }
+    .snm-name-item.active {
+      border-color: var(--color-primary);
+      background: var(--color-primary-dim);
+    }
+    .snm-name-item__label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text);
+    }
+    .snm-name-item__badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: var(--radius-full);
+      background: var(--color-success-dim);
+      color: var(--color-success);
+      font-weight: 600;
+    }
+    .snm-name-empty {
+      font-size: 12px;
+      color: var(--color-text-faint);
+      text-align: center;
+      padding: 16px 0;
+    }
+
+    /* sidebar nav tabs */
+    .snm-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 12px 8px;
+    }
+    .snm-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      text-align: left;
+      width: 100%;
+      transition: background var(--transition-interactive), color var(--transition-interactive);
+    }
+    .snm-nav-item:hover {
+      background: var(--color-surface-offset);
+      color: var(--color-text);
+    }
+    .snm-nav-item.active {
+      background: var(--color-primary-dim);
+      color: var(--color-primary);
+    }
+    .snm-nav-item svg {
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+    .snm-nav-item.active svg {
+      opacity: 1;
+    }
+
+    /* sidebar footer */
+    .snm-sidebar__footer {
+      margin-top: auto;
+      padding: 16px;
+      border-top: 1px solid var(--color-border);
+    }
+    .snm-sidebar__footer p {
+      font-size: 11px;
+      color: var(--color-text-faint);
+      line-height: 1.5;
+      max-width: none;
+    }
+
+    /* ── Main area ── */
+    .snm-main {
+      flex: 1;
+      padding: 32px;
+      max-width: 900px;
+      min-width: 0;
+    }
+
+    /* ── Tab panels ── */
+    .snm-panel {
+      display: none;
+    }
+    .snm-panel.active {
+      display: block;
+      animation: fadeIn 180ms ease;
+    }
+
+    /* ── Step wizard ── */
+    .snm-steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 32px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .snm-step {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+    }
+    .snm-step__node {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+    .snm-step__circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--color-border-strong);
+      background: var(--color-surface-offset);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-text-faint);
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+      transition: all var(--transition-interactive);
+    }
+    .snm-step.active .snm-step__circle {
+      border-color: var(--color-primary);
+      background: var(--color-primary);
+      color: #000;
+    }
+    .snm-step.done .snm-step__circle {
+      border-color: var(--color-success);
+      background: var(--color-success-dim);
+      color: var(--color-success);
+    }
+    .snm-step__label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-faint);
+      white-space: nowrap;
+    }
+    .snm-step.active .snm-step__label {
+      color: var(--color-text);
+    }
+    .snm-step.done .snm-step__label {
+      color: var(--color-text-muted);
+    }
+    .snm-step__connector {
+      width: 28px;
+      height: 2px;
+      background: var(--color-border);
+      margin: 0 6px;
+      flex-shrink: 0;
+    }
+    .snm-step.done + .snm-step .snm-step__connector,
+    .snm-step__connector.done {
+      background: var(--color-success);
+    }
+
+    /* ── Wizard sub-panels ── */
+    .snm-wizard-step {
+      display: none;
+    }
+    .snm-wizard-step.active {
+      display: block;
+      animation: fadeIn 180ms ease;
+    }
+
+    /* step header */
+    .snm-step-header {
+      margin-bottom: 28px;
+    }
+    .snm-step-header h2 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-text);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .snm-step-header p {
+      font-size: 14px;
+      color: var(--color-text-muted);
+      max-width: 520px;
+    }
+
+    /* step footer nav */
+    .snm-wizard-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--color-border);
+    }
+
+    /* ── Step 1: Name search ── */
+    .snm-name-search-wrap {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .snm-name-search-wrap svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-text-faint);
+      pointer-events: none;
+    }
+    .snm-name-input {
+      width: 100%;
+      background: var(--color-surface-offset);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 12px 12px 12px 42px;
+      font-size: 15px;
+      font-family: var(--font-mono);
+      color: var(--color-text);
+      outline: none;
+      transition: border-color var(--transition-interactive), box-shadow var(--transition-interactive);
+    }
+    .snm-name-input:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-glow);
+    }
+    .snm-name-result-card {
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      display: none;
+    }
+    .snm-name-result-card.visible {
+      display: block;
+      animation: fadeIn 200ms ease;
+    }
+    .snm-name-result-card__name {
+      font-family: var(--font-mono);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 8px;
+    }
+    .snm-name-result-card__row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+      margin-bottom: 4px;
+    }
+    .snm-name-result-card__row span.mono {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-text-faint);
+    }
+    .snm-name-result-card__actions {
+      margin-top: 16px;
+    }
+    .snm-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+      padding: 3px 10px;
+    }
+    .snm-status-badge--ready {
+      background: var(--color-success-dim);
+      color: var(--color-success);
+    }
+    .snm-status-badge--warn {
+      background: var(--color-amber-dim);
+      color: var(--color-amber);
+    }
+    .snm-status-badge--error {
+      background: var(--color-error-dim);
+      color: var(--color-error);
+    }
+    .snm-status-badge--info {
+      background: var(--color-blue-dim);
+      color: var(--color-blue);
+    }
+    .snm-warning-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--color-amber-dim);
+      border: 1px solid var(--color-amber-border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--color-amber);
+      margin-top: 12px;
+    }
+    .snm-warning-box svg {
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Step 2: Template grid ── */
+    .snm-template-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    @media (max-width: 760px) {
+      .snm-template-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .snm-template-grid { grid-template-columns: 1fr; }
+    }
+    .snm-template-card {
+      position: relative;
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color var(--transition-interactive), background var(--transition-interactive), box-shadow var(--transition-interactive);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .snm-template-card:hover {
+      border-color: var(--color-border-strong);
+      background: var(--color-surface-offset);
+    }
+    .snm-template-card.selected {
+      border-color: var(--color-primary);
+      background: var(--color-primary-dim);
+      box-shadow: 0 0 0 1px var(--color-primary);
+    }
+    .snm-template-card__icon {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      background: var(--color-surface-offset);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-primary);
+      margin-bottom: 2px;
+      flex-shrink: 0;
+    }
+    .snm-template-card.selected .snm-template-card__icon {
+      background: rgba(255,138,0,0.2);
+    }
+    .snm-template-card__name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+    .snm-template-card__example {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--color-text-faint);
+    }
+    .snm-template-card__desc {
+      font-size: 11.5px;
+      color: var(--color-text-muted);
+      line-height: 1.45;
+    }
+    .snm-template-card__risk {
+      font-size: 11px;
+      color: var(--color-amber);
+      display: flex;
+      align-items: flex-start;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .snm-template-card__experimental {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 9px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--color-amber);
+      background: var(--color-amber-dim);
+      border: 1px solid var(--color-amber-border);
+      border-radius: var(--radius-full);
+      padding: 1px 6px;
+    }
+    .snm-template-card__check {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: #000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .snm-template-card.selected .snm-template-card__check {
+      display: flex;
+    }
+    .snm-template-card.selected .snm-template-card__experimental {
+      display: none;
+    }
+
+    /* ── Step 3: Form + preview ── */
+    .snm-step3-layout {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 800px) {
+      .snm-step3-layout { grid-template-columns: 1fr; }
+      .snm-preview-panel { order: -1; }
+    }
+    .snm-form-group {
+      margin-bottom: 20px;
+    }
+    .snm-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 6px;
+    }
+    .snm-label-hint {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--color-text-muted);
+      margin-left: 6px;
+    }
+    .snm-input {
+      width: 100%;
+      background: var(--color-surface-offset);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--color-text);
+      outline: none;
+      transition: border-color var(--transition-interactive), box-shadow var(--transition-interactive);
+    }
+    .snm-input:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-glow);
+    }
+    .snm-input.mono {
+      font-family: var(--font-mono);
+      font-size: 13px;
+    }
+    .snm-textarea {
+      width: 100%;
+      background: var(--color-surface-offset);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--color-text);
+      outline: none;
+      resize: vertical;
+      min-height: 72px;
+      transition: border-color var(--transition-interactive), box-shadow var(--transition-interactive);
+    }
+    .snm-textarea:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-glow);
+    }
+    .snm-input-hint {
+      font-size: 11.5px;
+      color: var(--color-text-faint);
+      margin-top: 5px;
+    }
+    .snm-label-preview {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      margin-top: 6px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+    }
+    .snm-label-preview__typed {
+      background: var(--color-primary-dim);
+      color: var(--color-primary);
+      padding: 3px 7px;
+      font-weight: 700;
+    }
+    .snm-label-preview__suffix {
+      background: var(--color-surface-offset);
+      color: var(--color-text-faint);
+      padding: 3px 7px;
+    }
+
+    /* advanced fields */
+    .snm-advanced-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      padding: 10px 0;
+      border: none;
+      background: none;
+      border-top: 1px solid var(--color-border);
+      width: 100%;
+      text-align: left;
+      transition: color var(--transition-interactive);
+    }
+    .snm-advanced-toggle:hover {
+      color: var(--color-text);
+    }
+    .snm-advanced-toggle svg {
+      transition: transform var(--transition-interactive);
+    }
+    .snm-advanced-toggle.open svg {
+      transform: rotate(180deg);
+    }
+    .snm-advanced-fields {
+      display: none;
+      padding-top: 16px;
+    }
+    .snm-advanced-fields.open {
+      display: block;
+    }
+    .snm-select {
+      width: 100%;
+      background: var(--color-surface-offset);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--color-text);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%236B6968' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      transition: border-color var(--transition-interactive);
+    }
+    .snm-select:focus {
+      border-color: var(--color-primary);
+    }
+    .snm-kvpair-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 32px;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .snm-kvpair-remove {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--color-text-faint);
+      padding: 0;
+      transition: color var(--transition-interactive), background var(--transition-interactive);
+    }
+    .snm-kvpair-remove:hover {
+      color: var(--color-error);
+      background: var(--color-error-dim);
+    }
+    .snm-add-row-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-primary);
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0;
+      transition: opacity var(--transition-interactive);
+    }
+    .snm-add-row-btn:hover {
+      opacity: 0.7;
+    }
+
+    /* preview panel */
+    .snm-preview-panel {
+      position: sticky;
+      top: 140px;
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+    }
+    .snm-preview-panel__label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-text-faint);
+      margin-bottom: 14px;
+    }
+    .snm-preview-name {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: 16px;
+      word-break: break-all;
+      min-height: 24px;
+    }
+    .snm-preview-name .preview-label {
+      color: var(--color-primary);
+    }
+    .snm-preview-name .preview-suffix {
+      color: var(--color-text-muted);
+      font-weight: 400;
+    }
+    .snm-preview-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 10px;
+    }
+    .snm-preview-row__key {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-faint);
+    }
+    .snm-preview-row__val {
+      font-size: 12.5px;
+      color: var(--color-text-muted);
+      word-break: break-all;
+      font-family: var(--font-mono);
+    }
+    .snm-preview-divider {
+      height: 1px;
+      background: var(--color-border);
+      margin: 12px 0;
+    }
+
+    /* ── Step 4: Review ── */
+    .snm-review-card {
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .snm-review-card__name {
+      font-family: var(--font-mono);
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: 20px;
+      letter-spacing: -0.01em;
+    }
+    .snm-review-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .snm-review-table tr {
+      border-bottom: 1px solid var(--color-border);
+    }
+    .snm-review-table tr:last-child {
+      border-bottom: none;
+    }
+    .snm-review-table td {
+      padding: 8px 0;
+      font-size: 13.5px;
+      vertical-align: top;
+    }
+    .snm-review-table td:first-child {
+      color: var(--color-text-faint);
+      width: 130px;
+      font-weight: 500;
+      padding-right: 16px;
+    }
+    .snm-review-table td:last-child {
+      color: var(--color-text);
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      word-break: break-all;
+    }
+    .snm-trust-panel {
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .snm-trust-panel__title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-text-faint);
+      margin-bottom: 14px;
+    }
+    .snm-trust-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .snm-trust-item:last-child {
+      margin-bottom: 0;
+    }
+    .snm-trust-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 1px;
+    }
+    .snm-trust-icon--ok {
+      background: var(--color-success-dim);
+      color: var(--color-success);
+    }
+    .snm-trust-icon--warn {
+      background: var(--color-amber-dim);
+      color: var(--color-amber);
+    }
+    .snm-trust-icon--info {
+      background: var(--color-blue-dim);
+      color: var(--color-blue);
+    }
+    .snm-trust-item__text {
+      color: var(--color-text-muted);
+      line-height: 1.4;
+    }
+    .snm-trust-item__text strong {
+      color: var(--color-text);
+    }
+
+    /* ── Step 5: Generate ── */
+    .snm-code-block {
+      background: #0a0a0a;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .snm-code-block__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .snm-code-block__lang {
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      color: var(--color-text-faint);
+    }
+    .snm-code-block__actions {
+      display: flex;
+      gap: 8px;
+    }
+    .snm-code-block pre {
+      padding: 20px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      color: #e0e0e0;
+      overflow-x: auto;
+      margin: 0;
+    }
+    .json-key { color: #79b8ff; }
+    .json-str { color: #9ecbff; }
+    .json-num { color: #f78166; }
+    .json-bool { color: #85e89d; }
+    .snm-next-steps {
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .snm-next-steps__title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 14px;
+    }
+    .snm-next-step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+      margin-bottom: 10px;
+    }
+    .snm-next-step-item:last-child { margin-bottom: 0; }
+    .snm-next-step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--color-text-faint);
+      flex-shrink: 0;
+    }
+    .snm-step5-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* ── Overview tab ── */
+    .snm-overview-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--color-text-muted);
+    }
+    .snm-overview-empty__icon {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-offset);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      color: var(--color-text-faint);
+    }
+    .snm-overview-empty h3 {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 8px;
+    }
+    .snm-overview-empty p {
+      font-size: 14px;
+      max-width: 36ch;
+      margin: 0 auto 20px;
+    }
+    .snm-table-wrap {
+      overflow-x: auto;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+    }
+    .snm-table {
+      width: 100%;
+      font-size: 13px;
+      border-collapse: collapse;
+    }
+    .snm-table thead tr {
+      background: var(--color-surface);
+    }
+    .snm-table th {
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-faint);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .snm-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border);
+      vertical-align: middle;
+    }
+    .snm-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .snm-table tbody tr:hover td {
+      background: var(--color-surface-offset);
+    }
+    .snm-table td.mono {
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    .snm-table-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .snm-action-btn {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: background var(--transition-interactive), color var(--transition-interactive), border-color var(--transition-interactive);
+    }
+    .snm-action-btn:hover {
+      background: var(--color-surface-offset);
+      color: var(--color-text);
+    }
+    .snm-action-btn--danger:hover {
+      background: var(--color-error-dim);
+      color: var(--color-error);
+      border-color: var(--color-error);
+    }
+
+    /* ── Records tab ── */
+    .snm-records-empty {
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--color-text-muted);
+    }
+    .snm-records-picker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .snm-records-picker label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      white-space: nowrap;
+    }
+    .snm-record-type-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      background: var(--color-blue-dim);
+      color: var(--color-blue);
+    }
+
+    /* ── History tab ── */
+    .snm-history-banner {
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    /* ── Settings tab ── */
+    .snm-settings-section {
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .snm-settings-section h3 {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 6px;
+    }
+    .snm-settings-section p {
+      font-size: 13px;
+      color: var(--color-text-muted);
+      margin-bottom: 16px;
+      max-width: 480px;
+    }
+    .snm-settings-policy-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .snm-managers-list {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .snm-manager-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+
+    /* ── Utility buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: var(--font-body);
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background var(--transition-interactive), color var(--transition-interactive), border-color var(--transition-interactive), opacity var(--transition-interactive);
+      white-space: nowrap;
+    }
+    .btn--primary {
+      background: var(--color-primary);
+      color: #000;
+      padding: 10px 20px;
+      font-size: 14px;
+    }
+    .btn--primary:hover {
+      background: var(--color-primary-hover);
+    }
+    .btn--ghost {
+      background: transparent;
+      border: 1.5px solid var(--color-border);
+      color: var(--color-text-muted);
+      padding: 10px 18px;
+      font-size: 14px;
+    }
+    .btn--ghost:hover {
+      border-color: var(--color-border-strong);
+      color: var(--color-text);
+    }
+    .btn--sm {
+      padding: 7px 14px;
+      font-size: 13px;
+    }
+    .btn--xs {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    .btn--orange-outline {
+      background: transparent;
+      border: 1.5px solid var(--color-primary);
+      color: var(--color-primary);
+      padding: 10px 18px;
+      font-size: 14px;
+    }
+    .btn--orange-outline:hover {
+      background: var(--color-primary-dim);
+    }
+    .btn--danger {
+      background: var(--color-error-dim);
+      border: 1.5px solid var(--color-error);
+      color: var(--color-error);
+      padding: 10px 18px;
+      font-size: 14px;
+    }
+    .btn--danger:hover {
+      background: rgba(248,113,113,0.2);
+    }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* ── Panel header ── */
+    .snm-panel-header {
+      margin-bottom: 28px;
+    }
+    .snm-panel-header h2 {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--color-text);
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .snm-panel-header p {
+      font-size: 14px;
+      color: var(--color-text-muted);
+      max-width: 520px;
+    }
+    .snm-panel-header__actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    /* mobile sidebar toggle */
+    .snm-sidebar-toggle {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      padding: 8px 14px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 700px) {
+      .snm-sidebar { display: none; }
+      .snm-sidebar.open { display: flex; position: fixed; top: 0; left: 0; height: 100vh; z-index: 200; box-shadow: var(--shadow-lg); }
+      .snm-sidebar-toggle { display: flex; }
+      .snm-main { padding: 20px 16px; }
+      .snm-topbar { padding: 12px 16px; }
+      .snm-steps { gap: 4px; }
+      .snm-step__label { display: none; }
+      .snm-step.active .snm-step__label { display: block; }
+    }
+
+    /* copy feedback */
+    .copy-feedback {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--color-success);
+      opacity: 0;
+      transition: opacity var(--transition-interactive);
+    }
+    .copy-feedback.visible {
+      opacity: 1;
+    }
+
+    /* tooltip */
+    .snm-tooltip-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+    .snm-tooltip-wrap .snm-tooltip {
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-surface-dynamic);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--color-text);
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity var(--transition-interactive);
+      z-index: 100;
+      box-shadow: var(--shadow-md);
+    }
+    .snm-tooltip-wrap:hover .snm-tooltip {
+      opacity: 1;
+    }
+    .snm-help-icon {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border-strong);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--color-text-faint);
+      cursor: help;
+      margin-left: 4px;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="snm-page">
+
+<!-- ─── Navigation ─── -->
+<nav class="nav">
+  <a href="./index.html" class="nav__logo" aria-label="BTC Native home">
+    <picture><source srcset="./logo-36.webp" type="image/webp"><img src="./logo-36.png" alt="BTC Native" width="32" height="32" loading="eager" style="display:block;width:32px;height:32px;"></picture>
+    <span class="nav__brand">BTC<span class="nav__brand-native">NATIVE</span></span>
+  </a>
+  <button class="nav__hamburger" aria-label="Open menu" aria-expanded="false">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="6" x2="17" y2="6"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="14" x2="17" y2="14"/></svg>
+  </button>
+  <ul class="nav__links" role="list">
+    <li>
+      <a href="./explore.html" class="nav__link nav__link--has-dropdown">Explore</a>
+      <div class="nav__dropdown">
+        <div class="nav__dropdown-label">Browse</div>
+        <a href="./explore.html" class="nav__dropdown-item">Categories</a>
+        <a href="./explore.html?tab=listings" class="nav__dropdown-item">Listings</a>
+        <a href="./bulk.html" class="nav__dropdown-item">Bulk Search</a>
+      </div>
+    </li>
+    <li>
+      <a href="./explore.html?tab=market" class="nav__link nav__link--has-dropdown">Market</a>
+      <div class="nav__dropdown">
+        <div class="nav__dropdown-label">Data</div>
+        <a href="./explore.html?tab=market" class="nav__dropdown-item">Overview</a>
+        <a href="./explore.html?tab=listings&sort=price_asc" class="nav__dropdown-item">Floor Prices</a>
+        <a href="./explore.html?tab=market" class="nav__dropdown-item">Recent Sales</a>
+      </div>
+    </li>
+    <li>
+      <a href="./sell.html" class="nav__link nav__link--has-dropdown">Sell</a>
+      <div class="nav__dropdown">
+        <div class="nav__dropdown-label">Manage</div>
+        <a href="./sell.html" class="nav__dropdown-item">List a Name</a>
+        <a href="./portfolio.html" class="nav__dropdown-item">My Listings</a>
+      </div>
+    </li>
+    <li>
+      <a href="./subnames.html" class="nav__link nav__link--has-dropdown">Subnames</a>
+      <div class="nav__dropdown">
+        <div class="nav__dropdown-label">Namespaces</div>
+        <a href="./subnames.html" class="nav__dropdown-item">What Are Subnames?</a>
+        <a href="./subname-manager.html" class="nav__dropdown-item">Subname Manager</a>
+        <a href="./namespace.html" class="nav__dropdown-item">Event Tool</a>
+      </div>
+    </li>
+    <li>
+      <a href="./portfolio.html" class="nav__link nav__link--has-dropdown">Account</a>
+      <div class="nav__dropdown">
+        <div class="nav__dropdown-label">Account</div>
+        <a href="./portfolio.html" class="nav__dropdown-item">My Portfolio</a>
+        <a href="./points.html" class="nav__dropdown-item">My Points</a>
+        <a href="#" class="nav__dropdown-item nav__dropdown-item--wallet">Connect Wallet</a>
+      </div>
+    </li>
+  </ul>
+  <div class="nav__actions">
+    <button class="btn btn--ghost btn--sm" data-theme-toggle aria-label="Toggle theme"></button>
+    <a href="./sell.html" class="btn btn--primary btn--sm">List Name</a>
+  </div>
+</nav>
+
+<!-- ─── Top bar ─── -->
+<div class="snm-topbar">
+  <div class="snm-topbar__title">Subname Manager</div>
+  <div class="snm-topbar__right">
+    <span class="snm-experimental-badge">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M5 3v2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="5" cy="7" r="0.5" fill="currentColor"/></svg>
+      Experimental
+    </span>
+    <div class="snm-mode-toggle" role="group" aria-label="Mode">
+      <button class="snm-mode-btn active" data-mode="beginner" id="btn-mode-beginner">Beginner</button>
+      <button class="snm-mode-btn" data-mode="expert" id="btn-mode-expert">Expert</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Body ─── -->
+<div class="snm-body">
+
+  <!-- ─── Sidebar ─── -->
+  <aside class="snm-sidebar" id="snm-sidebar">
+
+    <!-- wallet section -->
+    <div class="snm-sidebar__section">
+      <div class="snm-sidebar__label">Wallet</div>
+
+      <!-- not connected -->
+      <div class="snm-wallet-empty" id="snm-wallet-empty">
+        <p>Connect your wallet to manage your names.</p>
+        <button class="btn btn--primary btn--sm" id="snm-connect-btn">Connect Wallet</button>
+      </div>
+
+      <!-- connected -->
+      <div class="snm-wallet-connected" id="snm-wallet-connected">
+        <div style="font-size:13px;color:var(--color-text);font-weight:600;">
+          <span class="snm-wallet-dot"></span>Connected
+        </div>
+        <div class="snm-wallet-addr" id="snm-wallet-addr"></div>
+        <button class="btn btn--ghost btn--xs" id="snm-disconnect-btn">Disconnect</button>
+      </div>
+    </div>
+
+    <!-- names section -->
+    <div class="snm-sidebar__section">
+      <div class="snm-sidebar__label">Your Names</div>
+      <input type="search" class="snm-name-search" placeholder="Search your names…" id="snm-name-filter" aria-label="Filter names" />
+      <div class="snm-name-list" id="snm-name-list">
+        <div class="snm-name-empty" id="snm-name-empty-state">Connect wallet to load your names.</div>
+      </div>
+    </div>
+
+    <!-- nav tabs -->
+    <nav class="snm-nav" aria-label="Subname manager sections">
+      <button class="snm-nav-item" data-tab="overview" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+        Overview
+      </button>
+      <button class="snm-nav-item active" data-tab="create" aria-selected="true">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
+        Create Subname
+      </button>
+      <button class="snm-nav-item" data-tab="records" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="2.5" rx="0.5"/><rect x="2" y="7.5" width="12" height="2.5" rx="0.5"/><rect x="2" y="12" width="8" height="2" rx="0.5"/></svg>
+        Manage Records
+      </button>
+      <button class="snm-nav-item" data-tab="history" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10.5,10.5"/></svg>
+        History
+      </button>
+      <button class="snm-nav-item" data-tab="settings" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1M8 13.5v1M1.5 8h1M13.5 8h1M3.2 3.2l.7.7M12.1 12.1l.7.7M12.8 3.2l-.7.7M3.9 12.1l-.7.7"/></svg>
+        Settings
+      </button>
+    </nav>
+
+    <!-- sidebar footer -->
+    <div class="snm-sidebar__footer">
+      <p>Experimental — Subname issuance is not yet live on mainnet.</p>
+    </div>
+  </aside>
+
+  <!-- ─── Main content ─── -->
+  <main class="snm-main">
+
+    <!-- mobile sidebar toggle -->
+    <button class="snm-sidebar-toggle" id="snm-sidebar-toggle" aria-label="Open sidebar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="10" y2="12"/></svg>
+      Menu
+    </button>
+
+    <!-- ══════════════════════════════════════
+         TAB: OVERVIEW
+    ══════════════════════════════════════ -->
+    <section class="snm-panel" data-panel="overview">
+      <div class="snm-panel-header">
+        <h2>Your Subnames</h2>
+        <p>All subnames you've created under your Bitcoin names.</p>
+        <div class="snm-panel-header__actions">
+          <button class="btn btn--primary btn--sm" onclick="document.querySelector('[data-tab=create]').click()">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+            Create Subname
+          </button>
+        </div>
+      </div>
+
+      <!-- not connected state -->
+      <div class="snm-overview-empty" id="overview-empty-wallet">
+        <div class="snm-overview-empty__icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2"/><line x1="12" y1="12" x2="12" y2="16"/></svg>
+        </div>
+        <h3>Connect your wallet</h3>
+        <p>Connect your wallet to see subnames registered under your names.</p>
+        <button class="btn btn--primary" id="overview-connect-btn">Connect Wallet</button>
+      </div>
+
+      <!-- connected, no subnames -->
+      <div class="snm-overview-empty" id="overview-empty-subnames" style="display:none;">
+        <div class="snm-overview-empty__icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <h3>No subnames yet</h3>
+        <p>Create your first subname under one of your Bitcoin names.</p>
+        <button class="btn btn--primary" onclick="document.querySelector('[data-tab=create]').click()">Create first subname</button>
+      </div>
+
+      <!-- table (shown when wallet connected + has subnames) -->
+      <div id="overview-table" style="display:none;">
+        <div class="snm-table-wrap">
+          <table class="snm-table">
+            <thead>
+              <tr>
+                <th>Subname</th>
+                <th>Points to</th>
+                <th>Status</th>
+                <th>Last updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="overview-table-body">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         TAB: CREATE SUBNAME (wizard)
+    ══════════════════════════════════════ -->
+    <section class="snm-panel active" data-panel="create">
+
+      <!-- Step indicator -->
+      <div class="snm-steps" role="list" aria-label="Wizard steps">
+        <div class="snm-step active" data-step-indicator="1" role="listitem">
+          <div class="snm-step__node">
+            <div class="snm-step__circle" id="step-circle-1">1</div>
+            <span class="snm-step__label">Select name</span>
+          </div>
+        </div>
+        <div class="snm-step__connector" id="step-connector-1"></div>
+        <div class="snm-step" data-step-indicator="2" role="listitem">
+          <div class="snm-step__node">
+            <div class="snm-step__circle" id="step-circle-2">2</div>
+            <span class="snm-step__label">Choose template</span>
+          </div>
+        </div>
+        <div class="snm-step__connector" id="step-connector-2"></div>
+        <div class="snm-step" data-step-indicator="3" role="listitem">
+          <div class="snm-step__node">
+            <div class="snm-step__circle" id="step-circle-3">3</div>
+            <span class="snm-step__label">Fill details</span>
+          </div>
+        </div>
+        <div class="snm-step__connector" id="step-connector-3"></div>
+        <div class="snm-step" data-step-indicator="4" role="listitem">
+          <div class="snm-step__node">
+            <div class="snm-step__circle" id="step-circle-4">4</div>
+            <span class="snm-step__label">Review</span>
+          </div>
+        </div>
+        <div class="snm-step__connector" id="step-connector-4"></div>
+        <div class="snm-step" data-step-indicator="5" role="listitem">
+          <div class="snm-step__node">
+            <div class="snm-step__circle" id="step-circle-5">5</div>
+            <span class="snm-step__label">Generate</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── STEP 1: Select name ── -->
+      <div class="snm-wizard-step active" data-wizard-step="1" id="wstep-1">
+        <div class="snm-step-header">
+          <h2>Choose your parent name</h2>
+          <p>This is the name you own. Subnames are created beneath it.</p>
+        </div>
+
+        <div class="snm-name-search-wrap">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/></svg>
+          <input
+            type="text"
+            class="snm-name-input"
+            id="step1-name-input"
+            placeholder="Search or paste a name (e.g. artist.btc)"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+
+        <!-- result card -->
+        <div class="snm-name-result-card" id="step1-result-card">
+          <div class="snm-name-result-card__name" id="step1-result-name">artist.btc</div>
+          <div class="snm-name-result-card__row">
+            <span style="color:var(--color-text-faint);">Owner</span>
+            <span class="mono" id="step1-result-owner">bc1p...xxxx</span>
+            <span id="step1-verified-badge"></span>
+          </div>
+          <div class="snm-name-result-card__row" style="margin-top:6px;">
+            <span style="color:var(--color-text-faint);">Status</span>
+            <span class="snm-status-badge snm-status-badge--ready" id="step1-status-badge">
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="3"/></svg>
+              Ready to become a namespace
+            </span>
+          </div>
+          <div class="snm-warning-box" id="step1-ownership-warning" style="display:none;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.6" fill="currentColor"/></svg>
+            You don't appear to own this name. Proceed with caution.
+          </div>
+          <div class="snm-name-result-card__actions">
+            <button class="btn btn--primary" id="step1-use-btn">Use this name →</button>
+          </div>
+        </div>
+
+        <div class="snm-wizard-nav">
+          <div></div>
+          <button class="btn btn--primary" id="step1-next" disabled>Next: Choose template →</button>
+        </div>
+      </div>
+
+      <!-- ── STEP 2: Choose template ── -->
+      <div class="snm-wizard-step" data-wizard-step="2" id="wstep-2">
+        <div class="snm-step-header">
+          <h2>What do you want this subname to do?</h2>
+          <p>Pick a template to get started. You can customize everything.</p>
+        </div>
+
+        <div class="snm-template-grid" id="template-grid">
+
+          <!-- Payment -->
+          <div class="snm-template-card" data-template="payment" data-label="pay" data-purpose="Payment">
+            <div class="snm-template-card__icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="14" height="10" rx="2"/><line x1="2" y1="8" x2="16" y2="8"/></svg>
+            </div>
+            <div class="snm-template-card__name">Payment</div>
+            <div class="snm-template-card__example">pay.name.btc</div>
+            <div class="snm-template-card__desc">Receive payments at a dedicated address</div>
+            <div class="snm-template-card__risk">⚠ Verify address before sharing</div>
+            <div class="snm-template-card__check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Cold Vault -->
+          <div class="snm-template-card" data-template="vault" data-label="vault" data-purpose="Cold Vault">
+            <div class="snm-template-card__icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="14" height="14" rx="2"/><circle cx="9" cy="9" r="3"/><circle cx="9" cy="9" r="1"/></svg>
+            </div>
+            <div class="snm-template-card__name">Cold Vault</div>
+            <div class="snm-template-card__example">vault.name.btc</div>
+            <div class="snm-template-card__desc">Separate address for long-term savings</div>
+            <div class="snm-template-card__risk">⚠ Never share private key</div>
+            <div class="snm-template-card__check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Shop -->
+          <div class="snm-template-card" data-template="shop" data-label="shop" data-purpose="Shop">
+            <div class="snm-template-card__icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h14l-1.5 6H3.5L2 5z"/><circle cx="6.5" cy="15" r="1.2"/><circle cx="12.5" cy="15" r="1.2"/><path d="M1 2h2l.8 3"/></svg>
+            </div>
+            <div class="snm-template-card__name">Shop</div>
+            <div class="snm-template-card__example">shop.name.btc</div>
+            <div class="snm-template-card__desc">Your store or marketplace profile</div>
+            <div class="snm-template-card__check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Archive -->
+          <div class="snm-template-card" data-template="archive" data-label="archive" data-purpose="Archive">
+            <div class="snm-template-card__icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="14" height="3" rx="1"/><path d="M3 6v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6"/><line x1="7" y1="10" x2="11" y2="10"/></svg>
+            </div>
+            <div class="snm-template-card__name">Archive</div>
+            <div class="snm-template-card__example">archive.name.btc</div>
+            <div class="snm-template-card__desc">Historical work and past releases</div>
+            <div class="snm-template-card__check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Collection item -->
+          <div class="snm-template-card" data-template="collection" data-label="001" data-purpose="Collection item">
+            <div class="snm-template-card__icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="7" height="7" rx="1.5"/><rect x="9" y="6" width="7" height="7" rx="1.5"/><rect x="5.5" y="2" width="7" height="7" rx="1.5" opacity="0.5"/></svg>
+            </div>
+            <div class="snm-template-card__name">Collection item</div>
+            <div class="snm-template-card__example">001.collection.btc</div>
+            <div class="snm-template-card__desc">Number a series of items</div>
+            <div class="snm-template-card__risk">⚠ Use consistent numbering</div>
+            <div class="snm-template-card__check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Support -->
+          <div class="snm-template-card" data-template="support" data-label="support" data-purpose="Support">
+            <div class="snm-template-card__icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 16a7 7 0 1 0 0-14 7 7 0 0 0 0 14z"/><path d="M9 10V9a2.5 2.5 0 0 0 0-5"/><circle cx="9" cy="13" r="0.6" fill="currentColor"/></svg>
+            </div>
+            <div class="snm-template-card__name">Support</div>
+            <div class="snm-template-card__example">support.brand.btc</div>
+            <div class="snm-template-card__desc">Support contact for your brand</div>
+            <div class="snm-template-card__check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Docs -->
+          <div class="snm-template-card" data-template="docs" data-label="docs" data-purpose="Docs">
+            <div class="snm-template-card__icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="12" height="14" rx="1.5"/><line x1="6" y1="6" x2="12" y2="6"/><line x1="6" y1="9" x2="12" y2="9"/><line x1="6" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <div class="snm-template-card__name">Docs</div>
+            <div class="snm-template-card__example">docs.protocol.btc</div>
+            <div class="snm-template-card__desc">Documentation for a protocol or project</div>
+            <div class="snm-template-card__check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+            </div>
+          </div>
+
+          <!-- AI agent -->
+          <div class="snm-template-card" data-template="agent" data-label="agent" data-purpose="AI Agent">
+            <div class="snm-template-card__experimental">Experimental</div>
+            <div class="snm-template-card__icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="10" height="9" rx="2"/><circle cx="7" cy="9" r="1"/><circle cx="11" cy="9" r="1"/><path d="M7 12h4"/><path d="M7 2v3M11 2v3"/></svg>
+            </div>
+            <div class="snm-template-card__name">AI Agent</div>
+            <div class="snm-template-card__example">agent.wallet.btc</div>
+            <div class="snm-template-card__desc">Autonomous agent wallet address</div>
+            <div class="snm-template-card__risk">⚠ Not for real funds</div>
+            <div class="snm-template-card__check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Custom -->
+          <div class="snm-template-card" data-template="custom" data-label="" data-purpose="Custom">
+            <div class="snm-template-card__icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2l1.8 5.5H17l-4.8 3.5 1.8 5.5L9 13 4 16.5l1.8-5.5L1 7.5h6.2z"/></svg>
+            </div>
+            <div class="snm-template-card__name">Custom</div>
+            <div class="snm-template-card__example">custom.name.btc</div>
+            <div class="snm-template-card__desc">Start from scratch with any fields</div>
+            <div class="snm-template-card__check">
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>
+            </div>
+          </div>
+
+        </div><!-- /template-grid -->
+
+        <div class="snm-wizard-nav">
+          <button class="btn btn--ghost" id="step2-back">← Back</button>
+          <button class="btn btn--primary" id="step2-next" disabled>Next: Fill details →</button>
+        </div>
+      </div>
+
+      <!-- ── STEP 3: Fill details ── -->
+      <div class="snm-wizard-step" data-wizard-step="3" id="wstep-3">
+        <div class="snm-step-header">
+          <h2>Where should this subname point?</h2>
+          <p>Fill in the details for your subname.</p>
+        </div>
+
+        <div class="snm-step3-layout">
+          <!-- form -->
+          <div>
+            <!-- subname label -->
+            <div class="snm-form-group">
+              <label class="snm-label" for="form-label">
+                Subname label
+                <span class="snm-label-hint">the part before your name</span>
+              </label>
+              <input type="text" class="snm-input mono" id="form-label" placeholder="e.g. shop, vault, pay" autocomplete="off" spellcheck="false" maxlength="63" />
+              <div class="snm-label-preview" id="label-preview">
+                <span class="snm-label-preview__typed" id="label-preview-typed">shop</span>
+                <span class="snm-label-preview__suffix" id="label-preview-suffix">.artist.btc</span>
+              </div>
+              <div class="snm-input-hint">Only letters, numbers, and hyphens. Max 63 characters.</div>
+            </div>
+
+            <!-- purpose -->
+            <div class="snm-form-group">
+              <label class="snm-label" for="form-purpose">
+                Purpose / description
+                <span class="snm-label-hint">optional</span>
+              </label>
+              <textarea class="snm-textarea" id="form-purpose" placeholder="A short note about what this subname is for…" rows="2"></textarea>
+            </div>
+
+            <!-- destination -->
+            <div class="snm-form-group">
+              <label class="snm-label" for="form-destination">
+                Destination
+                <span class="snm-tooltip-wrap">
+                  <span class="snm-help-icon">?</span>
+                  <span class="snm-tooltip">BTC address, Lightning address, or website URL</span>
+                </span>
+              </label>
+              <input type="text" class="snm-input mono" id="form-destination" placeholder="bc1p… or lightning@address.com or https://…" autocomplete="off" spellcheck="false" />
+              <div class="snm-input-hint" id="form-destination-hint">Enter a BTC address, Lightning address, or URL</div>
+            </div>
+
+            <!-- advanced toggle -->
+            <button class="snm-advanced-toggle" id="snm-advanced-toggle" aria-expanded="false">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,4.5 7,9.5 12,4.5"/></svg>
+              Show advanced fields
+            </button>
+
+            <!-- advanced fields -->
+            <div class="snm-advanced-fields" id="snm-advanced-fields">
+
+              <div class="snm-form-group">
+                <label class="snm-label" for="adv-owner">Owner address <span class="snm-label-hint">default: same as parent</span></label>
+                <input type="text" class="snm-input mono" id="adv-owner" placeholder="bc1p…" spellcheck="false" />
+              </div>
+
+              <div class="snm-form-group">
+                <label class="snm-label" for="adv-btc">BTC address</label>
+                <input type="text" class="snm-input mono" id="adv-btc" placeholder="bc1p… or bc1q…" spellcheck="false" />
+              </div>
+
+              <div class="snm-form-group">
+                <label class="snm-label" for="adv-lightning">Lightning address</label>
+                <input type="text" class="snm-input mono" id="adv-lightning" placeholder="you@wallet.com" spellcheck="false" />
+              </div>
+
+              <div class="snm-form-group">
+                <label class="snm-label" for="adv-ordinals">Ordinals address</label>
+                <input type="text" class="snm-input mono" id="adv-ordinals" placeholder="bc1p… (Taproot)" spellcheck="false" />
+              </div>
+
+              <div class="snm-form-group">
+                <label class="snm-label" for="adv-website">Website URL</label>
+                <input type="text" class="snm-input" id="adv-website" placeholder="https://yoursite.com" spellcheck="false" />
+              </div>
+
+              <div class="snm-form-group">
+                <label class="snm-label" for="adv-avatar">Avatar inscription ID</label>
+                <input type="text" class="snm-input mono" id="adv-avatar" placeholder="Ordinals inscription ID" spellcheck="false" />
+              </div>
+
+              <div class="snm-form-group">
+                <label class="snm-label" for="adv-twitter">Twitter / X handle</label>
+                <input type="text" class="snm-input" id="adv-twitter" placeholder="@handle" spellcheck="false" />
+              </div>
+
+              <div class="snm-form-group">
+                <label class="snm-label">
+                  Policy
+                  <span class="snm-tooltip-wrap">
+                    <span class="snm-help-icon">?</span>
+                    <span class="snm-tooltip">Who controls updates to this subname</span>
+                  </span>
+                </label>
+                <select class="snm-select" id="adv-policy">
+                  <option value="parent-controlled">Parent-controlled (default)</option>
+                  <option value="locked">Locked — no updates after creation</option>
+                  <option value="expiring">Expiring — Coming soon</option>
+                </select>
+                <div class="snm-input-hint">Parent-controlled means you can update this record from the parent name's wallet.</div>
+              </div>
+
+              <div class="snm-form-group">
+                <label class="snm-label" for="adv-manager">
+                  Manager
+                  <span class="snm-tooltip-wrap">
+                    <span class="snm-help-icon">?</span>
+                    <span class="snm-tooltip">Another wallet that can update this subname</span>
+                  </span>
+                </label>
+                <input type="text" class="snm-input mono" id="adv-manager" placeholder="bc1p… (optional)" spellcheck="false" />
+              </div>
+
+              <!-- custom key/value -->
+              <div class="snm-form-group">
+                <label class="snm-label">Custom records</label>
+                <div id="kvpair-list"></div>
+                <button class="snm-add-row-btn" id="add-kvpair-btn" type="button">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+                  Add custom record
+                </button>
+              </div>
+            </div><!-- /advanced -->
+          </div>
+
+          <!-- preview panel -->
+          <div class="snm-preview-panel" id="preview-panel">
+            <div class="snm-preview-panel__label">Preview</div>
+            <div class="snm-preview-name" id="preview-fullname">
+              <span class="preview-label" id="preview-label-span">shop</span><span class="preview-suffix" id="preview-suffix-span">.artist.btc</span>
+            </div>
+            <div class="snm-preview-divider"></div>
+            <div class="snm-preview-row">
+              <div class="snm-preview-row__key">Purpose</div>
+              <div class="snm-preview-row__val" id="preview-purpose" style="font-family:var(--font-body);">Shop</div>
+            </div>
+            <div class="snm-preview-row">
+              <div class="snm-preview-row__key">Points to</div>
+              <div class="snm-preview-row__val" id="preview-destination" style="color:var(--color-text-faint);">—</div>
+            </div>
+            <div class="snm-preview-row">
+              <div class="snm-preview-row__key">Status</div>
+              <div class="snm-preview-row__val" id="preview-status" style="font-family:var(--font-body);color:var(--color-success);">Ready to generate</div>
+            </div>
+            <div class="snm-preview-row">
+              <div class="snm-preview-row__key">Policy</div>
+              <div class="snm-preview-row__val" id="preview-policy" style="font-family:var(--font-body);color:var(--color-text-muted);">Parent-controlled</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="snm-wizard-nav">
+          <button class="btn btn--ghost" id="step3-back">← Back</button>
+          <button class="btn btn--primary" id="step3-next">Next: Review →</button>
+        </div>
+      </div>
+
+      <!-- ── STEP 4: Review ── -->
+      <div class="snm-wizard-step" data-wizard-step="4" id="wstep-4">
+        <div class="snm-step-header">
+          <h2>Review your subname</h2>
+          <p>Check all the details before generating the BNRP event.</p>
+        </div>
+
+        <!-- summary card -->
+        <div class="snm-review-card">
+          <div class="snm-review-card__name" id="review-fullname">shop.artist.btc</div>
+          <table class="snm-review-table">
+            <tbody>
+              <tr><td>Parent name</td><td id="review-parent">artist.btc</td></tr>
+              <tr><td>Label</td><td id="review-label">shop</td></tr>
+              <tr><td>Purpose</td><td id="review-purpose" style="font-family:var(--font-body);font-size:13px;">Shop</td></tr>
+              <tr><td>Destination</td><td id="review-destination">—</td></tr>
+              <tr><td>Policy</td><td id="review-policy" style="font-family:var(--font-body);font-size:13px;">Parent-controlled</td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:16px;">
+            <button class="btn btn--ghost btn--sm" id="step4-edit-btn">← Edit details</button>
+          </div>
+        </div>
+
+        <!-- trust check -->
+        <div class="snm-trust-panel">
+          <div class="snm-trust-panel__title">Trust Check</div>
+          <div class="snm-trust-item" id="trust-format">
+            <div class="snm-trust-icon snm-trust-icon--ok">✓</div>
+            <div class="snm-trust-item__text">Name format valid</div>
+          </div>
+          <div class="snm-trust-item" id="trust-address">
+            <div class="snm-trust-icon snm-trust-icon--ok">✓</div>
+            <div class="snm-trust-item__text">Destination format valid</div>
+          </div>
+          <div class="snm-trust-item" id="trust-ownership">
+            <div class="snm-trust-icon snm-trust-icon--warn">!</div>
+            <div class="snm-trust-item__text"><strong>Owner not verified</strong> — wallet not connected</div>
+          </div>
+          <div class="snm-trust-item">
+            <div class="snm-trust-icon snm-trust-icon--warn">!</div>
+            <div class="snm-trust-item__text"><strong>Subname issuance is experimental</strong> — indexers in prototype phase</div>
+          </div>
+          <div class="snm-trust-item">
+            <div class="snm-trust-icon snm-trust-icon--info">i</div>
+            <div class="snm-trust-item__text">Only the first inscription for this subname is canonical</div>
+          </div>
+        </div>
+
+        <!-- warning -->
+        <div class="snm-warning-box" style="margin-bottom:24px;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0;margin-top:1px;"><path d="M8 2L1 14h14L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12.5" r="0.6" fill="currentColor"/></svg>
+          <span>Subname issuance is experimental. This generates a BNRP event JSON. You can inscribe it on Bitcoin, but indexers are in prototype phase. Do not use for high-value transfers without independent verification.</span>
+        </div>
+
+        <div class="snm-wizard-nav">
+          <button class="btn btn--ghost" id="step4-back">← Back</button>
+          <button class="btn btn--primary" id="step4-next">Generate BNRP event →</button>
+        </div>
+      </div>
+
+      <!-- ── STEP 5: Generate ── -->
+      <div class="snm-wizard-step" data-wizard-step="5" id="wstep-5">
+        <div class="snm-step-header">
+          <h2>BNRP event generated</h2>
+          <p>Your subname record is ready. Review the JSON, then inscribe it on Bitcoin.</p>
+        </div>
+
+        <!-- code block -->
+        <div class="snm-code-block">
+          <div class="snm-code-block__header">
+            <span class="snm-code-block__lang">JSON — BNRP subname_register</span>
+            <div class="snm-code-block__actions">
+              <button class="btn btn--ghost btn--xs" id="copy-json-btn">Copy JSON</button>
+              <button class="btn btn--ghost btn--xs" id="copy-text-btn">Copy as text</button>
+              <span class="copy-feedback" id="copy-feedback">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,6 4.5,9 10.5,3"/></svg>
+                Copied!
+              </span>
+            </div>
+          </div>
+          <pre id="generated-json-display"></pre>
+        </div>
+
+        <!-- next steps -->
+        <div class="snm-next-steps">
+          <div class="snm-next-steps__title">Next steps</div>
+          <div class="snm-next-step-item">
+            <div class="snm-next-step-num">1</div>
+            <div>Copy the JSON above</div>
+          </div>
+          <div class="snm-next-step-item">
+            <div class="snm-next-step-num">2</div>
+            <div>Inscribe it on Bitcoin using any Ordinals wallet (e.g. UniSat)</div>
+          </div>
+          <div class="snm-next-step-item">
+            <div class="snm-next-step-num">3</div>
+            <div>Wait for block confirmation (typically 10–60 minutes)</div>
+          </div>
+          <div class="snm-next-step-item">
+            <div class="snm-next-step-num">4</div>
+            <div>Return here to verify — or check the History tab</div>
+          </div>
+        </div>
+
+        <!-- warning -->
+        <div class="snm-warning-box" style="margin-bottom:24px;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0;margin-top:1px;"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.6" fill="currentColor"/></svg>
+          <span>This is experimental. The BNRP indexer is in prototype phase. Subnames inscribed now will be indexed when the resolver is fully live.</span>
+        </div>
+
+        <div class="snm-step5-actions">
+          <button class="btn btn--orange-outline" id="inscribe-unisat-btn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="5.5"/><path d="M7 4.5v3l2 1.5"/></svg>
+            Inscribe with UniSat
+            <span class="snm-experimental-badge" style="font-size:9px;padding:1px 6px;">Experimental</span>
+          </button>
+          <button class="btn btn--ghost" id="save-json-btn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h7l2 2v7a1 1 0 0 1-1 1z"/><rect x="4.5" y="6.5" width="5" height="4"/><path d="M4.5 2v3h5V2"/></svg>
+            Save JSON
+          </button>
+          <button class="btn btn--ghost" id="step5-start-over">Start over</button>
+        </div>
+      </div>
+
+    </section><!-- /create panel -->
+
+    <!-- ══════════════════════════════════════
+         TAB: MANAGE RECORDS
+    ══════════════════════════════════════ -->
+    <section class="snm-panel" data-panel="records">
+      <div class="snm-panel-header">
+        <h2>Manage Records</h2>
+        <p>Edit the records attached to a subname — like a DNS editor for your Bitcoin name.</p>
+      </div>
+
+      <div class="snm-records-picker">
+        <label for="records-subname-pick">Subname</label>
+        <select class="snm-select" id="records-subname-pick" style="max-width:300px;">
+          <option value="">Select a subname…</option>
+        </select>
+      </div>
+
+      <div class="snm-records-empty" id="records-empty-state">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 16px;opacity:0.3;display:block;"><rect x="4" y="8" width="28" height="5" rx="2"/><rect x="4" y="17" width="28" height="5" rx="2"/><rect x="4" y="26" width="18" height="4" rx="2"/></svg>
+        <p style="font-size:14px;margin:0 auto;">Select a subname above to manage its records.</p>
+      </div>
+
+      <div id="records-table-wrap" style="display:none;">
+        <div class="snm-table-wrap" style="margin-bottom:16px;">
+          <table class="snm-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Value</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="records-table-body">
+              <tr>
+                <td><span class="snm-record-type-badge">BTC</span></td>
+                <td class="mono">bc1p…xxxx</td>
+                <td><span class="snm-status-badge snm-status-badge--ready">Active</span></td>
+                <td>
+                  <div class="snm-table-actions">
+                    <button class="snm-action-btn">Edit</button>
+                    <button class="snm-action-btn snm-action-btn--danger">Delete</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><span class="snm-record-type-badge">Website</span></td>
+                <td class="mono">https://…</td>
+                <td><span class="snm-status-badge snm-status-badge--ready">Active</span></td>
+                <td>
+                  <div class="snm-table-actions">
+                    <button class="snm-action-btn">Edit</button>
+                    <button class="snm-action-btn snm-action-btn--danger">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button class="btn btn--ghost btn--sm">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+          Add record
+        </button>
+        <div class="snm-warning-box" style="margin-top:16px;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0;margin-top:1px;"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.6" fill="currentColor"/></svg>
+          <span>Updating records requires a new BNRP inscription. Changes are permanent once inscribed on Bitcoin.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         TAB: HISTORY
+    ══════════════════════════════════════ -->
+    <section class="snm-panel" data-panel="history">
+      <div class="snm-panel-header">
+        <h2>Inscription History</h2>
+        <p>Every update to a subname is permanently recorded on Bitcoin.</p>
+      </div>
+
+      <div class="snm-history-banner">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0;margin-top:1px;"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.6" fill="currentColor"/></svg>
+        History is loaded from Bitcoin. This is a read-only view — every update is permanent.
+      </div>
+
+      <div class="snm-overview-empty" style="padding:60px 20px;">
+        <div class="snm-overview-empty__icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+        </div>
+        <h3>No history loaded</h3>
+        <p>History loading from the BNRP indexer is a roadmap feature. Check back when the resolver is fully live.</p>
+        <span class="snm-experimental-badge" style="margin-top:4px;">Coming soon</span>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════
+         TAB: SETTINGS
+    ══════════════════════════════════════ -->
+    <section class="snm-panel" data-panel="settings">
+      <div class="snm-panel-header">
+        <h2>Namespace Settings</h2>
+        <p>Configure rules for subnames under your selected parent name.</p>
+      </div>
+
+      <!-- policy -->
+      <div class="snm-settings-section">
+        <h3>Policy</h3>
+        <p>Controls how subnames under this name can be updated or revoked.</p>
+        <div class="snm-settings-policy-row">
+          <select class="snm-select" style="max-width:280px;">
+            <option>Parent-controlled (default)</option>
+            <option>Locked — subnames cannot be updated</option>
+            <option disabled>Expiring — Coming soon</option>
+          </select>
+          <button class="btn btn--ghost btn--sm" disabled>Save policy</button>
+        </div>
+        <div class="snm-warning-box" style="margin-top:16px;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0;margin-top:1px;"><circle cx="8" cy="8" r="6.5"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.6" fill="currentColor"/></svg>
+          Changing namespace settings requires a new BNRP inscription.
+        </div>
+      </div>
+
+      <!-- managers -->
+      <div class="snm-settings-section">
+        <h3>Managers</h3>
+        <p>Other wallet addresses that can create or update subnames under this name.</p>
+        <div class="snm-managers-list" id="managers-list">
+          <div style="font-size:13px;color:var(--color-text-faint);padding:8px 0;">No managers added yet.</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+          <input type="text" class="snm-input mono" id="add-manager-input" placeholder="bc1p… wallet address" style="flex:1;" spellcheck="false" />
+          <button class="btn btn--ghost btn--sm" id="add-manager-btn">Add</button>
+        </div>
+      </div>
+
+      <!-- revocation -->
+      <div class="snm-settings-section" style="border-color:var(--color-error);background:var(--color-error-dim);">
+        <h3 style="color:var(--color-error);">Revocation</h3>
+        <p>Revoke a subname — permanently. This cannot be undone on-chain.</p>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" class="snm-input mono" id="revoke-input" placeholder="subname.name.btc to revoke" style="flex:1;" spellcheck="false" />
+          <button class="btn btn--danger btn--sm" id="revoke-btn">Revoke <span class="snm-experimental-badge" style="font-size:9px;padding:1px 5px;">Experimental</span></button>
+        </div>
+        <div class="snm-warning-box" style="margin-top:12px;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0;margin-top:1px;"><path d="M8 2L1 14h14L8 2z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12.5" r="0.6" fill="currentColor"/></svg>
+          Revoking a subname inscribes a revocation event on Bitcoin. Resolvers will stop returning records. This is irreversible.
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div><!-- /snm-body -->
+
+<!-- ─── Footer ─── -->
+<footer class="site-footer">
+  <div class="footer__inner">
+    <div class="footer__brand">
+      <a href="./index.html" class="footer__logo">
+        <picture><source srcset="./logo-36.webp" type="image/webp"><img class="footer__logo-mark" src="./logo-36.png" alt="" aria-hidden="true" width="32" height="32" style="display:block;width:32px;height:32px;" loading="lazy"></picture>
+        <div>
+          <div class="footer__logo-btc">BTC</div>
+          <div class="footer__logo-native">NATIVE</div>
+        </div>
+      </a>
+      <p class="footer__tagline">Built on Bitcoin. Native to the future.</p>
+      <p style="font-family:var(--font-mono);font-size:11px;color:var(--color-text-faint);margin-top:6px;">Powered by <a href="./bnrp.html" style="color:var(--color-brand-orange);text-decoration:none;">BNRP</a> open resolution.</p>
+    </div>
+    <div class="footer__col">
+      <div class="footer__col-title">Subnames</div>
+      <div class="footer__links">
+        <a href="./subnames.html" class="footer__link">What Are Subnames?</a>
+        <a href="./subname-manager.html" class="footer__link">Subname Manager</a>
+        <a href="./namespace.html" class="footer__link">Event Tool</a>
+      </div>
+    </div>
+    <div class="footer__col">
+      <div class="footer__col-title">Protocol</div>
+      <div class="footer__links">
+        <a href="./bnrp.html" class="footer__link">Powered by BNRP</a>
+        <a href="./docs.html" class="footer__link">Docs</a>
+        <a href="./about.html" class="footer__link">About</a>
+        <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
+        <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
+      </div>
+    </div>
+    <div class="footer__col">
+      <div class="footer__col-title">Support</div>
+      <div class="footer__links">
+        <a href="https://x.com/btcnativename" target="_blank" rel="noopener" class="footer__link">@btcnativename</a>
+        <a href="mailto:hello@btcnative.name" class="footer__link">hello@btcnative.name</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer__bottom">
+    <span class="footer__copy">&copy; 2026 BTC Native. Trustless by design.</span>
+  </div>
+</footer>
+
+<script defer src="./app.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ─────────────────────────────────────────
+     State
+  ───────────────────────────────────────── */
+  const state = {
+    walletConnected: false,
+    walletAddress: '',
+    currentTab: 'create',
+    currentStep: 1,
+    mode: 'beginner',          // 'beginner' | 'expert'
+    selectedTemplate: null,
+    parentName: '',
+    form: {
+      label: '',
+      purpose: '',
+      destination: '',
+      policy: 'Parent-controlled',
+    },
+    customNames: [],           // mock wallet names
+    kvPairs: [],
+    generatedJSON: null,
+  };
+
+  /* ─────────────────────────────────────────
+     Utils
+  ───────────────────────────────────────── */
+  function truncateAddr(addr, n = 6) {
+    if (!addr || addr.length <= n * 2 + 4) return addr;
+    return addr.slice(0, n) + '…' + addr.slice(-n);
+  }
+
+  function isValidBtcAddress(addr) {
+    return /^(bc1p|bc1q|1|3)[a-zA-HJ-NP-Z0-9]{25,87}$/.test(addr);
+  }
+
+  function isValidSubnameLabel(label) {
+    return /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?$/.test(label) || /^[a-zA-Z0-9]$/.test(label);
+  }
+
+  function isValidBtcName(name) {
+    return /^[a-zA-Z0-9][a-zA-Z0-9\-.]*\.(btc|sats|ord)$/.test(name.trim());
+  }
+
+  function detectDestinationType(val) {
+    if (!val) return '';
+    if (isValidBtcAddress(val)) return 'BTC address';
+    if (/^https?:\/\//i.test(val)) return 'Website URL';
+    if (/@/.test(val) && !/^https?/.test(val)) return 'Lightning address';
+    return 'Unknown format';
+  }
+
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return str
+      .replace(/("[\w]+")\s*:/g, '<span class="json-key">$1</span>:')
+      .replace(/:\s*(".*?")/g, ': <span class="json-str">$1</span>')
+      .replace(/:\s*(\d+)/g, ': <span class="json-num">$1</span>')
+      .replace(/:\s*(true|false|null)/g, ': <span class="json-bool">$1</span>');
+  }
+
+  /* ─────────────────────────────────────────
+     BNRP event generator
+  ───────────────────────────────────────── */
+  function generateBNRPEvent(parentName, label, destination, records) {
+    return {
+      p: 'bnrp',
+      op: 'subname_register',
+      name: parentName,
+      sub: label + '.' + parentName,
+      to: destination || '',
+      records: records || {},
+      nonce: 1,
+      v: 1,
+    };
+  }
+
+  /* ─────────────────────────────────────────
+     Wallet
+  ───────────────────────────────────────── */
+  async function connectWallet() {
+    let addr = null;
+
+    if (window.unisat) {
+      try {
+        const accounts = await window.unisat.requestAccounts();
+        addr = accounts && accounts[0];
+      } catch (e) {
+        // user rejected
+      }
+    }
+
+    if (!addr) {
+      // mock connect for demo
+      addr = 'bc1p' + Math.random().toString(36).slice(2, 12) + Math.random().toString(36).slice(2, 12);
+    }
+
+    state.walletConnected = true;
+    state.walletAddress = addr;
+    state.customNames = [
+      { name: 'artist.btc', status: 'Ready' },
+      { name: 'protocol.btc', status: 'Ready' },
+    ];
+
+    renderWalletState();
+    renderNameList();
+    updateOverviewState();
+  }
+
+  function disconnectWallet() {
+    state.walletConnected = false;
+    state.walletAddress = '';
+    state.customNames = [];
+    renderWalletState();
+    renderNameList();
+    updateOverviewState();
+  }
+
+  function renderWalletState() {
+    const emptyEl = document.getElementById('snm-wallet-empty');
+    const connectedEl = document.getElementById('snm-wallet-connected');
+    const addrEl = document.getElementById('snm-wallet-addr');
+
+    if (state.walletConnected) {
+      emptyEl.classList.add('hidden');
+      connectedEl.classList.add('visible');
+      addrEl.textContent = truncateAddr(state.walletAddress, 8);
+    } else {
+      emptyEl.classList.remove('hidden');
+      connectedEl.classList.remove('visible');
+    }
+
+    // update trust check ownership item
+    const trustOwn = document.getElementById('trust-ownership');
+    if (trustOwn) {
+      if (state.walletConnected) {
+        trustOwn.querySelector('.snm-trust-icon').className = 'snm-trust-icon snm-trust-icon--ok';
+        trustOwn.querySelector('.snm-trust-icon').textContent = '✓';
+        trustOwn.querySelector('.snm-trust-item__text').innerHTML = 'Owner verified via connected wallet';
+      } else {
+        trustOwn.querySelector('.snm-trust-icon').className = 'snm-trust-icon snm-trust-icon--warn';
+        trustOwn.querySelector('.snm-trust-icon').textContent = '!';
+        trustOwn.querySelector('.snm-trust-item__text').innerHTML = '<strong>Owner not verified</strong> — wallet not connected';
+      }
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     Name list (sidebar)
+  ───────────────────────────────────────── */
+  function renderNameList(filter = '') {
+    const listEl = document.getElementById('snm-name-list');
+    const emptyEl = document.getElementById('snm-name-empty-state');
+
+    if (!state.walletConnected || state.customNames.length === 0) {
+      listEl.innerHTML = '';
+      emptyEl.style.display = '';
+      listEl.appendChild(emptyEl);
+      emptyEl.textContent = state.walletConnected ? 'No names found.' : 'Connect wallet to load your names.';
+      return;
+    }
+
+    const filtered = state.customNames.filter(n => n.name.includes(filter));
+    listEl.innerHTML = '';
+
+    if (filtered.length === 0) {
+      const d = document.createElement('div');
+      d.className = 'snm-name-empty';
+      d.textContent = 'No names match "' + filter + '".';
+      listEl.appendChild(d);
+      return;
+    }
+
+    filtered.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'snm-name-item' + (state.parentName === item.name ? ' active' : '');
+      div.innerHTML = `<span class="snm-name-item__label">${item.name}</span>
+        <span class="snm-name-item__badge">${item.status}</span>`;
+      div.addEventListener('click', () => {
+        state.parentName = item.name;
+        document.getElementById('step1-name-input').value = item.name;
+        renderNameList(filter);
+        updatePreview();
+        lookupName(item.name);
+      });
+      listEl.appendChild(div);
+    });
+  }
+
+  /* ─────────────────────────────────────────
+     Tab switching
+  ───────────────────────────────────────── */
+  function switchTab(tab) {
+    state.currentTab = tab;
+
+    document.querySelectorAll('.snm-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.snm-nav-item').forEach(b => {
+      b.classList.remove('active');
+      b.setAttribute('aria-selected', 'false');
+    });
+
+    const panel = document.querySelector(`[data-panel="${tab}"]`);
+    if (panel) panel.classList.add('active');
+
+    const navBtn = document.querySelector(`[data-tab="${tab}"]`);
+    if (navBtn) {
+      navBtn.classList.add('active');
+      navBtn.setAttribute('aria-selected', 'true');
+    }
+  }
+
+  document.querySelectorAll('.snm-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  /* ─────────────────────────────────────────
+     Mode toggle (Beginner / Expert)
+  ───────────────────────────────────────── */
+  document.getElementById('btn-mode-beginner').addEventListener('click', () => setMode('beginner'));
+  document.getElementById('btn-mode-expert').addEventListener('click', () => setMode('expert'));
+
+  function setMode(mode) {
+    state.mode = mode;
+    document.getElementById('btn-mode-beginner').classList.toggle('active', mode === 'beginner');
+    document.getElementById('btn-mode-expert').classList.toggle('active', mode === 'expert');
+
+    // In expert mode, auto-open advanced fields
+    if (mode === 'expert') {
+      openAdvancedFields();
+    } else {
+      closeAdvancedFields();
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     Wizard step navigation
+  ───────────────────────────────────────── */
+  function goToStep(n) {
+    state.currentStep = n;
+
+    // show/hide wizard steps
+    document.querySelectorAll('.snm-wizard-step').forEach(s => s.classList.remove('active'));
+    const targetStep = document.querySelector(`[data-wizard-step="${n}"]`);
+    if (targetStep) targetStep.classList.add('active');
+
+    // update step indicators
+    for (let i = 1; i <= 5; i++) {
+      const stepEl = document.querySelector(`[data-step-indicator="${i}"]`);
+      const circleEl = document.getElementById(`step-circle-${i}`);
+      if (!stepEl || !circleEl) continue;
+
+      stepEl.classList.remove('active', 'done');
+      circleEl.innerHTML = String(i);
+
+      if (i < n) {
+        stepEl.classList.add('done');
+        circleEl.innerHTML = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>`;
+      } else if (i === n) {
+        stepEl.classList.add('active');
+      }
+    }
+
+    // update connectors
+    for (let i = 1; i <= 4; i++) {
+      const conn = document.getElementById(`step-connector-${i}`);
+      if (conn) conn.classList.toggle('done', i < n);
+    }
+
+    // Step 4: run trust checks
+    if (n === 4) runTrustChecks();
+
+    // Step 5: generate JSON
+    if (n === 5) generateAndDisplayJSON();
+  }
+
+  /* next/back handlers */
+  document.getElementById('step1-next').addEventListener('click', () => {
+    if (!state.parentName) return;
+    goToStep(2);
+  });
+
+  document.getElementById('step2-back').addEventListener('click', () => goToStep(1));
+  document.getElementById('step2-next').addEventListener('click', () => {
+    if (!state.selectedTemplate) return;
+    goToStep(3);
+  });
+
+  document.getElementById('step3-back').addEventListener('click', () => goToStep(2));
+  document.getElementById('step3-next').addEventListener('click', () => {
+    populateReview();
+    goToStep(4);
+  });
+
+  document.getElementById('step4-back').addEventListener('click', () => goToStep(3));
+  document.getElementById('step4-edit-btn').addEventListener('click', () => goToStep(3));
+  document.getElementById('step4-next').addEventListener('click', () => goToStep(5));
+
+  document.getElementById('step5-start-over').addEventListener('click', () => {
+    // reset
+    state.selectedTemplate = null;
+    state.parentName = '';
+    state.form = { label: '', purpose: '', destination: '', policy: 'Parent-controlled' };
+    document.getElementById('step1-name-input').value = '';
+    document.getElementById('form-label').value = '';
+    document.getElementById('form-purpose').value = '';
+    document.getElementById('form-destination').value = '';
+    document.getElementById('step1-result-card').classList.remove('visible');
+    document.getElementById('step1-next').disabled = true;
+    document.getElementById('step2-next').disabled = true;
+    document.querySelectorAll('.snm-template-card').forEach(c => c.classList.remove('selected'));
+    updatePreview();
+    renderNameList();
+    goToStep(1);
+  });
+
+  /* ─────────────────────────────────────────
+     Step 1: Name lookup
+  ───────────────────────────────────────── */
+  const nameInput = document.getElementById('step1-name-input');
+  let lookupTimer = null;
+
+  nameInput.addEventListener('input', () => {
+    const val = nameInput.value.trim();
+    clearTimeout(lookupTimer);
+
+    if (!val) {
+      document.getElementById('step1-result-card').classList.remove('visible');
+      document.getElementById('step1-next').disabled = true;
+      state.parentName = '';
+      return;
+    }
+
+    lookupTimer = setTimeout(() => {
+      if (isValidBtcName(val)) {
+        lookupName(val);
+      }
+    }, 500);
+  });
+
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const val = nameInput.value.trim();
+      if (isValidBtcName(val)) lookupName(val);
+    }
+  });
+
+  async function lookupName(name) {
+    const resultCard = document.getElementById('step1-result-card');
+    const resultName = document.getElementById('step1-result-name');
+    const resultOwner = document.getElementById('step1-result-owner');
+    const statusBadge = document.getElementById('step1-status-badge');
+    const ownerWarning = document.getElementById('step1-ownership-warning');
+    const useBtn = document.getElementById('step1-use-btn');
+    const nextBtn = document.getElementById('step1-next');
+
+    resultName.textContent = name;
+    resultOwner.textContent = 'Looking up…';
+    statusBadge.textContent = '…';
+    statusBadge.className = 'snm-status-badge snm-status-badge--info';
+    ownerWarning.style.display = 'none';
+    resultCard.classList.add('visible');
+
+    // real API call
+    try {
+      const res = await fetch('https://api.bnrp.name/v1/resolve?name=' + encodeURIComponent(name));
+      if (res.ok) {
+        const data = await res.json();
+        const owner = data?.owner || data?.address || null;
+        resultOwner.textContent = owner ? truncateAddr(owner, 10) : 'Unknown';
+        statusBadge.innerHTML = `<svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="3"/></svg> Ready to become a namespace`;
+        statusBadge.className = 'snm-status-badge snm-status-badge--ready';
+
+        const ownedByWallet = state.walletConnected && owner && owner === state.walletAddress;
+        ownerWarning.style.display = (state.walletConnected && !ownedByWallet) ? 'flex' : 'none';
+      } else {
+        throw new Error('not found');
+      }
+    } catch (e) {
+      // fallback mock
+      const mockOwner = 'bc1p' + Math.random().toString(36).slice(2, 10) + '…';
+      resultOwner.textContent = mockOwner;
+      statusBadge.innerHTML = `<svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="3"/></svg> Ready to become a namespace`;
+      statusBadge.className = 'snm-status-badge snm-status-badge--ready';
+      if (state.walletConnected) {
+        ownerWarning.style.display = 'flex';
+      }
+    }
+
+    state.parentName = name;
+    nextBtn.disabled = false;
+    updatePreview();
+  }
+
+  document.getElementById('step1-use-btn').addEventListener('click', () => {
+    const val = document.getElementById('step1-name-input').value.trim();
+    if (val && isValidBtcName(val)) {
+      state.parentName = val;
+      document.getElementById('step1-next').disabled = false;
+      goToStep(2);
+    }
+  });
+
+  /* ─────────────────────────────────────────
+     Step 2: Template selection
+  ───────────────────────────────────────── */
+  document.querySelectorAll('.snm-template-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.snm-template-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.selectedTemplate = card.dataset.template;
+      document.getElementById('step2-next').disabled = false;
+
+      // pre-fill label and purpose
+      const suggestedLabel = card.dataset.label || '';
+      const purpose = card.dataset.purpose || '';
+      if (suggestedLabel) {
+        document.getElementById('form-label').value = suggestedLabel;
+        state.form.label = suggestedLabel;
+      }
+      state.form.purpose = purpose;
+      document.getElementById('form-purpose').value = purpose;
+      updatePreview();
+    });
+  });
+
+  /* ─────────────────────────────────────────
+     Step 3: Live preview
+  ───────────────────────────────────────── */
+  document.getElementById('form-label').addEventListener('input', () => {
+    state.form.label = document.getElementById('form-label').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    document.getElementById('form-label').value = state.form.label;
+    updatePreview();
+  });
+
+  document.getElementById('form-purpose').addEventListener('input', () => {
+    state.form.purpose = document.getElementById('form-purpose').value;
+    updatePreview();
+  });
+
+  document.getElementById('form-destination').addEventListener('input', () => {
+    state.form.destination = document.getElementById('form-destination').value.trim();
+    const hint = document.getElementById('form-destination-hint');
+    const detected = detectDestinationType(state.form.destination);
+    hint.textContent = detected || 'Enter a BTC address, Lightning address, or URL';
+    hint.style.color = detected && detected !== 'Unknown format' ? 'var(--color-success)' : '';
+    updatePreview();
+  });
+
+  document.getElementById('adv-policy').addEventListener('change', () => {
+    const val = document.getElementById('adv-policy');
+    state.form.policy = val.options[val.selectedIndex].text;
+    updatePreview();
+  });
+
+  function updatePreview() {
+    const label = state.form.label || '[label]';
+    const parent = state.parentName || '[name].btc';
+    const purpose = state.form.purpose || (state.selectedTemplate ? state.selectedTemplate : '—');
+    const dest = state.form.destination;
+
+    document.getElementById('preview-label-span').textContent = label;
+    document.getElementById('preview-suffix-span').textContent = '.' + parent;
+    document.getElementById('label-preview-typed').textContent = label;
+    document.getElementById('label-preview-suffix').textContent = '.' + parent;
+
+    document.getElementById('preview-purpose').textContent = purpose || '—';
+    document.getElementById('preview-destination').textContent = dest ? truncateAddr(dest, 10) : '—';
+    document.getElementById('preview-policy').textContent = state.form.policy || 'Parent-controlled';
+
+    const ready = state.form.label && (state.parentName || parent);
+    document.getElementById('preview-status').textContent = ready ? 'Ready to generate' : 'Fill in details';
+    document.getElementById('preview-status').style.color = ready ? 'var(--color-success)' : 'var(--color-text-faint)';
+  }
+
+  /* ─────────────────────────────────────────
+     Advanced fields toggle
+  ───────────────────────────────────────── */
+  const advToggle = document.getElementById('snm-advanced-toggle');
+  const advFields = document.getElementById('snm-advanced-fields');
+
+  advToggle.addEventListener('click', () => {
+    const open = advFields.classList.contains('open');
+    if (open) {
+      closeAdvancedFields();
+    } else {
+      openAdvancedFields();
+    }
+  });
+
+  function openAdvancedFields() {
+    advFields.classList.add('open');
+    advToggle.classList.add('open');
+    advToggle.querySelector('span') && (advToggle.querySelector('span') || advToggle).childNodes;
+    // update text node
+    advToggle.childNodes.forEach(n => {
+      if (n.nodeType === 3) n.textContent = ' Hide advanced fields';
+    });
+    advToggle.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeAdvancedFields() {
+    advFields.classList.remove('open');
+    advToggle.classList.remove('open');
+    advToggle.childNodes.forEach(n => {
+      if (n.nodeType === 3) n.textContent = ' Show advanced fields';
+    });
+    advToggle.setAttribute('aria-expanded', 'false');
+  }
+
+  /* ─────────────────────────────────────────
+     Custom key/value pairs
+  ───────────────────────────────────────── */
+  document.getElementById('add-kvpair-btn').addEventListener('click', () => {
+    addKVPair('', '');
+  });
+
+  function addKVPair(key = '', val = '') {
+    const id = Date.now();
+    state.kvPairs.push({ id, key, val });
+    renderKVPairs();
+  }
+
+  function removeKVPair(id) {
+    state.kvPairs = state.kvPairs.filter(p => p.id !== id);
+    renderKVPairs();
+  }
+
+  function renderKVPairs() {
+    const list = document.getElementById('kvpair-list');
+    list.innerHTML = '';
+    state.kvPairs.forEach(pair => {
+      const row = document.createElement('div');
+      row.className = 'snm-kvpair-row';
+      row.innerHTML = `
+        <input type="text" class="snm-input mono" placeholder="key" value="${pair.key}" data-kv-id="${pair.id}" data-kv-field="key" style="font-size:12px;padding:7px 9px;">
+        <input type="text" class="snm-input mono" placeholder="value" value="${pair.val}" data-kv-id="${pair.id}" data-kv-field="val" style="font-size:12px;padding:7px 9px;">
+        <button class="snm-kvpair-remove" data-kv-remove="${pair.id}" aria-label="Remove row">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg>
+        </button>`;
+      list.appendChild(row);
+    });
+
+    list.querySelectorAll('[data-kv-remove]').forEach(btn => {
+      btn.addEventListener('click', () => removeKVPair(Number(btn.dataset.kvRemove)));
+    });
+    list.querySelectorAll('[data-kv-id]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        const id = Number(inp.dataset.kvId);
+        const field = inp.dataset.kvField;
+        const pair = state.kvPairs.find(p => p.id === id);
+        if (pair) pair[field] = inp.value;
+      });
+    });
+  }
+
+  /* ─────────────────────────────────────────
+     Step 4: Trust checks
+  ───────────────────────────────────────── */
+  function runTrustChecks() {
+    const label = state.form.label;
+    const dest = state.form.destination;
+    const parent = state.parentName;
+
+    // format check
+    const trustFormat = document.getElementById('trust-format');
+    const formatOk = isValidSubnameLabel(label) && isValidBtcName(parent);
+    setTrustItem(trustFormat, formatOk ? 'ok' : 'warn', formatOk ? 'Name format valid' : '<strong>Name format invalid</strong> — check label and parent name');
+
+    // address check
+    const trustAddr = document.getElementById('trust-address');
+    if (!dest) {
+      setTrustItem(trustAddr, 'info', 'No destination set');
+    } else {
+      const type = detectDestinationType(dest);
+      const ok = type !== 'Unknown format';
+      setTrustItem(trustAddr, ok ? 'ok' : 'warn', ok ? `Destination format valid (${type})` : '<strong>Destination format unrecognised</strong> — double-check before inscribing');
+    }
+  }
+
+  function setTrustItem(el, kind, html) {
+    const icon = el.querySelector('.snm-trust-icon');
+    const text = el.querySelector('.snm-trust-item__text');
+    icon.className = `snm-trust-icon snm-trust-icon--${kind}`;
+    icon.textContent = kind === 'ok' ? '✓' : kind === 'warn' ? '!' : 'i';
+    text.innerHTML = html;
+  }
+
+  /* ─────────────────────────────────────────
+     Step 4: Populate review
+  ───────────────────────────────────────── */
+  function populateReview() {
+    const parent = state.parentName || '[name].btc';
+    const label = state.form.label || '[label]';
+    const fullName = label + '.' + parent;
+
+    document.getElementById('review-fullname').textContent = fullName;
+    document.getElementById('review-parent').textContent = parent;
+    document.getElementById('review-label').textContent = label;
+    document.getElementById('review-purpose').textContent = state.form.purpose || state.selectedTemplate || '—';
+    document.getElementById('review-destination').textContent = state.form.destination || '—';
+    document.getElementById('review-policy').textContent = state.form.policy || 'Parent-controlled';
+  }
+
+  /* ─────────────────────────────────────────
+     Step 5: Generate + display JSON
+  ───────────────────────────────────────── */
+  function generateAndDisplayJSON() {
+    const parent = state.parentName || '[name].btc';
+    const label = state.form.label || '[label]';
+    const dest = state.form.destination || '';
+
+    // build records from form
+    const records = {};
+    const destType = detectDestinationType(dest);
+    if (dest && destType === 'BTC address') records.btc = dest;
+    else if (dest && destType === 'Lightning address') records.lightning = dest;
+    else if (dest && destType === 'Website URL') records.url = dest;
+    else if (dest) records.address = dest;
+
+    // advanced
+    const advBtc = document.getElementById('adv-btc').value.trim();
+    const advLightning = document.getElementById('adv-lightning').value.trim();
+    const advOrdinals = document.getElementById('adv-ordinals').value.trim();
+    const advWebsite = document.getElementById('adv-website').value.trim();
+    const advAvatar = document.getElementById('adv-avatar').value.trim();
+    const advTwitter = document.getElementById('adv-twitter').value.trim();
+
+    if (advBtc) records.btc = advBtc;
+    if (advLightning) records.lightning = advLightning;
+    if (advOrdinals) records.ordinals = advOrdinals;
+    if (advWebsite) records.url = advWebsite;
+    if (advAvatar) records.avatar = advAvatar;
+    if (advTwitter) records.twitter = advTwitter;
+
+    // custom kv
+    state.kvPairs.forEach(p => {
+      if (p.key && p.val) records[p.key] = p.val;
+    });
+
+    state.generatedJSON = generateBNRPEvent(parent, label, dest, records);
+
+    const display = document.getElementById('generated-json-display');
+    display.innerHTML = highlightJSON(state.generatedJSON);
+  }
+
+  /* ─────────────────────────────────────────
+     Copy buttons
+  ───────────────────────────────────────── */
+  function showCopyFeedback() {
+    const fb = document.getElementById('copy-feedback');
+    fb.classList.add('visible');
+    setTimeout(() => fb.classList.remove('visible'), 2000);
+  }
+
+  document.getElementById('copy-json-btn').addEventListener('click', async () => {
+    if (!state.generatedJSON) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(state.generatedJSON, null, 2));
+      showCopyFeedback();
+    } catch (_) {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = JSON.stringify(state.generatedJSON, null, 2);
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showCopyFeedback();
+    }
+  });
+
+  document.getElementById('copy-text-btn').addEventListener('click', async () => {
+    if (!state.generatedJSON) return;
+    const text = JSON.stringify(state.generatedJSON);
+    try {
+      await navigator.clipboard.writeText(text);
+      showCopyFeedback();
+    } catch (_) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showCopyFeedback();
+    }
+  });
+
+  /* save JSON as file */
+  document.getElementById('save-json-btn').addEventListener('click', () => {
+    if (!state.generatedJSON) return;
+    const blob = new Blob([JSON.stringify(state.generatedJSON, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const sub = state.generatedJSON.sub || 'subname';
+    a.download = 'bnrp-' + sub.replace(/\./g, '-') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  /* inscribe with UniSat */
+  document.getElementById('inscribe-unisat-btn').addEventListener('click', async () => {
+    if (!state.generatedJSON) return;
+
+    if (window.unisat) {
+      try {
+        const content = JSON.stringify(state.generatedJSON);
+        // UniSat inscribeContent API (if available)
+        if (window.unisat.inscribeContent) {
+          await window.unisat.inscribeContent({
+            content,
+            contentType: 'application/json',
+          });
+        } else {
+          alert('UniSat is connected but inscribe API is not available in this version. Copy the JSON and inscribe manually.');
+        }
+      } catch (e) {
+        alert('UniSat inscription failed: ' + (e.message || 'Unknown error'));
+      }
+    } else {
+      window.open('https://unisat.io/inscribe', '_blank', 'noopener');
+      // show hint
+      alert('UniSat is not installed. Opening the UniSat inscribe tool — paste your JSON there.');
+    }
+  });
+
+  /* ─────────────────────────────────────────
+     Wallet connect buttons
+  ───────────────────────────────────────── */
+  document.getElementById('snm-connect-btn').addEventListener('click', connectWallet);
+  document.getElementById('overview-connect-btn').addEventListener('click', connectWallet);
+  document.getElementById('snm-disconnect-btn').addEventListener('click', disconnectWallet);
+
+  /* ─────────────────────────────────────────
+     Overview state
+  ───────────────────────────────────────── */
+  function updateOverviewState() {
+    const emptyWallet = document.getElementById('overview-empty-wallet');
+    const emptySubnames = document.getElementById('overview-empty-subnames');
+    const tableEl = document.getElementById('overview-table');
+    const tbody = document.getElementById('overview-table-body');
+
+    if (!state.walletConnected) {
+      emptyWallet.style.display = '';
+      emptySubnames.style.display = 'none';
+      tableEl.style.display = 'none';
+      return;
+    }
+
+    emptyWallet.style.display = 'none';
+
+    // mock: no subnames yet
+    const subnames = [];
+    if (subnames.length === 0) {
+      emptySubnames.style.display = '';
+      tableEl.style.display = 'none';
+    } else {
+      emptySubnames.style.display = 'none';
+      tableEl.style.display = '';
+      tbody.innerHTML = subnames.map(s => `
+        <tr>
+          <td class="mono">${s.name}</td>
+          <td class="mono">${truncateAddr(s.destination, 8)}</td>
+          <td><span class="snm-status-badge snm-status-badge--ready">${s.status}</span></td>
+          <td>${s.updated}</td>
+          <td>
+            <div class="snm-table-actions">
+              <button class="snm-action-btn">Edit</button>
+              <button class="snm-action-btn snm-action-btn--danger">Revoke</button>
+              <button class="snm-action-btn">History</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     Name filter (sidebar)
+  ───────────────────────────────────────── */
+  document.getElementById('snm-name-filter').addEventListener('input', (e) => {
+    renderNameList(e.target.value.trim());
+  });
+
+  /* ─────────────────────────────────────────
+     Settings: add manager
+  ───────────────────────────────────────── */
+  document.getElementById('add-manager-btn').addEventListener('click', () => {
+    const inp = document.getElementById('add-manager-input');
+    const val = inp.value.trim();
+    if (!val) return;
+
+    const list = document.getElementById('managers-list');
+    // remove empty state
+    list.querySelectorAll('div').forEach(d => { if (d.style.color) d.remove(); });
+
+    const item = document.createElement('div');
+    item.className = 'snm-manager-item';
+    item.innerHTML = `<span>${truncateAddr(val, 12)}</span>
+      <button class="snm-action-btn snm-action-btn--danger" style="font-size:11px;padding:3px 8px;">Remove</button>`;
+    item.querySelector('button').addEventListener('click', () => item.remove());
+    list.appendChild(item);
+    inp.value = '';
+  });
+
+  /* ─────────────────────────────────────────
+     Mobile sidebar toggle
+  ───────────────────────────────────────── */
+  document.getElementById('snm-sidebar-toggle').addEventListener('click', () => {
+    const sidebar = document.getElementById('snm-sidebar');
+    sidebar.classList.toggle('open');
+  });
+
+  /* close sidebar on outside click (mobile) */
+  document.addEventListener('click', (e) => {
+    const sidebar = document.getElementById('snm-sidebar');
+    const toggle = document.getElementById('snm-sidebar-toggle');
+    if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== toggle) {
+      sidebar.classList.remove('open');
+    }
+  });
+
+  /* ─────────────────────────────────────────
+     Init
+  ───────────────────────────────────────── */
+  updatePreview();
+  updateOverviewState();
+  renderNameList();
+
+})();
+</script>
+</body>
+</html>

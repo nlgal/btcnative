@@ -66,6 +66,15 @@
           </div>
         </li>
         <li class="nav__item">
+          <a href="./subnames.html" class="nav__link nav__link--has-dropdown">Subnames</a>
+          <div class="nav__dropdown">
+            <div class="nav__dropdown-label">Namespaces</div>
+            <a href="./subnames.html" class="nav__dropdown-item">What Are Subnames?</a>
+            <a href="./subname-manager.html" class="nav__dropdown-item">Subname Manager</a>
+            <a href="./namespace.html" class="nav__dropdown-item">Event Tool</a>
+          </div>
+        </li>
+        <li class="nav__item">
           <a href="./bnrp.html" class="nav__link">Protocol</a>
         </li>
         <li class="nav__item">
@@ -116,6 +125,7 @@
           <a href="#errors" class="docs-nav__link">Error responses</a>
           <a href="#rate-limits" class="docs-nav__link">Rate limits</a>
           <a href="#namespace-api" class="docs-nav__link">Namespace API</a>
+          <a href="#subnames" class="docs-nav__link">Subnames</a>
           <a href="#contact" class="docs-nav__link">Contact</a>
         </div>
         <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border);">
@@ -482,6 +492,76 @@ Resolution chain:
           <p style="margin-top:16px;font-size:var(--text-xs);color:var(--color-text-faint);">Namespace endpoints are Phase 2 roadmap. The resolver stub is live — subname issuance is not yet active. <a href="./namespace.html" style="color:var(--color-brand-orange);text-decoration:none;">Learn about namespaces →</a></p>
         </section>
 
+        <!-- ── Subnames ── -->
+        <section class="docs-section" id="subnames">
+  <h2 class="docs-section__title">Subnames</h2>
+  <p class="docs-section__intro">Subnames are Bitcoin-native child records created under a root name. They use the BNRP <code>subname_register</code> op and are indexed from Bitcoin inscriptions.</p>
+
+  <h3 class="docs-section__subtitle">Event format</h3>
+  <pre class="bnrp-code-block"><code>{
+  "p": "bnrp",
+  "op": "subname_register",
+  "name": "artist.btc",       // parent name
+  "sub": "shop.artist.btc",   // full subname
+  "to": "bc1p...",             // primary destination
+  "records": {                  // optional extended records
+    "btc": "bc1p...",
+    "website": "https://...",
+    "lightning": "lnbc...",
+    "com.twitter": "@handle"
+  },
+  "nonce": 1,                   // must strictly increase
+  "v": 1                        // protocol version
+}</code></pre>
+
+  <h3 class="docs-section__subtitle" style="margin-top:24px;">Validity rules</h3>
+  <p class="docs-section__text">A subname record is valid if:</p>
+  <ul class="docs-section__list">
+    <li>The inscription was made by the current owner of the parent name, or an approved delegate</li>
+    <li>The nonce strictly increases from the previous record for this subname</li>
+    <li>The record has not been revoked by a subsequent <code>subname_revoke</code> event</li>
+    <li>The record conforms to the parent namespace policy</li>
+    <li>The inscription is confirmed on-chain</li>
+  </ul>
+
+  <h3 class="docs-section__subtitle" style="margin-top:24px;">Supported ops</h3>
+  <table class="docs-table">
+    <thead><tr><th>Op</th><th>Status</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>subname_register</code></td><td><span class="phase-badge phase-badge--experimental">Experimental</span></td><td>Create a new subname</td></tr>
+      <tr><td><code>subname_update</code></td><td><span class="phase-badge phase-badge--experimental">Experimental</span></td><td>Update an existing subname's records</td></tr>
+      <tr><td><code>subname_revoke</code></td><td><span class="phase-badge phase-badge--experimental">Experimental</span></td><td>Revoke a subname record</td></tr>
+      <tr><td><code>delegate_add</code></td><td><span class="phase-badge phase-badge--experimental">Experimental</span></td><td>Authorize a manager wallet to update subnames</td></tr>
+      <tr><td><code>delegate_remove</code></td><td><span class="phase-badge phase-badge--experimental">Experimental</span></td><td>Remove a delegated manager</td></tr>
+      <tr><td><code>subname_transfer</code></td><td><span class="phase-badge phase-badge--coming-soon">Coming soon</span></td><td>Transfer subname ownership (requires policy)</td></tr>
+      <tr><td><code>subname_freeze</code></td><td><span class="phase-badge phase-badge--coming-soon">Coming soon</span></td><td>Freeze a subname (prevent further updates)</td></tr>
+    </tbody>
+  </table>
+
+  <h3 class="docs-section__subtitle" style="margin-top:24px;">GET /names/:name/subnames</h3>
+  <p class="docs-section__text">Returns all active subnames for a given parent name.</p>
+  <pre class="bnrp-code-block"><code>GET https://api.bnrp.name/v1/names/artist.btc/subnames
+
+Response:
+{
+  "name": "artist.btc",
+  "count": 3,
+  "subnames": [
+    {
+      "name": "shop.artist.btc",
+      "records": { "btc": "bc1p...", "website": "https://..." },
+      "status": "active",
+      "nonce": 1
+    }
+  ]
+}</code></pre>
+
+  <div style="margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;">
+    <a href="./subname-manager.html" class="btn btn--primary btn--sm">Open Subname Manager</a>
+    <a href="./bnrp.html#subnames" class="btn btn--ghost btn--sm">Protocol overview</a>
+  </div>
+</section>
+
         <!-- ── Contact ── -->
         <section class="docs-section" id="contact">
           <div class="docs-section__title">Contact</div>
@@ -529,6 +609,14 @@ Resolution chain:
           <a href="./explore.html?tab=listings" class="footer__link">Listings</a>
           <a href="./explore.html?tab=market" class="footer__link">Market Data</a>
           <a href="./bulk.html" class="footer__link">Bulk Search</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Subnames</div>
+        <div class="footer__links">
+          <a href="./subnames.html" class="footer__link">What Are Subnames?</a>
+          <a href="./subname-manager.html" class="footer__link">Subname Manager</a>
+          <a href="./namespace.html" class="footer__link">Event Tool</a>
         </div>
       </div>
       <div>
