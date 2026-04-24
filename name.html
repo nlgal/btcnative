@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    // Theme init — runs synchronously to prevent flash of wrong theme
+    (function(){var t=localStorage.getItem('btcn-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Name Profile — BTC Native</title>
@@ -27,7 +31,6 @@
   <link rel="icon" type="image/png" sizes="32x32" href="./icon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="./icon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
-  <link rel="preload" as="image" href="./logo-icon.svg">
   <meta name="theme-color" content="#0D0D0D">
 </head>
 <body>
@@ -36,7 +39,7 @@
   <div class="container">
     <div class="nav__inner">
       <a href="./index.html" class="nav__logo" aria-label="BTC Native home">
-        <img class="nav__logo-mark" src="./logo-source-gradient.png" alt="" aria-hidden="true" width="36" height="36" style="display:block;width:36px;height:36px;">
+        <picture><source srcset="./logo.webp" type="image/webp"><img class="nav__logo-mark" src="./logo-source-gradient.png" alt="" aria-hidden="true" width="36" height="36" style="display:block;width:36px;height:36px;"></picture>
         <span class="nav__logo-text">
           <span class="nav__logo-btc">BTC</span><span class="nav__logo-native">NATIVE</span>
         </span>
@@ -370,7 +373,7 @@
     <div class="footer__inner">
       <div>
         <a href="./index.html" class="footer__logo">
-          <img class="footer__logo-mark" src="./logo-source-gradient.png" alt="" aria-hidden="true" width="32" height="32" style="display:block;width:32px;height:32px;">
+          <picture><source srcset="./logo.webp" type="image/webp"><img class="footer__logo-mark" src="./logo-source-gradient.png" alt="" aria-hidden="true" width="32" height="32" style="display:block;width:32px;height:32px;"></picture>
           <div>
             <div class="footer__logo-btc">BTC</div>
             <div class="footer__logo-native">NATIVE</div>

@@ -32,26 +32,21 @@
   }
 
   async function resolveCandidate(name) {
+    // Proxied through worker — no API key in client
     try {
-      const base = (typeof UNISAT_API_KEY !== 'undefined')
-        ? 'https://open-api.unisat.io'
-        : null;
-      if (!base) return null;
-      const apiKey = (typeof UNISAT_API_KEY !== 'undefined') ? UNISAT_API_KEY : null;
-      if (!apiKey) return null;
-
       const tld = BTCNAME_TLDS.find(t => name.endsWith(t));
-      const domainType = tld ? tld.slice(1) : 'btc';
-      const label = tld ? name.slice(0, -tld.length) : name;
-
+      const domainType = tld || '.btc';
+      const MARKET = 'https://btcnative-market.galanin.workers.dev';
       const r = await fetch(
-        `https://open-api.unisat.io/v3/market/btcname/auction/info?domainType=${domainType}&domain=${encodeURIComponent(label)}`,
-        { headers: { Authorization: 'Bearer ' + apiKey }, signal: AbortSignal.timeout(4000) }
+        `${MARKET}/api/proxy/domain-types?domainType=${encodeURIComponent(domainType)}`,
+        { signal: AbortSignal.timeout(4000) }
       );
       if (!r.ok) return null;
       const d = await r.json();
-      if (d.code !== 0) return null;
-      return d.data || null;
+      if (d.code !== 0 || !d.data?.list) return null;
+      // Find the matching domainType entry
+      const entry = d.data.list.find(item => item.domainType === domainType.replace('.', ''));
+      return entry || null;
     } catch { return null; }
   }
 

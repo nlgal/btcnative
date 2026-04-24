@@ -778,6 +778,8 @@
 }
 @media (max-width: 768px) {
   .profile-layout { grid-template-columns: 1fr; }
+  .profile-main { order: -1; } /* listing panel above fold on mobile */
+  .profile-card { position: static; } /* remove sticky on mobile */
 }
 .profile-card {
   background: var(--color-surface);

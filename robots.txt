@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://btcnative.name/sitemap.xml
