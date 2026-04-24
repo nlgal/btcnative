@@ -11,7 +11,40 @@ const MARKET_API      = 'https://btcnative-market.galanin.workers.dev';  // all 
 // API key removed — all UniSat market calls now route through MARKET_API proxy (server-side key)
 const SUPPORTED_TLDS  = ['.btc', '.sats', '.x', '.ord', '.gm', '.xbt', '.sat', '.unisat', '.fb'];
 
-// ── BTC/USD price ─────────────────────────────────────────────────────────────
+// ── Points system client helpers ───────────────────────────────────────────────────
+function _ptsEvent(address, action, meta = {}) {
+  // Fire-and-forget. Never blocks UI. Never throws.
+  if (!address) return;
+  fetch(`${MARKET_API}/api/points/event`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ address, action, meta }),
+    signal: AbortSignal.timeout(8000),
+  }).catch(() => {});
+}
+
+// Persist referral code from URL so it survives wallet connect
+(function _initReferral() {
+  try {
+    const ref = new URLSearchParams(location.search).get('ref');
+    if (ref) sessionStorage.setItem('btcn_ref', ref.slice(0, 12));
+  } catch {}
+})();
+
+function _claimReferral(address) {
+  try {
+    const ref = sessionStorage.getItem('btcn_ref');
+    if (!ref || !address) return;
+    fetch(`${MARKET_API}/api/referral/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address, refCode: ref }),
+      signal: AbortSignal.timeout(6000),
+    }).catch(() => {});
+  } catch {}
+}
+
+// ── BTC/USD price ────────────────────────────────────────────────────────────────────
 let _btcUsd = null;
 async function getBtcUsd() {
   if (_btcUsd) return _btcUsd;
@@ -4012,6 +4045,11 @@ async function setNavWalletConnected(address) {
   btn.innerHTML = `<span class="nav__wallet-name">${shortAddr}</span>`;
   btn.classList.add('nav__wallet-btn--connected');
   _track('Wallet Connected');
+  // Points: fire-and-forget, never blocks connect flow
+  _ptsEvent(address, 'connect_wallet');
+  _claimReferral(address);
+  // Daily check-in on wallet connect (silent)
+  _ptsEvent(address, 'daily_checkin');
 
   // Async identity resolution — both calls get 15s timeouts
   // (BNRP worker makes multiple upstream calls; cold starts take 8-12s)

@@ -918,6 +918,11 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
         (txid ? `<div class="bn-modal__txid"><a href="https://mempool.space/tx/${txid}" target="_blank" rel="noopener">${txid}</a></div>` : '')
       );
       try { if (typeof window.plausible === 'function') window.plausible('Purchase Complete', { props: { name } }); } catch {}
+      // Points: purchase (fire-and-forget)
+      try {
+        const _buyerAddr = wallet._address || document.getElementById('navWalletBtn')?.dataset?.addr;
+        if (_buyerAddr && typeof _ptsEvent === 'function') _ptsEvent(_buyerAddr, 'purchase', { name, priceSats, txid });
+      } catch {}
       btn.textContent = 'Done';
       btn.style.background = '#22c55e';
       btn.style.color = '#fff';
