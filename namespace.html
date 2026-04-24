@@ -251,76 +251,357 @@
       height: 12px;
     }
 
-    /* Policy section */
-    .ns-policy-section {
+    /* ── Guide section ── */
+    .ns-guide-section {
       padding: 64px 0;
       border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
     }
-    .ns-policy-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-top: 28px;
+    .ns-guide-subtitle {
+      font-size: 15px;
+      color: var(--color-text-muted, #a09880);
+      line-height: 1.65;
+      max-width: 620px;
+      margin: 0 0 48px;
     }
-    .ns-policy-card {
-      background: var(--color-surface, rgba(255,255,255,0.04));
-      border: 1px solid var(--color-border, rgba(255,255,255,0.06));
-      border-radius: 12px;
-      padding: 22px;
+    .ns-guide-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      max-width: 720px;
     }
-    .ns-policy-card--recommended {
-      border-color: rgba(255, 138, 0, 0.25);
-      background: rgba(255, 138, 0, 0.04);
+    .ns-guide-step {
+      display: flex;
+      gap: 28px;
+      padding-bottom: 40px;
+      position: relative;
     }
-    .ns-policy-card__header {
+    .ns-guide-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 44px;
+      bottom: 0;
+      width: 2px;
+      background: var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-guide-step__num {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 138, 0, 0.12);
+      border: 2px solid rgba(255, 138, 0, 0.3);
+      color: var(--color-brand-orange, #FF8A00);
+      font-family: var(--font-display, 'Space Grotesk', sans-serif);
+      font-size: 16px;
+      font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
     }
-    .ns-policy-card__name {
-      font-weight: 600;
+    .ns-guide-step__content {
+      flex: 1;
+      padding-top: 8px;
+    }
+    .ns-guide-step__title {
+      font-family: var(--font-display, 'Space Grotesk', sans-serif);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--color-text, #f0ece4);
+      margin: 0 0 10px;
+    }
+    .ns-guide-step__body {
       font-size: 14px;
+      color: var(--color-text-muted, #a09880);
+      line-height: 1.7;
+      margin: 0;
+    }
+    .ns-guide-step__body p {
+      margin: 0 0 8px;
+    }
+    .ns-guide-step__body p:last-child {
+      margin-bottom: 0;
+    }
+    .ns-guide-step__body code {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 12px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 4px;
+      padding: 1px 5px;
       color: var(--color-text, #f0ece4);
     }
-    .ns-policy-card__desc {
+    .ns-guide-step__body a {
+      color: var(--color-brand-orange, #FF8A00);
+      text-decoration: none;
+    }
+    .ns-guide-step__body a:hover {
+      text-decoration: underline;
+    }
+    .ns-guide-note {
+      margin-top: 32px;
+      padding: 14px 16px;
+      background: rgba(255, 138, 0, 0.05);
+      border: 1px solid rgba(255, 138, 0, 0.15);
+      border-left: 3px solid var(--color-brand-orange, #FF8A00);
+      border-radius: 8px;
       font-size: 13px;
       color: var(--color-text-muted, #a09880);
       line-height: 1.6;
-      margin: 0;
+      max-width: 720px;
     }
-    .ns-policy-badge {
+    .ns-guide-note a {
+      color: var(--color-brand-orange, #FF8A00);
+      text-decoration: none;
+    }
+    .ns-guide-note a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── Event tool section ── */
+    .ns-event-tool-section {
+      padding: 64px 0;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-event-tool-subtitle {
+      font-size: 15px;
+      color: var(--color-text-muted, #a09880);
+      line-height: 1.65;
+      max-width: 620px;
+      margin: 0 0 32px;
+    }
+
+    /* Op tabs */
+    .ns-op-tabs {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.08));
+      padding-bottom: 0;
+    }
+    .ns-op-tab {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 9px 14px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      color: var(--color-text-faint, #6a6050);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      margin-bottom: -1px;
+      letter-spacing: 0.01em;
+    }
+    .ns-op-tab:hover {
+      color: var(--color-text-muted, #a09880);
+    }
+    .ns-op-tab--active {
+      color: var(--color-brand-orange, #FF8A00);
+      border-bottom-color: var(--color-brand-orange, #FF8A00);
+    }
+
+    /* Tool layout */
+    .ns-tool-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+    @media (max-width: 800px) {
+      .ns-tool-layout { grid-template-columns: 1fr; }
+    }
+    .ns-tool-form-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Shared fields header */
+    .ns-shared-fields {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-shared-fields-label {
       font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.05em;
       text-transform: uppercase;
-      padding: 2px 8px;
-      border-radius: 20px;
-      background: rgba(255,255,255,0.06);
-      color: var(--color-text-muted, #a09880);
-      border: 1px solid rgba(255,255,255,0.08);
+      letter-spacing: 0.07em;
+      color: var(--color-text-faint, #6a6050);
+      margin-bottom: 14px;
     }
-    .ns-policy-badge--recommended {
-      background: rgba(255, 138, 0, 0.12);
-      color: var(--color-brand-orange, #FF8A00);
-      border-color: rgba(255, 138, 0, 0.25);
+
+    /* Op panel */
+    .ns-op-panel {
+      display: none;
     }
-    .ns-policy-warning {
+    .ns-op-panel--active {
+      display: block;
+    }
+    .ns-op-note {
+      font-size: 12px;
+      color: var(--color-text-faint, #6a6050);
+      line-height: 1.6;
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+    .ns-op-warning {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      margin-top: 24px;
-      padding: 14px 16px;
-      background: rgba(255, 170, 0, 0.06);
-      border: 1px solid rgba(255, 170, 0, 0.18);
-      border-radius: 10px;
-      font-size: 13px;
-      color: #d4a040;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(255, 138, 0, 0.05);
+      border: 1px solid rgba(255, 138, 0, 0.2);
+      border-left: 3px solid var(--color-brand-orange, #FF8A00);
+      border-radius: 8px;
+      font-size: 12px;
+      color: #c89030;
       line-height: 1.55;
     }
-    .ns-policy-warning svg {
+    .ns-op-warning svg {
       flex-shrink: 0;
       margin-top: 1px;
+    }
+
+    /* Form elements */
+    .ns-form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .ns-form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted, #a09880);
+      letter-spacing: 0.03em;
+    }
+    .ns-form-required {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-brand-orange, #FF8A00);
+      margin-left: 4px;
+    }
+    .ns-form-optional {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-faint, #6a6050);
+      margin-left: 4px;
+    }
+    .ns-form-input {
+      padding: 10px 14px;
+      font-size: 13px;
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      background: var(--color-surface, rgba(255,255,255,0.04));
+      border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+      border-radius: 8px;
+      color: var(--color-text, #f0ece4);
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .ns-form-input:focus {
+      border-color: var(--color-brand-orange, #FF8A00);
+    }
+    .ns-form-input::placeholder {
+      color: var(--color-text-faint, #6a6050);
+    }
+    .ns-nonce-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+    .ns-nonce-row .ns-form-input {
+      flex: 1;
+    }
+    .ns-fetch-btn {
+      padding: 0 14px;
+      background: rgba(255, 138, 0, 0.1);
+      border: 1px solid rgba(255, 138, 0, 0.25);
+      border-radius: 8px;
+      color: var(--color-brand-orange, #FF8A00);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ns-fetch-btn:hover {
+      background: rgba(255, 138, 0, 0.18);
+    }
+    .ns-fetch-status {
+      font-size: 11px;
+      color: var(--color-text-faint, #6a6050);
+      min-height: 16px;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+    .ns-fetch-status--error {
+      color: #d06060;
+    }
+    .ns-fetch-status--ok {
+      color: #3ecf6e;
+    }
+
+    /* JSON output */
+    .ns-json-output {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      border-radius: 12px;
+      padding: 20px;
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 12px;
+      color: var(--color-text-muted, #a09880);
+      line-height: 1.65;
+      white-space: pre;
+      overflow-x: auto;
+      min-height: 200px;
+    }
+    .ns-json-output-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-text-faint, #6a6050);
+      margin-bottom: 10px;
+    }
+    .ns-json-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .ns-json-inscribe-note {
+      font-size: 11px;
+      color: var(--color-text-faint, #6a6050);
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+    .ns-json-inscribe-note code {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 11px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+    .ns-label-warn {
+      font-size: 11px;
+      color: #c89030;
+      margin-top: 4px;
+    }
+    .ns-label-warn--error {
+      color: #d06060;
     }
 
     /* Dashboard section */
@@ -429,44 +710,124 @@
       color: var(--color-text, #f0ece4);
       font-family: var(--font-mono, 'JetBrains Mono', monospace);
     }
-    .ns-dash-records {
-      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
-      padding-top: 16px;
-      margin-bottom: 20px;
-    }
-    .ns-dash-records__title {
+    .ns-dash-section-title {
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--color-text-faint, #6a6050);
       margin-bottom: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-subname-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.04));
+    }
+    .ns-subname-item:last-child {
+      border-bottom: none;
+    }
+    .ns-subname-item__name {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 13px;
+      color: var(--color-brand-orange, #FF8A00);
+      flex: 1;
+    }
+    .ns-subname-item__owner {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 11px;
+      color: var(--color-text-faint, #6a6050);
+    }
+    .ns-history-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.04));
+      flex-wrap: wrap;
+    }
+    .ns-history-item:last-child {
+      border-bottom: none;
+    }
+    .ns-history-item__id {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 11px;
+      color: var(--color-brand-orange, #FF8A00);
+      text-decoration: none;
+      flex: 1;
+      min-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ns-history-item__id:hover {
+      text-decoration: underline;
+    }
+    .ns-history-item__op {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 11px;
+      color: var(--color-text-muted, #a09880);
+      white-space: nowrap;
+    }
+    .ns-history-item__nonce {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 11px;
+      color: var(--color-text-faint, #6a6050);
+    }
+    .ns-history-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 20px;
+    }
+    .ns-history-badge--active {
+      background: rgba(30, 200, 100, 0.1);
+      color: #3ecf6e;
+      border: 1px solid rgba(30, 200, 100, 0.2);
+    }
+    .ns-history-badge--superseded,
+    .ns-history-badge--revoked {
+      background: rgba(255, 138, 0, 0.1);
+      color: var(--color-brand-orange, #FF8A00);
+      border: 1px solid rgba(255, 138, 0, 0.2);
+    }
+    .ns-history-badge--invalid {
+      background: rgba(220, 60, 60, 0.08);
+      color: #d06060;
+      border: 1px solid rgba(220, 60, 60, 0.18);
+    }
+    .ns-dash-show-all-btn {
+      background: none;
+      border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+      border-radius: 6px;
+      color: var(--color-text-muted, #a09880);
+      font-size: 12px;
+      padding: 5px 12px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: border-color 0.15s;
+    }
+    .ns-dash-show-all-btn:hover {
+      border-color: rgba(255,255,255,0.2);
     }
     .ns-dash-actions {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
-      margin-bottom: 16px;
-      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      margin-top: 20px;
       padding-top: 16px;
-    }
-    .ns-coming-soon {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      background: rgba(255,255,255,0.06);
-      border-radius: 4px;
-      padding: 1px 5px;
-      margin-left: 4px;
-      color: var(--color-text-faint, #6a6050);
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
     }
     .ns-dash-disclaimer {
       font-size: 11px;
       color: var(--color-text-faint, #6a6050);
       line-height: 1.6;
-      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
-      padding-top: 12px;
+      margin-top: 12px;
     }
     .ns-dash-loading {
       display: flex;
@@ -483,117 +844,76 @@
       animation: ns-spin 1.2s linear infinite;
     }
 
-    /* Event section */
-    .ns-event-section {
+    /* Policy section */
+    .ns-policy-section {
       padding: 64px 0;
       border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
     }
-    .ns-event-header {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
+    .ns-policy-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 28px;
     }
-    .ns-event-form {
-      margin-top: 24px;
-      max-width: 580px;
-    }
-    .ns-form-row {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 14px;
-    }
-    .ns-form-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--color-text-muted, #a09880);
-      letter-spacing: 0.03em;
-    }
-    .ns-form-required {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--color-brand-orange, #FF8A00);
-      margin-left: 4px;
-    }
-    .ns-form-optional {
-      font-size: 10px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--color-text-faint, #6a6050);
-      margin-left: 4px;
-    }
-    .ns-form-input {
-      padding: 10px 14px;
-      font-size: 13px;
-      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    .ns-policy-card {
       background: var(--color-surface, rgba(255,255,255,0.04));
-      border: 1px solid var(--color-border, rgba(255,255,255,0.1));
-      border-radius: 8px;
-      color: var(--color-text, #f0ece4);
-      outline: none;
-      transition: border-color 0.15s;
+      border: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      border-radius: 12px;
+      padding: 22px;
     }
-    .ns-form-input:focus {
-      border-color: var(--color-brand-orange, #FF8A00);
+    .ns-policy-card--recommended {
+      border-color: rgba(255, 138, 0, 0.25);
+      background: rgba(255, 138, 0, 0.04);
     }
-    .ns-form-input::placeholder {
-      color: var(--color-text-faint, #6a6050);
-    }
-    .ns-form-preview-name {
-      font-family: var(--font-mono, 'JetBrains Mono', monospace);
-      font-size: 12px;
-      color: var(--color-brand-orange, #FF8A00);
-      margin-top: 4px;
-    }
-    .ns-event-preview-header {
+    .ns-policy-card__header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
+      gap: 10px;
+      margin-bottom: 12px;
     }
-    .ns-event-preview-label {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--color-text-faint, #6a6050);
+    .ns-policy-card__name {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--color-text, #f0ece4);
     }
-    .ns-event-json {
-      font-family: var(--font-mono, 'JetBrains Mono', monospace);
-      font-size: 12px;
+    .ns-policy-card__desc {
+      font-size: 13px;
       color: var(--color-text-muted, #a09880);
-      background: var(--color-surface, rgba(0,0,0,0.25));
-      border: 1px solid var(--color-border, rgba(255,255,255,0.06));
-      border-radius: 10px;
-      padding: 20px;
-      overflow-x: auto;
       line-height: 1.6;
-      white-space: pre;
+      margin: 0;
     }
-    .ns-event-note {
-      font-size: 12px;
-      color: var(--color-text-faint, #6a6050);
-      margin-top: 12px;
-      line-height: 1.6;
-    }
-    .ns-event-note a {
-      color: var(--color-brand-orange, #FF8A00);
-      text-decoration: none;
-    }
-    .ns-event-note a:hover {
-      text-decoration: underline;
-    }
-    .ns-event-note code {
-      font-family: var(--font-mono, 'JetBrains Mono', monospace);
-      font-size: 11px;
+    .ns-policy-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 20px;
       background: rgba(255,255,255,0.06);
-      border-radius: 4px;
-      padding: 1px 5px;
+      color: var(--color-text-muted, #a09880);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .ns-policy-badge--recommended {
+      background: rgba(255, 138, 0, 0.12);
+      color: var(--color-brand-orange, #FF8A00);
+      border-color: rgba(255, 138, 0, 0.25);
+    }
+    .ns-policy-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 24px;
+      padding: 14px 16px;
+      background: rgba(255, 170, 0, 0.06);
+      border: 1px solid rgba(255, 170, 0, 0.18);
+      border-radius: 10px;
+      font-size: 13px;
+      color: #d4a040;
+      line-height: 1.55;
+    }
+    .ns-policy-warning svg {
+      flex-shrink: 0;
+      margin-top: 1px;
     }
 
     /* Trust section */
@@ -635,7 +955,7 @@
       margin: 0;
     }
 
-    /* Resolver status badges (reused from style.css pattern) */
+    /* Resolver status badges */
     .resolver-status {
       display: inline-flex;
       align-items: center;
@@ -663,7 +983,7 @@
       border: 1px solid rgba(255,255,255,0.08);
     }
 
-    /* Trust warning (matches style.css) */
+    /* Trust warning */
     .trust-warning {
       display: flex;
       align-items: flex-start;
@@ -759,7 +1079,7 @@
   <div class="container">
     <h2 class="ns-section-title">What is a namespace?</h2>
     <p class="ns-section-body">A namespace is a name that can organize other names beneath it. If you own artist.btc, you could create records like shop.artist.btc, vault.artist.btc, or prints.artist.btc. Each subname can point to its own address, avatar, inscription, website, or identity record.</p>
-    <p class="ns-section-body">On Bitcoin, these records are Bitcoin-native — not smart-contract subdomains. Each record is anchored to Bitcoin L1 through an inscription or Bitcoin-native record event, and resolved through BNRP.</p>
+    <p class="ns-section-body">On Bitcoin, these records are Bitcoin-native, not smart-contract subdomains. Each record is anchored to Bitcoin L1 through an inscription or Bitcoin-native record event, and resolved through BNRP.</p>
 
     <div class="ns-concept-cards">
       <div class="ns-concept-card">
@@ -774,7 +1094,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h6l3 18 3-8h6"/></svg>
         </div>
         <div class="ns-concept-card__title">Provenance tree</div>
-        <p class="ns-concept-card__body">Subnames can carry records, ownership history, inscription links, and verification data — all traceable to the Bitcoin root.</p>
+        <p class="ns-concept-card__body">Subnames can carry records, ownership history, inscription links, and verification data, all traceable to the Bitcoin root.</p>
       </div>
       <div class="ns-concept-card">
         <div class="ns-concept-card__icon">
@@ -855,7 +1175,290 @@
   </div>
 </section>
 
-<!-- ── SECTION 4: Namespace policy ── -->
+<!-- ── SECTION 4: Guide ── -->
+<section class="ns-guide-section" id="guide">
+  <div class="container">
+    <h2 class="ns-section-title">How to inscribe a namespace record</h2>
+    <p class="ns-guide-subtitle">Every BNRP namespace operation is a Bitcoin inscription. You own the key. You control the namespace.</p>
+
+    <div class="ns-guide-steps">
+
+      <div class="ns-guide-step">
+        <div class="ns-guide-step__num" aria-hidden="true">1</div>
+        <div class="ns-guide-step__content">
+          <h3 class="ns-guide-step__title">Own the root name</h3>
+          <div class="ns-guide-step__body">
+            <p>You must own the Bitcoin name inscription (e.g. artist.btc) in a wallet that can inscribe. UniSat wallet supports this.</p>
+            <p>The inscription must be in the wallet you will inscribe from. BNRP validates ownership by checking the current holder of the name inscription.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ns-guide-step">
+        <div class="ns-guide-step__num" aria-hidden="true">2</div>
+        <div class="ns-guide-step__content">
+          <h3 class="ns-guide-step__title">Build the event JSON</h3>
+          <div class="ns-guide-step__body">
+            <p>Use the tool below to generate the correct BNRP event JSON for your operation (register a subname, update records, revoke, or delegate).</p>
+            <p>Every event must include: <code>p: "bnrp"</code>, <code>op</code>, <code>name</code> (your root name), <code>nonce</code> (must be higher than your last accepted nonce), and <code>v: 1</code>.</p>
+            <p>The nonce must strictly increase. Use the "Fetch nonce" button in the tool to pull your current nonce from the live BNRP resolver.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ns-guide-step">
+        <div class="ns-guide-step__num" aria-hidden="true">3</div>
+        <div class="ns-guide-step__content">
+          <h3 class="ns-guide-step__title">Inscribe on Bitcoin</h3>
+          <div class="ns-guide-step__body">
+            <p>Go to <a href="https://unisat.io/inscribe" target="_blank" rel="noopener">UniSat Inscribe</a>. Select "Text" mode.</p>
+            <p>Paste your BNRP event JSON exactly as generated.</p>
+            <p>Set content-type to <code>application/json</code>.</p>
+            <p>Inscribe from the wallet that holds your root name.</p>
+            <p>After confirmation (1-2 blocks), the BNRP indexer will pick it up automatically.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ns-guide-step">
+        <div class="ns-guide-step__num" aria-hidden="true">4</div>
+        <div class="ns-guide-step__content">
+          <h3 class="ns-guide-step__title">Verify</h3>
+          <div class="ns-guide-step__body">
+            <p>Use the namespace dashboard on this page or call <code>GET https://api.bnrp.name/v1/names/yourname.btc/namespace</code> to confirm the record was indexed.</p>
+            <p>The <code>/history</code> endpoint shows all events. The <code>/current-record</code> endpoint shows the latest valid state.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ns-guide-note">
+      BNRP does not hold your keys. Records are on Bitcoin. You can verify any record by looking up the inscription on <a href="https://ordinals.com" target="_blank" rel="noopener">ordinals.com</a>.
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 5: Event tool ── -->
+<section class="ns-event-tool-section" id="event-tool">
+  <div class="container">
+    <h2 class="ns-section-title">Build a BNRP event</h2>
+    <p class="ns-event-tool-subtitle">Select an operation, fill the fields, and copy the ready-to-inscribe JSON.</p>
+
+    <!-- Op tabs -->
+    <div class="ns-op-tabs" role="tablist" aria-label="BNRP operation type">
+      <button class="ns-op-tab ns-op-tab--active" role="tab" aria-selected="true" onclick="switchOpTab('subname_register')">subname_register</button>
+      <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('subname_update')">subname_update</button>
+      <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('subname_revoke')">subname_revoke</button>
+      <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('delegate')">delegate</button>
+      <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('delegate_revoke')">delegate_revoke</button>
+    </div>
+
+    <div class="ns-tool-layout">
+      <!-- Left: form -->
+      <div class="ns-tool-form-panel">
+
+        <!-- Shared fields -->
+        <div class="ns-shared-fields">
+          <div class="ns-shared-fields-label">Shared fields</div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolRootName">Root name <span class="ns-form-required">required</span></label>
+            <input type="text" id="toolRootName" class="ns-form-input" placeholder="artist.btc" autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
+          </div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolNonce">Nonce <span class="ns-form-required">required</span></label>
+            <div class="ns-nonce-row">
+              <input type="number" id="toolNonce" class="ns-form-input" min="1" value="1" placeholder="1" oninput="buildEventJson()" />
+              <button class="ns-fetch-btn" id="toolFetchNonce" onclick="fetchNonce()">
+                <span id="toolFetchNonceSpinner" style="display:none;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ns-spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6"/></svg>
+                </span>
+                Fetch nonce
+              </button>
+            </div>
+            <div class="ns-fetch-status" id="toolFetchStatus"></div>
+          </div>
+        </div>
+
+        <!-- Op: subname_register -->
+        <div class="ns-op-panel ns-op-panel--active" id="panel-subname_register">
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolSubLabel">Subname label <span class="ns-form-required">required</span></label>
+            <input type="text" id="toolSubLabel" class="ns-form-input" placeholder="shop" autocomplete="off" spellcheck="false" maxlength="32" oninput="buildEventJson(); checkLabel(this.value)" />
+            <div class="ns-label-warn" id="toolSubLabelWarn" style="display:none;"></div>
+          </div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolSubOwner">Owner address <span class="ns-form-required">required</span></label>
+            <input type="text" id="toolSubOwner" class="ns-form-input" placeholder="bc1p..." autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
+          </div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolSubBtc">BTC address <span class="ns-form-optional">optional</span></label>
+            <input type="text" id="toolSubBtc" class="ns-form-input" placeholder="bc1p..." autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
+          </div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolSubWebsite">Website <span class="ns-form-optional">optional</span></label>
+            <input type="url" id="toolSubWebsite" class="ns-form-input" placeholder="https://example.com" oninput="buildEventJson()" />
+          </div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolSubDesc">Description <span class="ns-form-optional">optional</span></label>
+            <input type="text" id="toolSubDesc" class="ns-form-input" placeholder="Description..." maxlength="160" oninput="buildEventJson()" />
+          </div>
+        </div>
+
+        <!-- Op: subname_update -->
+        <div class="ns-op-panel" id="panel-subname_update">
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolUpdLabel">Subname label <span class="ns-form-required">required</span></label>
+            <input type="text" id="toolUpdLabel" class="ns-form-input" placeholder="shop" autocomplete="off" spellcheck="false" maxlength="32" oninput="buildEventJson(); checkLabel(this.value)" />
+            <div class="ns-label-warn" id="toolUpdLabelWarn" style="display:none;"></div>
+          </div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolUpdBtc">BTC address <span class="ns-form-optional">optional</span></label>
+            <input type="text" id="toolUpdBtc" class="ns-form-input" placeholder="bc1p..." autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
+          </div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolUpdWebsite">Website <span class="ns-form-optional">optional</span></label>
+            <input type="url" id="toolUpdWebsite" class="ns-form-input" placeholder="https://example.com" oninput="buildEventJson()" />
+          </div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolUpdDesc">Description <span class="ns-form-optional">optional</span></label>
+            <input type="text" id="toolUpdDesc" class="ns-form-input" placeholder="Description..." maxlength="160" oninput="buildEventJson()" />
+          </div>
+          <p class="ns-op-note">subname_update changes the records for an existing subname. It does not change the owner.</p>
+        </div>
+
+        <!-- Op: subname_revoke -->
+        <div class="ns-op-panel" id="panel-subname_revoke">
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolRevLabel">Subname label <span class="ns-form-required">required</span></label>
+            <input type="text" id="toolRevLabel" class="ns-form-input" placeholder="shop" autocomplete="off" spellcheck="false" maxlength="32" oninput="buildEventJson(); checkLabel(this.value)" />
+            <div class="ns-label-warn" id="toolRevLabelWarn" style="display:none;"></div>
+          </div>
+          <div class="ns-op-warning">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Revoking a subname removes it from the active namespace. The inscription remains on Bitcoin permanently, but BNRP will mark this subname as revoked.
+          </div>
+        </div>
+
+        <!-- Op: delegate -->
+        <div class="ns-op-panel" id="panel-delegate">
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolDelAddr">Delegate address <span class="ns-form-required">required</span></label>
+            <input type="text" id="toolDelAddr" class="ns-form-input" placeholder="bc1p..." autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
+          </div>
+          <p class="ns-op-note">A delegate can register and revoke subnames on your behalf. They cannot transfer your root name. Delegate rights are tied to this address until you inscribe a delegate_revoke event.</p>
+        </div>
+
+        <!-- Op: delegate_revoke -->
+        <div class="ns-op-panel" id="panel-delegate_revoke">
+          <p class="ns-op-note">This removes the currently active delegate. The delegate_revoke event must be inscribed from the wallet holding the root name.</p>
+        </div>
+
+      </div>
+
+      <!-- Right: JSON output -->
+      <div>
+        <div class="ns-json-output-label">JSON output (live preview)</div>
+        <pre class="ns-json-output" id="toolJsonOutput">{
+  "p": "bnrp",
+  "op": "subname_register",
+  "name": "",
+  "sub": "",
+  "to": "",
+  "nonce": 1,
+  "v": 1
+}</pre>
+        <div class="ns-json-actions">
+          <button class="btn btn--primary btn--sm" id="toolCopyBtn" onclick="copyEventJson()">Copy JSON</button>
+          <a href="https://unisat.io/inscribe" target="_blank" rel="noopener" class="btn btn--outline btn--sm">Open UniSat Inscribe</a>
+        </div>
+        <p class="ns-json-inscribe-note">Inscribe this JSON with content-type <code>application/json</code> from the wallet that holds your root name.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 6: Namespace dashboard ── -->
+<section class="ns-dashboard-section" id="dashboard">
+  <div class="container">
+    <div class="ns-dashboard-header">
+      <h2 class="ns-section-title">Namespace dashboard</h2>
+    </div>
+    <p class="ns-section-body">Enter a name to see its namespace status, active subnames, and event history.</p>
+
+    <div class="ns-dashboard-search">
+      <input type="text" id="nsDashInput" class="ns-dash-input" placeholder="artist.btc" autocomplete="off" spellcheck="false" maxlength="64" />
+      <button class="btn btn--primary" id="nsDashBtn" onclick="loadNamespaceDashboard()">Check namespace</button>
+    </div>
+
+    <div id="nsDashLoading" style="display:none;" class="ns-dash-loading">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ns-spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Resolving via BNRP...
+    </div>
+
+    <div id="nsDashError" style="display:none;margin-top:20px;" class="trust-warning trust-warning--warn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="nsDashErrorMsg">Resolver unavailable. Could not reach BNRP. Try again.</span>
+    </div>
+
+    <div id="nsDashResult" style="display:none;margin-top:24px;">
+      <div class="ns-dash-card">
+        <div class="ns-dash-card__header">
+          <div>
+            <div class="ns-dash-name" id="nsDashName"></div>
+            <div class="ns-dash-meta" id="nsDashMeta"></div>
+          </div>
+          <div class="ns-dash-badges" id="nsDashBadges"></div>
+        </div>
+
+        <div class="ns-dash-grid">
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Owner</span>
+            <span class="ns-dash-field__value" id="nsDashOwner">-</span>
+          </div>
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Policy</span>
+            <span class="ns-dash-field__value" id="nsDashPolicy">-</span>
+          </div>
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Delegate</span>
+            <span class="ns-dash-field__value" id="nsDashDelegate">-</span>
+          </div>
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Subname count</span>
+            <span class="ns-dash-field__value" id="nsDashSubnameCount">-</span>
+          </div>
+        </div>
+
+        <!-- Subnames list -->
+        <div id="nsDashSubnamesSection" style="display:none;">
+          <div class="ns-dash-section-title">Active subnames</div>
+          <div id="nsDashSubnamesList"></div>
+        </div>
+
+        <!-- History -->
+        <div id="nsDashHistorySection" style="display:none;">
+          <div class="ns-dash-section-title">Event history</div>
+          <div id="nsDashHistoryList"></div>
+          <div id="nsDashHistoryMore" style="display:none;">
+            <button class="ns-dash-show-all-btn" onclick="toggleHistory()">Show all events</button>
+          </div>
+        </div>
+
+        <div class="ns-dash-actions">
+          <a href="#" id="nsDashViewProfile" class="btn btn--outline btn--sm">View full profile</a>
+          <button class="btn btn--ghost btn--sm" onclick="useInTool(document.getElementById('nsDashName').textContent)">Use in event tool</button>
+        </div>
+
+        <div class="ns-dash-disclaimer">
+          Always verify ownership, resolver status, and policy before relying on a name or subname. BNRP indexes inscription events on Bitcoin and does not hold keys.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 7: Policy explanation ── -->
 <section class="ns-policy-section">
   <div class="container">
     <h2 class="ns-section-title">Namespace policy</h2>
@@ -892,143 +1495,7 @@
   </div>
 </section>
 
-<!-- ── SECTION 5: Namespace dashboard ── -->
-<section class="ns-dashboard-section">
-  <div class="container">
-    <div class="ns-dashboard-header">
-      <h2 class="ns-section-title">Namespace dashboard</h2>
-      <span class="ns-phase-badge ns-phase-badge--prototype">Phase 1 · Read-only prototype</span>
-    </div>
-    <p class="ns-section-body">Enter a name to see its namespace status, resolver health, and record state. Subname management is a roadmap feature.</p>
-
-    <div class="ns-dashboard-search">
-      <input type="text" id="nsDashInput" class="ns-dash-input" placeholder="artist.btc" autocomplete="off" spellcheck="false" maxlength="64" />
-      <button class="btn btn--primary" id="nsDashBtn" onclick="loadNamespaceDashboard()">Check namespace</button>
-    </div>
-
-    <div id="nsDashResult" style="display:none;margin-top:24px;">
-      <div class="ns-dash-card">
-        <div class="ns-dash-card__header">
-          <div>
-            <div class="ns-dash-name" id="nsDashName">—</div>
-            <div class="ns-dash-meta" id="nsDashMeta"></div>
-          </div>
-          <div class="ns-dash-badges" id="nsDashBadges"></div>
-        </div>
-
-        <div class="ns-dash-grid">
-          <div class="ns-dash-field">
-            <span class="ns-dash-field__label">Owner</span>
-            <span class="ns-dash-field__value" id="nsDashOwner">—</span>
-          </div>
-          <div class="ns-dash-field">
-            <span class="ns-dash-field__label">Resolver status</span>
-            <span class="ns-dash-field__value" id="nsDashResolverStatus">—</span>
-          </div>
-          <div class="ns-dash-field">
-            <span class="ns-dash-field__label">Namespace</span>
-            <span class="ns-dash-field__value" id="nsDashNsStatus">—</span>
-          </div>
-          <div class="ns-dash-field">
-            <span class="ns-dash-field__label">Policy</span>
-            <span class="ns-dash-field__value" id="nsDashPolicy">—</span>
-          </div>
-          <div class="ns-dash-field">
-            <span class="ns-dash-field__label">Provenance source</span>
-            <span class="ns-dash-field__value" id="nsDashProvenance">—</span>
-          </div>
-          <div class="ns-dash-field">
-            <span class="ns-dash-field__label">Last verified</span>
-            <span class="ns-dash-field__value" id="nsDashVerified">—</span>
-          </div>
-        </div>
-
-        <div class="ns-dash-records" id="nsDashRecords" style="display:none;">
-          <div class="ns-dash-records__title">BNRP records</div>
-          <div id="nsDashRecordsList"></div>
-        </div>
-
-        <div class="ns-dash-actions">
-          <a href="#" id="nsDashViewProfile" class="btn btn--outline btn--sm">View profile</a>
-          <button class="btn btn--ghost btn--sm" disabled title="Subname creation is a roadmap feature">Create subname <span class="ns-coming-soon">roadmap</span></button>
-          <button class="btn btn--ghost btn--sm" disabled title="Record history indexing is a roadmap feature">Record history <span class="ns-coming-soon">roadmap</span></button>
-        </div>
-
-        <div class="ns-dash-disclaimer">
-          BTCNative namespace and record features may depend on BNRP indexing, Bitcoin-native records, and supported resolver sources. Always verify ownership, resolver status, record history, and policy before relying on a name or subname.
-        </div>
-      </div>
-    </div>
-
-    <div id="nsDashLoading" style="display:none;" class="ns-dash-loading">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ns-spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      Resolving via BNRP...
-    </div>
-
-    <div id="nsDashError" style="display:none;" class="trust-warning trust-warning--warn">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span id="nsDashErrorMsg">Resolver unavailable. Could not reach BNRP. Try again.</span>
-    </div>
-  </div>
-</section>
-
-<!-- ── SECTION 6: BNRP event preview ── -->
-<section class="ns-event-section">
-  <div class="container">
-    <div class="ns-event-header">
-      <h2 class="ns-section-title">BNRP event preview</h2>
-      <span class="ns-phase-badge ns-phase-badge--prototype">Phase 1 · Prototype</span>
-    </div>
-    <p class="ns-section-body">Generate a BNRP subname registration event. This tool creates the JSON payload for a subname record. On-chain inscription is not yet implemented — use "Generate BNRP event" to produce the JSON for review.</p>
-
-    <div class="ns-event-form">
-      <div class="ns-form-row">
-        <label class="ns-form-label">Parent name <span class="ns-form-required">required</span></label>
-        <input type="text" id="nsParent" class="ns-form-input" placeholder="artist.btc" oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" />
-      </div>
-      <div class="ns-form-row">
-        <label class="ns-form-label">Subname label <span class="ns-form-required">required</span></label>
-        <input type="text" id="nsLabel" class="ns-form-input" placeholder="shop" oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" maxlength="32" />
-        <div class="ns-form-preview-name" id="nsFullNamePreview" style="display:none;"></div>
-      </div>
-      <div class="ns-form-row">
-        <label class="ns-form-label">Owner address <span class="ns-form-optional">optional</span></label>
-        <input type="text" id="nsOwner" class="ns-form-input" placeholder="bc1p..." oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" />
-      </div>
-      <div class="ns-form-row">
-        <label class="ns-form-label">BTC address <span class="ns-form-optional">optional</span></label>
-        <input type="text" id="nsBtc" class="ns-form-input" placeholder="bc1p..." oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" />
-      </div>
-      <div class="ns-form-row">
-        <label class="ns-form-label">Website <span class="ns-form-optional">optional</span></label>
-        <input type="url" id="nsWebsite" class="ns-form-input" placeholder="https://example.com" oninput="nsUpdatePreview()" />
-      </div>
-      <div class="ns-form-row">
-        <label class="ns-form-label">Avatar inscription ID <span class="ns-form-optional">optional</span></label>
-        <input type="text" id="nsAvatar" class="ns-form-input" placeholder="abc123...i0" oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" maxlength="90" />
-      </div>
-      <div class="ns-form-row">
-        <label class="ns-form-label">Description <span class="ns-form-optional">optional</span></label>
-        <input type="text" id="nsDesc" class="ns-form-input" placeholder="Description..." oninput="nsUpdatePreview()" maxlength="160" />
-      </div>
-
-      <div id="nsFormWarnings" style="display:none;margin-top:12px;"></div>
-
-      <button class="btn btn--primary" style="margin-top:16px;" onclick="nsGenerateEvent()">Generate BNRP event</button>
-    </div>
-
-    <div id="nsEventPreview" style="display:none;margin-top:20px;">
-      <div class="ns-event-preview-header">
-        <span class="ns-event-preview-label">BNRP event JSON</span>
-        <button class="btn btn--ghost btn--sm" onclick="nsCopyEvent()">Copy</button>
-      </div>
-      <pre class="ns-event-json" id="nsEventJson"></pre>
-      <p class="ns-event-note">This JSON is the BNRP event payload. To inscribe on Bitcoin, use <a href="https://unisat.io/inscribe" target="_blank" rel="noopener">UniSat</a> or <a href="https://ordinals.com" target="_blank" rel="noopener">ord</a> with content-type <code>application/json</code>. On-chain inscription from BTCNative is a future feature.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ── SECTION 7: Trust warnings ── -->
+<!-- ── SECTION 8: Trust warnings ── -->
 <section class="ns-trust-section">
   <div class="container">
     <h2 class="ns-section-title">Trust and verification</h2>
@@ -1132,7 +1599,7 @@
 <script defer src="./app.js"></script>
 
 <script>
-// ── Theme init ───────────────────────────────────────────────────────────
+// ── Theme init ─────────────────────────────────────────────────────────────
 (function() {
   const saved = localStorage.getItem('btcn-theme');
   if (saved) document.documentElement.setAttribute('data-theme', saved);
@@ -1147,185 +1614,414 @@ if (themeBtn) themeBtn.addEventListener('click', () => {
 </script>
 
 <script>
-// ── Namespace dashboard ──────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────
 const BNRP_API = 'https://api.bnrp.name/v1';
 
-async function loadNamespaceDashboard() {
-  const input = document.getElementById('nsDashInput');
-  const name = (input && input.value.trim()) || '';
-  if (!name) return;
+const FAMOUS_NAMES = new Set([
+  'satoshi','bitcoin','trump','musk','vitalik','coinbase','binance','apple','google','ordinals'
+]);
 
-  const result = document.getElementById('nsDashResult');
-  const loading = document.getElementById('nsDashLoading');
-  const error = document.getElementById('nsDashError');
-  const errorMsg = document.getElementById('nsDashErrorMsg');
+// ── Op tab state ───────────────────────────────────────────────────────────
+let currentOp = 'subname_register';
 
-  if (result) result.style.display = 'none';
-  if (error) error.style.display = 'none';
-  if (loading) loading.style.display = 'flex';
+function switchOpTab(op) {
+  currentOp = op;
+  // Update tab active states
+  document.querySelectorAll('.ns-op-tab').forEach(tab => {
+    tab.classList.remove('ns-op-tab--active');
+    tab.setAttribute('aria-selected', 'false');
+    if (tab.getAttribute('onclick') === `switchOpTab('${op}')`) {
+      tab.classList.add('ns-op-tab--active');
+      tab.setAttribute('aria-selected', 'true');
+    }
+  });
+  // Show/hide panels
+  document.querySelectorAll('.ns-op-panel').forEach(panel => {
+    panel.classList.remove('ns-op-panel--active');
+  });
+  const active = document.getElementById(`panel-${op}`);
+  if (active) active.classList.add('ns-op-panel--active');
+  buildEventJson();
+}
+
+// ── Label checks ────────────────────────────────────────────────────────────
+function checkLabel(value) {
+  const warnIds = {
+    'subname_register': 'toolSubLabelWarn',
+    'subname_update':   'toolUpdLabelWarn',
+    'subname_revoke':   'toolRevLabelWarn',
+  };
+  const warnId = warnIds[currentOp];
+  if (!warnId) return;
+  const el = document.getElementById(warnId);
+  if (!el) return;
+
+  const label = value.trim().toLowerCase();
+  const warns = [];
+
+  // Non-ASCII / confusable check
+  if (label && /[^\u0000-\u007F]/.test(label)) {
+    warns.push({ msg: 'Label contains non-ASCII characters. This may be a confusable or spoof attempt.', cls: 'ns-label-warn--error' });
+  }
+  // Famous name check
+  if (label && FAMOUS_NAMES.has(label)) {
+    warns.push({ msg: 'This label references a well-known name or brand. It is not affiliated with or endorsed by that entity.', cls: '' });
+  }
+
+  if (warns.length) {
+    el.innerHTML = warns.map(w => `<span class="ns-label-warn ${w.cls}">${w.msg}</span>`).join('<br>');
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ── Build event JSON ────────────────────────────────────────────────────────
+function buildEventJson() {
+  const rootName = (document.getElementById('toolRootName')?.value || '').trim();
+  const nonceRaw = document.getElementById('toolNonce')?.value;
+  const nonce = parseInt(nonceRaw, 10) || 1;
+
+  let obj = null;
+
+  if (currentOp === 'subname_register') {
+    const label = (document.getElementById('toolSubLabel')?.value || '').trim();
+    const owner = (document.getElementById('toolSubOwner')?.value || '').trim();
+    const btc   = (document.getElementById('toolSubBtc')?.value || '').trim();
+    const web   = (document.getElementById('toolSubWebsite')?.value || '').trim();
+    const desc  = (document.getElementById('toolSubDesc')?.value || '').trim();
+
+    obj = { p: 'bnrp', op: 'subname_register' };
+    if (rootName) obj.name = rootName;
+    if (rootName && label) obj.sub = `${label}.${rootName}`;
+    if (owner) obj.to = owner;
+
+    const records = {};
+    if (btc)  records.btc = btc;
+    if (web)  records.website = web;
+    if (desc) records.description = desc;
+    if (Object.keys(records).length > 0) obj.records = records;
+
+    obj.nonce = nonce;
+    obj.v = 1;
+
+  } else if (currentOp === 'subname_update') {
+    const label = (document.getElementById('toolUpdLabel')?.value || '').trim();
+    const btc   = (document.getElementById('toolUpdBtc')?.value || '').trim();
+    const web   = (document.getElementById('toolUpdWebsite')?.value || '').trim();
+    const desc  = (document.getElementById('toolUpdDesc')?.value || '').trim();
+
+    obj = { p: 'bnrp', op: 'subname_update' };
+    if (rootName) obj.name = rootName;
+    if (rootName && label) obj.sub = `${label}.${rootName}`;
+
+    const records = {};
+    if (btc)  records.btc = btc;
+    if (web)  records.website = web;
+    if (desc) records.description = desc;
+    if (Object.keys(records).length > 0) obj.records = records;
+
+    obj.nonce = nonce;
+    obj.v = 1;
+
+  } else if (currentOp === 'subname_revoke') {
+    const label = (document.getElementById('toolRevLabel')?.value || '').trim();
+
+    obj = { p: 'bnrp', op: 'subname_revoke' };
+    if (rootName) obj.name = rootName;
+    if (rootName && label) obj.sub = `${label}.${rootName}`;
+    obj.nonce = nonce;
+    obj.v = 1;
+
+  } else if (currentOp === 'delegate') {
+    const addr = (document.getElementById('toolDelAddr')?.value || '').trim();
+
+    obj = { p: 'bnrp', op: 'delegate' };
+    if (rootName) obj.name = rootName;
+    if (addr) obj.to = addr;
+    obj.nonce = nonce;
+    obj.v = 1;
+
+  } else if (currentOp === 'delegate_revoke') {
+    obj = { p: 'bnrp', op: 'delegate_revoke' };
+    if (rootName) obj.name = rootName;
+    obj.nonce = nonce;
+    obj.v = 1;
+  }
+
+  const pre = document.getElementById('toolJsonOutput');
+  if (pre && obj) {
+    pre.textContent = JSON.stringify(obj, null, 2);
+  }
+}
+
+// ── Fetch nonce ─────────────────────────────────────────────────────────────
+async function fetchNonce() {
+  const nameEl = document.getElementById('toolRootName');
+  const name = (nameEl?.value || '').trim();
+  const statusEl = document.getElementById('toolFetchStatus');
+  const spinnerEl = document.getElementById('toolFetchNonceSpinner');
+  const btn = document.getElementById('toolFetchNonce');
+
+  if (!name) {
+    if (statusEl) {
+      statusEl.textContent = 'Enter your root name first.';
+      statusEl.className = 'ns-fetch-status ns-fetch-status--error';
+    }
+    return;
+  }
+
+  if (statusEl) {
+    statusEl.textContent = 'Fetching...';
+    statusEl.className = 'ns-fetch-status';
+  }
+  if (spinnerEl) spinnerEl.style.display = 'inline-flex';
+  if (btn) btn.disabled = true;
 
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 15000);
-    let data = null;
-    try {
-      const res = await fetch(`${BNRP_API}/resolve?name=${encodeURIComponent(name)}`, {
-        headers: { Accept: 'application/json' },
-        signal: ctrl.signal,
-      });
-      clearTimeout(timer);
-      if (res.ok) data = await res.json();
-    } finally {
-      clearTimeout(timer);
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    const res = await fetch(`${BNRP_API}/names/${encodeURIComponent(name)}/current-record`, {
+      headers: { Accept: 'application/json' },
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const currentNonce = (data && data.nonce) ? parseInt(data.nonce, 10) : 0;
+    const nextNonce = currentNonce + 1;
+
+    const nonceEl = document.getElementById('toolNonce');
+    if (nonceEl) nonceEl.value = nextNonce;
+    buildEventJson();
+
+    if (statusEl) {
+      statusEl.textContent = `Current nonce: ${currentNonce}. Set to ${nextNonce}.`;
+      statusEl.className = 'ns-fetch-status ns-fetch-status--ok';
     }
-
-    if (loading) loading.style.display = 'none';
-
-    // Populate dashboard
-    const profile = (data && data.profile) || {};
-    const records = {};
-    if (profile.avatar) records.avatar = profile.avatar;
-    if (profile.display) records.display = profile.display;
-    if (profile.description) records.description = profile.description;
-    if (profile['com.twitter']) records['com.twitter'] = profile['com.twitter'];
-    if (profile.url) records.url = profile.url;
-
-    const hasRecords = Object.keys(records).length > 0;
-    const owner = (data && (data.owner || data.address)) || null;
-    const via = (data && data.via) || null;
-    const resolvedAt = (data && data.resolved_at) || null;
-    const VIA_LABELS = { unisat: 'UniSat', btcname: 'BTCName', sns: 'SNS' };
-
-    document.getElementById('nsDashName').textContent = name;
-    document.getElementById('nsDashOwner').textContent = owner ? owner.slice(0,10) + '...' + owner.slice(-6) : 'Unknown';
-    document.getElementById('nsDashResolverStatus').textContent = data ? (hasRecords ? 'Verified' : 'Resolved (no records)') : 'Unresolved';
-    document.getElementById('nsDashNsStatus').textContent = 'Experimental — subname issuance coming';
-    document.getElementById('nsDashPolicy').textContent = 'Parent-controlled (default)';
-    document.getElementById('nsDashProvenance').textContent = via ? (VIA_LABELS[via] || via) : '—';
-    document.getElementById('nsDashVerified').textContent = resolvedAt ? new Date(resolvedAt).toLocaleString() : (data ? 'Just now' : '—');
-
-    const profileLink = document.getElementById('nsDashViewProfile');
-    if (profileLink) profileLink.href = `./name.html?name=${encodeURIComponent(name)}`;
-
-    const metaEl = document.getElementById('nsDashMeta');
-    if (metaEl) metaEl.textContent = data ? 'BNRP resolved' : 'Not found in BNRP';
-
-    const badgesEl = document.getElementById('nsDashBadges');
-    if (badgesEl) {
-      badgesEl.innerHTML = '';
-      if (hasRecords) badgesEl.innerHTML += '<span class="resolver-status resolver-status--verified">Verified</span>';
-      else if (data) badgesEl.innerHTML += '<span class="resolver-status resolver-status--unresolved">Unresolved</span>';
-      else badgesEl.innerHTML += '<span class="resolver-status resolver-status--unavailable">Not found</span>';
-    }
-
-    if (hasRecords) {
-      const recordsEl = document.getElementById('nsDashRecordsList');
-      const recordsWrap = document.getElementById('nsDashRecords');
-      if (recordsEl && recordsWrap) {
-        recordsEl.innerHTML = Object.entries(records).map(([k, v]) =>
-          `<div class="ns-dash-field"><span class="ns-dash-field__label">${k}</span><span class="ns-dash-field__value" style="word-break:break-all;font-size:11px;">${v}</span></div>`
-        ).join('');
-        recordsWrap.style.display = 'block';
-      }
-    }
-
-    if (result) result.style.display = 'block';
   } catch (err) {
-    if (loading) loading.style.display = 'none';
-    if (errorMsg) errorMsg.textContent = err.name === 'AbortError' ? 'Resolver timed out. Try again.' : 'Resolver unavailable. Could not reach BNRP.';
-    if (error) error.style.display = 'flex';
-  }
-}
-
-// Enter key support
-const nsDashInput = document.getElementById('nsDashInput');
-if (nsDashInput) nsDashInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadNamespaceDashboard(); });
-
-// ── Subname event form ───────────────────────────────────────────────────
-function nsUpdatePreview() {
-  const parent = (document.getElementById('nsParent')?.value || '').trim().toLowerCase();
-  const label  = (document.getElementById('nsLabel')?.value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-  const preview = document.getElementById('nsFullNamePreview');
-  if (preview) {
-    if (parent && label) {
-      preview.textContent = `→ ${label}.${parent}`;
-      preview.style.display = 'block';
-    } else {
-      preview.style.display = 'none';
+    let msg = 'Could not reach BNRP. Check name or try again.';
+    if (err.name === 'AbortError') msg = 'Request timed out.';
+    if (statusEl) {
+      statusEl.textContent = msg;
+      statusEl.className = 'ns-fetch-status ns-fetch-status--error';
     }
-  }
-  // Warnings
-  const warnsEl = document.getElementById('nsFormWarnings');
-  if (!warnsEl) return;
-  const warns = [];
-  const fullName = label && parent ? `${label}.${parent}` : '';
-  // Confusable check
-  if (label && /[\u0400-\u04FF\u0370-\u03FF]/.test(label)) {
-    warns.push({ msg: 'Subname label contains non-Latin characters. This may be a confusable or spoof attempt.', level: 'warn' });
-  }
-  if (fullName) {
-    const FAMOUS = new Set(['satoshi','bitcoin','trump','musk','apple','google','coinbase','binance','ordinals']);
-    if (FAMOUS.has(label)) warns.push({ msg: 'This label references a well-known person or brand. It is not affiliated with or endorsed by that entity.', level: 'caution' });
-  }
-  if (warns.length) {
-    warnsEl.innerHTML = warns.map(w =>
-      `<div class="trust-warning trust-warning--${w.level}" style="margin-bottom:6px;">
-         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-         ${w.msg}
-       </div>`
-    ).join('');
-    warnsEl.style.display = 'block';
-  } else {
-    warnsEl.style.display = 'none';
+  } finally {
+    if (spinnerEl) spinnerEl.style.display = 'none';
+    if (btn) btn.disabled = false;
   }
 }
 
-function nsGenerateEvent() {
-  const parent = (document.getElementById('nsParent')?.value || '').trim().toLowerCase();
-  const label  = (document.getElementById('nsLabel')?.value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
-  if (!parent || !label) {
-    alert('Parent name and subname label are required.');
+// ── Copy JSON ────────────────────────────────────────────────────────────────
+function copyEventJson() {
+  const json = document.getElementById('toolJsonOutput')?.textContent || '';
+  if (!json || !navigator.clipboard) return;
+  navigator.clipboard.writeText(json).then(() => {
+    const btn = document.getElementById('toolCopyBtn');
+    if (btn) {
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = 'Copy JSON'; }, 2000);
+    }
+  }).catch(() => {});
+}
+
+// ── Dashboard history state ───────────────────────────────────────────────────
+let _allHistoryEvents = [];
+
+function toggleHistory() {
+  const listEl = document.getElementById('nsDashHistoryList');
+  const moreEl = document.getElementById('nsDashHistoryMore');
+  const btn = moreEl?.querySelector('button');
+  if (!listEl) return;
+
+  if (listEl.dataset.expanded === 'true') {
+    listEl.innerHTML = renderHistoryItems(_allHistoryEvents.slice(0, 5));
+    listEl.dataset.expanded = 'false';
+    if (btn) btn.textContent = 'Show all events';
+  } else {
+    listEl.innerHTML = renderHistoryItems(_allHistoryEvents);
+    listEl.dataset.expanded = 'true';
+    if (btn) btn.textContent = 'Show fewer';
+  }
+}
+
+function renderHistoryItems(events) {
+  if (!events || events.length === 0) {
+    return '<div style="font-size:13px;color:var(--color-text-faint);padding:8px 0;">No events found.</div>';
+  }
+  return events.map(ev => {
+    const id = ev.inscriptionId || ev.inscription_id || ev.txid || '';
+    const idShort = id ? (id.slice(0, 10) + '...' + id.slice(-6)) : 'unknown';
+    const idUrl = id ? `https://ordinals.com/inscription/${id}` : '#';
+    const op = ev.op || ev.operation || '-';
+    const nonce = ev.nonce != null ? ev.nonce : '-';
+    const blockHeight = ev.blockHeight || ev.block_height || '-';
+    const validity = (ev.validityState || ev.validity_state || ev.status || 'unknown').toLowerCase();
+    let badgeCls = 'ns-history-badge';
+    if (validity === 'active') badgeCls += ' ns-history-badge--active';
+    else if (validity === 'superseded') badgeCls += ' ns-history-badge--superseded';
+    else if (validity === 'revoked') badgeCls += ' ns-history-badge--revoked';
+    else badgeCls += ' ns-history-badge--invalid';
+
+    return `<div class="ns-history-item">
+      <a class="ns-history-item__id" href="${idUrl}" target="_blank" rel="noopener" title="${id}">${idShort}</a>
+      <span class="ns-history-item__op">${op}</span>
+      <span class="ns-history-item__nonce">n:${nonce}</span>
+      ${blockHeight !== '-' ? `<span class="ns-history-item__nonce">blk:${blockHeight}</span>` : ''}
+      <span class="${badgeCls}">${validity}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderSubnameItems(subnames) {
+  if (!subnames || subnames.length === 0) {
+    return '<div style="font-size:13px;color:var(--color-text-faint);padding:8px 0;">No active subnames.</div>';
+  }
+  return subnames.map(sn => {
+    const name = sn.sub || sn.name || sn.subname || '-';
+    const owner = sn.owner || sn.to || '';
+    const ownerShort = owner ? (owner.slice(0, 8) + '...' + owner.slice(-4)) : '-';
+    const status = (sn.status || 'active').toLowerCase();
+    let badgeCls = 'ns-history-badge';
+    if (status === 'active') badgeCls += ' ns-history-badge--active';
+    else badgeCls += ' ns-history-badge--revoked';
+
+    return `<div class="ns-subname-item">
+      <span class="ns-subname-item__name">${name}</span>
+      <span class="ns-subname-item__owner">${ownerShort}</span>
+      <span class="${badgeCls}">${status}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Load namespace dashboard ──────────────────────────────────────────────────
+async function loadNamespaceDashboard() {
+  const input = document.getElementById('nsDashInput');
+  const name = (input?.value || '').trim();
+  if (!name) return;
+
+  const resultEl   = document.getElementById('nsDashResult');
+  const loadingEl  = document.getElementById('nsDashLoading');
+  const errorEl    = document.getElementById('nsDashError');
+  const errorMsgEl = document.getElementById('nsDashErrorMsg');
+
+  if (resultEl)  resultEl.style.display  = 'none';
+  if (errorEl)   errorEl.style.display   = 'none';
+  if (loadingEl) loadingEl.style.display = 'flex';
+
+  const headers = { Accept: 'application/json' };
+  const encoded = encodeURIComponent(name);
+
+  // Fetch all 3 endpoints in parallel; capture individual errors
+  const [nsResult, snResult, histResult] = await Promise.allSettled([
+    fetch(`${BNRP_API}/names/${encoded}/namespace`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${BNRP_API}/names/${encoded}/subnames`,  { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+    fetch(`${BNRP_API}/names/${encoded}/history`,   { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+
+  if (loadingEl) loadingEl.style.display = 'none';
+
+  const nsData   = nsResult.status   === 'fulfilled' ? nsResult.value   : null;
+  const snData   = snResult.status   === 'fulfilled' ? snResult.value   : null;
+  const histData = histResult.status === 'fulfilled' ? histResult.value : null;
+
+  // If all three failed and nsData is null, show error
+  if (!nsData && !snData && !histData) {
+    if (errorMsgEl) errorMsgEl.textContent = 'Resolver unavailable. Could not reach BNRP. Try again.';
+    if (errorEl) errorEl.style.display = 'flex';
     return;
   }
-  const owner   = document.getElementById('nsOwner')?.value.trim() || '';
-  const btc     = document.getElementById('nsBtc')?.value.trim() || '';
-  const website = document.getElementById('nsWebsite')?.value.trim() || '';
-  const avatar  = document.getElementById('nsAvatar')?.value.trim() || '';
-  const desc    = document.getElementById('nsDesc')?.value.trim() || '';
 
-  const records = {};
-  if (btc)     records.btc     = btc;
-  if (website) records.website = website;
-  if (avatar)  records.avatar  = avatar;
-  if (desc)    records.description = desc;
+  // Populate header
+  document.getElementById('nsDashName').textContent = name;
 
-  const event = {
-    p:      'bnrp',
-    op:     'subname_register',
-    parent: parent,
-    name:   `${label}.${parent}`,
-    label:  label,
-    ...(owner ? { owner } : {}),
-    records,
-    nonce:     1,
-    timestamp: new Date().toISOString(),
-  };
+  // Namespace data
+  const owner       = nsData?.owner || nsData?.address || null;
+  const policy      = nsData?.policy || null;
+  const delegate    = nsData?.delegate || null;
+  const resolverSt  = nsData?.resolverStatus || nsData?.resolver_status || null;
+  const subnameCount = nsData?.subnameCount ?? nsData?.subname_count ?? null;
 
-  const previewEl = document.getElementById('nsEventJson');
-  const previewWrap = document.getElementById('nsEventPreview');
-  if (previewEl) previewEl.textContent = JSON.stringify(event, null, 2);
-  if (previewWrap) previewWrap.style.display = 'block';
+  document.getElementById('nsDashOwner').textContent       = owner ? (owner.slice(0,10)+'...'+owner.slice(-6)) : 'Unknown';
+  document.getElementById('nsDashPolicy').textContent      = policy || 'Parent-controlled (default)';
+  document.getElementById('nsDashDelegate').textContent    = delegate ? (delegate.slice(0,10)+'...'+delegate.slice(-6)) : 'None';
+  document.getElementById('nsDashSubnameCount').textContent = subnameCount != null ? String(subnameCount) : '-';
+
+  const metaEl = document.getElementById('nsDashMeta');
+  if (metaEl) metaEl.textContent = nsData ? 'BNRP namespace record found' : 'No namespace record. Showing available data.';
+
+  const badgesEl = document.getElementById('nsDashBadges');
+  if (badgesEl) {
+    badgesEl.innerHTML = '';
+    if (resolverSt) {
+      const cls = resolverSt === 'active' || resolverSt === 'verified'
+        ? 'resolver-status--verified'
+        : resolverSt === 'unresolved'
+          ? 'resolver-status--unresolved'
+          : 'resolver-status--unavailable';
+      badgesEl.innerHTML = `<span class="resolver-status ${cls}">${resolverSt}</span>`;
+    } else if (nsData) {
+      badgesEl.innerHTML = '<span class="resolver-status resolver-status--verified">Found</span>';
+    } else {
+      badgesEl.innerHTML = '<span class="resolver-status resolver-status--unavailable">Not indexed</span>';
+    }
+  }
+
+  // Subnames
+  const snList   = Array.isArray(snData) ? snData : (snData?.subnames || snData?.items || []);
+  const snSectionEl  = document.getElementById('nsDashSubnamesSection');
+  const snListEl     = document.getElementById('nsDashSubnamesList');
+  if (snSectionEl && snListEl) {
+    snListEl.innerHTML = renderSubnameItems(snList);
+    snSectionEl.style.display = 'block';
+  }
+
+  // History
+  _allHistoryEvents = Array.isArray(histData) ? histData : (histData?.events || histData?.items || []);
+  const histSectionEl = document.getElementById('nsDashHistorySection');
+  const histListEl    = document.getElementById('nsDashHistoryList');
+  const histMoreEl    = document.getElementById('nsDashHistoryMore');
+  if (histSectionEl && histListEl) {
+    const showing = _allHistoryEvents.slice(0, 5);
+    histListEl.innerHTML = renderHistoryItems(showing);
+    histListEl.dataset.expanded = 'false';
+    histSectionEl.style.display = 'block';
+    if (histMoreEl) {
+      histMoreEl.style.display = _allHistoryEvents.length > 5 ? 'block' : 'none';
+    }
+  }
+
+  // Profile link
+  const profileLink = document.getElementById('nsDashViewProfile');
+  if (profileLink) profileLink.href = `./name.html?name=${encodeURIComponent(name)}`;
+
+  if (resultEl) resultEl.style.display = 'block';
 }
 
-function nsCopyEvent() {
-  const json = document.getElementById('nsEventJson')?.textContent || '';
-  if (json && navigator.clipboard) {
-    navigator.clipboard.writeText(json).then(() => {
-      const btn = document.querySelector('[onclick="nsCopyEvent()"]');
-      if (btn) { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
-    }).catch(() => {});
+// ── Use in tool ──────────────────────────────────────────────────────────────
+function useInTool(name) {
+  const nameEl = document.getElementById('toolRootName');
+  if (nameEl) {
+    nameEl.value = name;
+    buildEventJson();
+  }
+  const toolSection = document.getElementById('event-tool');
+  if (toolSection) {
+    toolSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
+
+// ── Enter key support for dashboard ──────────────────────────────────────────
+const nsDashInput = document.getElementById('nsDashInput');
+if (nsDashInput) {
+  nsDashInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') loadNamespaceDashboard();
+  });
+}
+
+// ── Initial JSON render ───────────────────────────────────────────────────────
+buildEventJson();
 </script>
 
 </body>
