@@ -1174,6 +1174,15 @@
       color: var(--color-blue);
     }
 
+    .snm-status-badge--warn {
+      background: rgba(255, 177, 0, 0.12);
+      color: #FFB100;
+    }
+    .snm-status-badge--error {
+      background: rgba(255, 68, 68, 0.12);
+      color: #FF4444;
+    }
+
     /* ── History tab ── */
     .snm-history-banner {
       background: var(--color-surface-offset);
@@ -1931,12 +1940,35 @@
               </div>
 
               <div class="snm-form-group">
-                <label class="snm-label" for="adv-avatar">Avatar inscription ID</label>
-                <input type="text" class="snm-input mono" id="adv-avatar" placeholder="Ordinals inscription ID" spellcheck="false" />
+                <label class="snm-label" for="adv-avatar">
+                  Avatar
+                  <span class="snm-tooltip-wrap">
+                    <span class="snm-help-icon">?</span>
+                    <span class="snm-tooltip">Use an Ordinals inscription ID, or "inherit" to show the parent name's avatar</span>
+                  </span>
+                </label>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <input type="text" class="snm-input mono" id="adv-avatar" placeholder="Inscription ID or leave blank" spellcheck="false" style="flex:1;min-width:0;" />
+                  <button type="button" class="snm-add-row-btn" id="adv-avatar-inherit-btn" style="white-space:nowrap;height:40px;padding:0 12px;" onclick="toggleAvatarInherit()">Use parent avatar</button>
+                </div>
+                <div class="snm-input-hint" id="adv-avatar-hint">Leave blank to set no avatar. Click "Use parent avatar" to inherit from the root name.</div>
               </div>
 
               <div class="snm-form-group">
-                <label class="snm-label" for="adv-twitter">Twitter / X handle</label>
+                <label class="snm-label" for="adv-x">X / Twitter handle</label>
+                <div style="display:flex;align-items:center;gap:0;">
+                  <span style="padding:0 10px;height:40px;display:flex;align-items:center;background:var(--color-surface-offset);border:1px solid var(--color-border);border-right:none;border-radius:8px 0 0 8px;color:var(--color-text-muted);font-size:14px;">@</span>
+                  <input type="text" class="snm-input" id="adv-x" placeholder="handle" spellcheck="false" style="border-radius:0 8px 8px 0;" />
+                </div>
+              </div>
+
+              <div class="snm-form-group">
+                <label class="snm-label" for="adv-url">URL</label>
+                <input type="text" class="snm-input" id="adv-url" placeholder="https://yoursite.com" spellcheck="false" />
+              </div>
+
+              <div class="snm-form-group" style="display:none;">
+                <label class="snm-label" for="adv-twitter">Twitter / X handle (legacy)</label>
                 <input type="text" class="snm-input" id="adv-twitter" placeholder="@handle" spellcheck="false" />
               </div>
 
@@ -3158,7 +3190,12 @@
     if (advOrdinals) records.ordinals = advOrdinals;
     if (advWebsite) records.url = advWebsite;
     if (advAvatar) records.avatar = advAvatar;
-    if (advTwitter) records.twitter = advTwitter;
+    const advX = document.getElementById('adv-x')?.value.trim().replace(/^@/, '');
+    const advUrl = document.getElementById('adv-url')?.value.trim();
+    if (advX) records.x = advX;
+    if (advUrl) records.url = advUrl;
+    // legacy twitter field — keep for compat
+    if (advTwitter && !advX) records.twitter = advTwitter;
 
     // custom kv
     state.kvPairs.forEach(p => {
@@ -3316,15 +3353,20 @@
         const block = s.provenance?.confirmedAt ? `#${s.provenance.confirmedAt.toLocaleString()}` : '—';
         const insId = s.provenance?.inscriptionId || '';
         const shortIns = insId ? insId.slice(0,8) + '…' + insId.slice(-6) : '—';
+        const statusClass = s.status === 'revoked' ? 'snm-status-badge--error'
+          : s.status === 'unverified' ? 'snm-status-badge--warn'
+          : 'snm-status-badge--ready';
         return `<tr>
           <td class="mono">${s.name}</td>
           <td class="mono" title="${btcAddr}">${truncateAddr(btcAddr, 8)}</td>
-          <td><span class="snm-status-badge snm-status-badge--ready">${s.status || 'active'}</span></td>
+          <td><span class="snm-status-badge ${statusClass}">${s.status || 'active'}</span></td>
           <td title="Block ${s.provenance?.confirmedAt || ''}">${block}</td>
           <td>
             <div class="snm-table-actions">
               <a class="snm-action-btn" href="https://unisat.io/inscription/${insId}" target="_blank" rel="noopener">View</a>
-              <button class="snm-action-btn" onclick="switchTab('history')">History</button>
+              <button class="snm-action-btn" onclick="openUpdateModal(${JSON.stringify(s).replace(/"/g,'&quot;')})">Update</button>
+              <button class="snm-action-btn" onclick="openTransferModal(${JSON.stringify(s).replace(/"/g,'&quot;')})">Transfer</button>
+              <button class="snm-action-btn snm-action-btn--danger" onclick="openRevokeModal(${JSON.stringify(s).replace(/"/g,'&quot;')})">Revoke</button>
             </div>
           </td>
         </tr>`;
@@ -3463,6 +3505,359 @@ function snmNotify({ title, body, type = 'info', json = null, cta = null }) {
       if (changed) localStorage.setItem(HINT_KEY, JSON.stringify(hints));
     } catch { /* storage disabled */ }
   })();
+
+  /* ─────────────────────────────────────────
+     Modal helpers: Update / Transfer / Revoke
+  ───────────────────────────────────────── */
+
+  function closeModal(id) {
+    const el = document.getElementById(id);
+    if (el) { el.style.display = 'none'; }
+  }
+
+  // Close on backdrop click
+  ['snm-update-modal','snm-transfer-modal','snm-revoke-modal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('click', e => { if (e.target === el) closeModal(id); });
+  });
+
+  // Avatar inherit toggle
+  let _avatarInheriting = false;
+  function toggleAvatarInherit() {
+    const inp = document.getElementById('adv-avatar');
+    const btn = document.getElementById('adv-avatar-inherit-btn');
+    const hint = document.getElementById('adv-avatar-hint');
+    _avatarInheriting = !_avatarInheriting;
+    if (_avatarInheriting) {
+      inp.value = 'inherit';
+      inp.disabled = true;
+      btn.textContent = 'Use own avatar';
+      hint.textContent = 'This subname will display the parent name’s avatar.';
+    } else {
+      inp.value = '';
+      inp.disabled = false;
+      btn.textContent = 'Use parent avatar';
+      hint.textContent = 'Leave blank to set no avatar. Click “Use parent avatar” to inherit from the root name.';
+    }
+  }
+
+  /* ── getNonce: fetch current highest nonce for a subname from BNRP API ── */
+  async function getNextNonce(parentName, sub) {
+    try {
+      const url = `${BNRP_API}/names/${encodeURIComponent(parentName)}/subnames`;
+      const res = await fetch(url);
+      if (!res.ok) return 2;
+      const data = await res.json();
+      const record = data.subnames?.[sub];
+      return (record?.provenance?.nonce || 1) + 1;
+    } catch { return 2; }
+  }
+
+  /* ── buildUpdateJSON ── */
+  async function buildUpdateJSON(subRecord, overrides = {}) {
+    const nonce = await getNextNonce(subRecord.parent, subRecord.name);
+    const records = {
+      ...(subRecord.records || {}),
+      ...overrides,
+    };
+    // Remove empty values
+    for (const k of Object.keys(records)) {
+      if (records[k] === '' || records[k] === null || records[k] === undefined) delete records[k];
+    }
+    return {
+      p: 'bnrp',
+      op: 'subname_update',
+      name: subRecord.parent,
+      sub:  subRecord.name,
+      to:   subRecord.owner,
+      records,
+      nonce,
+      v: 1,
+    };
+  }
+
+  /* ── Open Update Modal ── */
+  let _updateModalSub = null;
+  async function openUpdateModal(sub) {
+    _updateModalSub = sub;
+    const modal = document.getElementById('snm-update-modal');
+    document.getElementById('update-modal-sub-label').textContent = sub.name;
+    document.getElementById('um-status').textContent = '';
+    // Pre-fill existing records
+    document.getElementById('um-btc').value    = sub.records?.btc    || '';
+    document.getElementById('um-x').value      = (sub.records?.x || sub.records?.twitter || '').replace(/^@/,'');
+    document.getElementById('um-url').value    = sub.records?.url    || '';
+    document.getElementById('um-avatar').value = sub.records?.avatar || '';
+    // Show preview JSON
+    const json = await buildUpdateJSON(sub);
+    document.getElementById('um-json-preview').textContent = JSON.stringify(json, null, 2);
+    modal.style.display = 'flex';
+    // Live-update JSON as user types
+    ['um-btc','um-x','um-url','um-avatar'].forEach(id => {
+      document.getElementById(id).addEventListener('input', async () => {
+        const j = await buildCurrentUpdateJSON();
+        document.getElementById('um-json-preview').textContent = JSON.stringify(j, null, 2);
+      }, { once: false });
+    });
+  }
+
+  async function buildCurrentUpdateJSON() {
+    if (!_updateModalSub) return {};
+    return buildUpdateJSON(_updateModalSub, {
+      btc:    document.getElementById('um-btc').value.trim()    || undefined,
+      x:      document.getElementById('um-x').value.trim().replace(/^@/,'') || undefined,
+      url:    document.getElementById('um-url').value.trim()    || undefined,
+      avatar: document.getElementById('um-avatar').value.trim() || undefined,
+    });
+  }
+
+  async function inscribeUpdateModal() {
+    if (!_updateModalSub) return;
+    const statusEl = document.getElementById('um-status');
+    statusEl.style.color = 'var(--color-text-muted)';
+    statusEl.textContent = 'Building inscription…';
+    try {
+      const json = await buildCurrentUpdateJSON();
+      const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
+      await inscribeBlob(blob, statusEl);
+      // Save hint
+      saveHint(_updateModalSub.name, _updateModalSub.provenance?.inscriptionId);
+      closeModal('snm-update-modal');
+    } catch (e) {
+      statusEl.style.color = 'var(--color-error, #FF4444)';
+      statusEl.textContent = e.message || 'Inscription failed.';
+    }
+  }
+
+  /* ── Open Transfer Modal ── */
+  let _transferModalSub = null;
+  function openTransferModal(sub) {
+    _transferModalSub = sub;
+    const modal = document.getElementById('snm-transfer-modal');
+    document.getElementById('transfer-modal-sub-label').textContent = sub.name;
+    document.getElementById('tm-to').value = '';
+    document.getElementById('tm-status').textContent = '';
+    const json = {
+      p: 'bnrp', op: 'subname_transfer',
+      name: sub.parent, sub: sub.name,
+      to: '<new-owner-address>',
+      nonce: (sub.provenance?.nonce || 1) + 1, v: 1,
+    };
+    document.getElementById('tm-json-preview').textContent = JSON.stringify(json, null, 2);
+    modal.style.display = 'flex';
+    document.getElementById('tm-to').addEventListener('input', () => {
+      const newTo = document.getElementById('tm-to').value.trim();
+      json.to = newTo || '<new-owner-address>';
+      document.getElementById('tm-json-preview').textContent = JSON.stringify(json, null, 2);
+    });
+  }
+
+  async function inscribeTransferModal() {
+    if (!_transferModalSub) return;
+    const statusEl = document.getElementById('tm-status');
+    const newTo = document.getElementById('tm-to').value.trim();
+    if (!newTo) { statusEl.textContent = 'Enter a destination address.'; return; }
+    statusEl.style.color = 'var(--color-text-muted)';
+    statusEl.textContent = 'Building inscription…';
+    try {
+      const nonce = await getNextNonce(_transferModalSub.parent, _transferModalSub.name);
+      const json = {
+        p: 'bnrp', op: 'subname_transfer',
+        name: _transferModalSub.parent,
+        sub:  _transferModalSub.name,
+        to:   newTo,
+        nonce, v: 1,
+      };
+      const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
+      await inscribeBlob(blob, statusEl);
+      closeModal('snm-transfer-modal');
+    } catch (e) {
+      statusEl.style.color = 'var(--color-error, #FF4444)';
+      statusEl.textContent = e.message || 'Inscription failed.';
+    }
+  }
+
+  /* ── Open Revoke Modal ── */
+  let _revokeModalSub = null;
+  function openRevokeModal(sub) {
+    _revokeModalSub = sub;
+    const modal = document.getElementById('snm-revoke-modal');
+    document.getElementById('revoke-modal-sub-label').textContent = sub.name;
+    document.getElementById('revoke-modal-sub-name').textContent = sub.name;
+    document.getElementById('rm-status').textContent = '';
+    const json = {
+      p: 'bnrp', op: 'subname_revoke',
+      name: sub.parent, sub: sub.name,
+      nonce: (sub.provenance?.nonce || 1) + 1, v: 1,
+    };
+    document.getElementById('rm-json-preview').textContent = JSON.stringify(json, null, 2);
+    modal.style.display = 'flex';
+  }
+
+  async function inscribeRevokeModal() {
+    if (!_revokeModalSub) return;
+    const statusEl = document.getElementById('rm-status');
+    statusEl.style.color = 'var(--color-text-muted)';
+    statusEl.textContent = 'Building inscription…';
+    try {
+      const nonce = await getNextNonce(_revokeModalSub.parent, _revokeModalSub.name);
+      const json = {
+        p: 'bnrp', op: 'subname_revoke',
+        name: _revokeModalSub.parent,
+        sub:  _revokeModalSub.name,
+        nonce, v: 1,
+      };
+      const blob = new Blob([JSON.stringify(json)], { type: 'application/json' });
+      await inscribeBlob(blob, statusEl);
+      closeModal('snm-revoke-modal');
+    } catch (e) {
+      statusEl.style.color = 'var(--color-error, #FF4444)';
+      statusEl.textContent = e.message || 'Inscription failed.';
+    }
+  }
+
+  /* ── inscribeBlob: shared inscription dispatcher ── */
+  async function inscribeBlob(blob, statusEl) {
+    if (window.unisat) {
+      // UniSat: use inscribeText/inscribeFiles API
+      const text = await blob.text();
+      statusEl.textContent = 'Waiting for UniSat…';
+      try {
+        const result = await window.unisat.inscribeContent({
+          contentType: 'application/json',
+          content: text,
+        });
+        if (result) {
+          statusEl.style.color = 'var(--color-success, #4CAF50)';
+          statusEl.textContent = 'Inscription submitted. ' + (result.txid ? 'Tx: ' + result.txid.slice(0,12) + '…' : '');
+          return result;
+        }
+      } catch (e) {
+        // Fall through to download fallback
+      }
+    }
+    // Fallback: download JSON for manual inscription
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bnrp-inscription.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    statusEl.style.color = 'var(--color-brand-orange)';
+    statusEl.textContent = 'JSON downloaded. Inscribe it at unisat.io/inscribe using the “Text” tab.';
+  }
+
+  /* ── saveHint ── */
+  function saveHint(sub, inscriptionId) {
+    if (!inscriptionId) return;
+    try {
+      const hints = JSON.parse(localStorage.getItem(HINT_KEY) || '{}');
+      hints[sub] = inscriptionId;
+      localStorage.setItem(HINT_KEY, JSON.stringify(hints));
+    } catch { /* storage disabled */ }
+  }
+
 </script>
+
+<!-- ── Update Subname Modal ────────────────────────────────────────────── -->
+<div id="snm-update-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:28px;width:100%;max-width:480px;position:relative;max-height:90vh;overflow-y:auto;">
+    <button onclick="closeModal('snm-update-modal')" style="position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--color-text-muted);font-size:20px;">&times;</button>
+    <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;margin-bottom:6px;">Update subname</div>
+    <div style="font-size:13px;color:var(--color-text-muted);margin-bottom:20px;" id="update-modal-sub-label"></div>
+
+    <div class="snm-form-group">
+      <label class="snm-label">BTC address</label>
+      <input type="text" class="snm-input mono" id="um-btc" placeholder="bc1p… taproot" spellcheck="false" />
+    </div>
+    <div class="snm-form-group">
+      <label class="snm-label">X / Twitter handle</label>
+      <div style="display:flex;align-items:center;gap:0;">
+        <span style="padding:0 10px;height:40px;display:flex;align-items:center;background:var(--color-surface-offset);border:1px solid var(--color-border);border-right:none;border-radius:8px 0 0 8px;color:var(--color-text-muted);font-size:14px;">@</span>
+        <input type="text" class="snm-input" id="um-x" placeholder="handle" spellcheck="false" style="border-radius:0 8px 8px 0;" />
+      </div>
+    </div>
+    <div class="snm-form-group">
+      <label class="snm-label">URL</label>
+      <input type="text" class="snm-input" id="um-url" placeholder="https://yoursite.com" spellcheck="false" />
+    </div>
+    <div class="snm-form-group">
+      <label class="snm-label">
+        Avatar
+        <span style="font-size:11px;color:var(--color-text-muted);font-weight:400;margin-left:6px;">inscription ID, or "inherit" for parent name's avatar</span>
+      </label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" class="snm-input mono" id="um-avatar" placeholder="inscription ID or blank" spellcheck="false" style="flex:1;" />
+        <button type="button" class="snm-add-row-btn" style="height:40px;padding:0 10px;white-space:nowrap;" onclick="document.getElementById('um-avatar').value='inherit'">Inherit</button>
+      </div>
+    </div>
+
+    <div style="margin-top:4px;padding:12px;background:rgba(255,138,0,0.06);border:1px solid rgba(255,138,0,0.15);border-radius:8px;font-size:12px;color:var(--color-text-muted);line-height:1.6;">
+      Updating records inscribes a <code style="font-size:11px;">subname_update</code> event on Bitcoin. Must be signed from the subname owner wallet.
+    </div>
+
+    <div style="margin-top:16px;font-size:12px;color:var(--color-text-muted);margin-bottom:8px;">Generated inscription JSON:</div>
+    <pre id="um-json-preview" style="background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:8px;padding:12px;font-size:11px;overflow-x:auto;line-height:1.5;margin-bottom:16px;"></pre>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn--primary" style="flex:1;" onclick="inscribeUpdateModal()">Inscribe update</button>
+      <button class="btn" onclick="closeModal('snm-update-modal')" style="flex:0 0 auto;">Cancel</button>
+    </div>
+    <div id="um-status" style="margin-top:12px;font-size:13px;text-align:center;min-height:18px;"></div>
+  </div>
+</div>
+
+<!-- ── Transfer Subname Modal ──────────────────────────────────────────── -->
+<div id="snm-transfer-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:28px;width:100%;max-width:440px;position:relative;">
+    <button onclick="closeModal('snm-transfer-modal')" style="position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--color-text-muted);font-size:20px;">&times;</button>
+    <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;margin-bottom:6px;">Transfer subname</div>
+    <div style="font-size:13px;color:var(--color-text-muted);margin-bottom:20px;" id="transfer-modal-sub-label"></div>
+
+    <div class="snm-form-group">
+      <label class="snm-label">New owner address</label>
+      <input type="text" class="snm-input mono" id="tm-to" placeholder="bc1p… taproot" spellcheck="false" />
+      <div class="snm-input-hint">The wallet that will own and control this subname after transfer.</div>
+    </div>
+
+    <div style="margin-top:4px;padding:12px;background:rgba(255,68,68,0.06);border:1px solid rgba(255,68,68,0.15);border-radius:8px;font-size:12px;color:var(--color-text-muted);line-height:1.6;">
+      Transfer is permanent. The new owner will control all future updates to this subname. Must be signed from the current subname owner wallet.
+    </div>
+
+    <div style="margin-top:16px;font-size:12px;color:var(--color-text-muted);margin-bottom:8px;">Generated inscription JSON:</div>
+    <pre id="tm-json-preview" style="background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:8px;padding:12px;font-size:11px;overflow-x:auto;line-height:1.5;margin-bottom:16px;"></pre>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn--primary" style="flex:1;" onclick="inscribeTransferModal()">Inscribe transfer</button>
+      <button class="btn" onclick="closeModal('snm-transfer-modal')" style="flex:0 0 auto;">Cancel</button>
+    </div>
+    <div id="tm-status" style="margin-top:12px;font-size:13px;text-align:center;min-height:18px;"></div>
+  </div>
+</div>
+
+<!-- ── Revoke Subname Modal ────────────────────────────────────────────── -->
+<div id="snm-revoke-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:28px;width:100%;max-width:440px;position:relative;">
+    <button onclick="closeModal('snm-revoke-modal')" style="position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--color-text-muted);font-size:20px;">&times;</button>
+    <div style="font-family:var(--font-mono);font-size:1rem;font-weight:700;margin-bottom:6px;color:#FF4444;">Revoke subname</div>
+    <div style="font-size:13px;color:var(--color-text-muted);margin-bottom:20px;" id="revoke-modal-sub-label"></div>
+
+    <div style="padding:14px;background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.2);border-radius:8px;font-size:13px;color:var(--color-text);line-height:1.6;margin-bottom:20px;">
+      Revoking <strong id="revoke-modal-sub-name"></strong> will permanently invalidate this subname. Resolvers will stop returning its records. This cannot be undone — a new registration would be required to restore it.<br><br>
+      Must be signed from the <strong>name owner</strong> wallet (not the subname owner).
+    </div>
+
+    <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:8px;">Generated inscription JSON:</div>
+    <pre id="rm-json-preview" style="background:var(--color-surface-offset);border:1px solid var(--color-border);border-radius:8px;padding:12px;font-size:11px;overflow-x:auto;line-height:1.5;margin-bottom:16px;"></pre>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn" style="flex:1;background:rgba(255,68,68,0.12);color:#FF4444;border-color:rgba(255,68,68,0.3);" onclick="inscribeRevokeModal()">Revoke permanently</button>
+      <button class="btn" onclick="closeModal('snm-revoke-modal')" style="flex:0 0 auto;">Cancel</button>
+    </div>
+    <div id="rm-status" style="margin-top:12px;font-size:13px;text-align:center;min-height:18px;"></div>
+  </div>
+</div>
+
 </body>
 </html>

@@ -1347,6 +1347,9 @@
       <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('subname_register')">subname_register</button>
       <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('subname_update')">subname_update</button>
       <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('subname_revoke')">subname_revoke</button>
+      <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('subname_transfer')">subname_transfer</button>
+      <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('namespace_policy')">namespace_policy</button>
+      <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('namespace_transfer')">namespace_transfer</button>
       <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('delegate')">delegate</button>
       <button class="ns-op-tab" role="tab" aria-selected="false" onclick="switchOpTab('delegate_revoke')">delegate_revoke</button>
     </div>
@@ -1466,6 +1469,61 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             Revoking a subname removes it from the active namespace. The inscription remains on Bitcoin permanently, but BNRP will mark this subname as revoked.
           </div>
+        </div>
+
+        <!-- Op: subname_transfer -->
+        <div class="ns-op-panel" id="panel-subname_transfer">
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolStSub">Subname <span class="ns-form-required">required</span></label>
+            <input class="ns-form-input ns-form-input--mono" id="toolStSub" type="text" placeholder="vault.yourname.btc" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolStTo">New owner address <span class="ns-form-required">required</span></label>
+            <input class="ns-form-input ns-form-input--mono" id="toolStTo" type="text" placeholder="bc1p… taproot" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="ns-nonce-row">
+            <label class="ns-form-label" for="toolStNonce">Nonce <span class="ns-form-required">required</span></label>
+            <input class="ns-form-input ns-form-input--mono" id="toolStNonce" type="number" min="1" placeholder="2" />
+          </div>
+          <p class="ns-op-note">Transfers ownership of a subname to a new wallet. Must be inscribed from the <strong>current subname owner</strong> wallet (the <code>to</code> address on the original <code>subname_register</code>). The new owner controls all future updates.</p>
+        </div>
+
+        <!-- Op: namespace_policy -->
+        <div class="ns-op-panel" id="panel-namespace_policy">
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolNpPolicy">Policy <span class="ns-form-required">required</span></label>
+            <select class="ns-form-input" id="toolNpPolicy" onchange="onNsPolicyChange()">
+              <option value="open">open — anyone can register subnames</option>
+              <option value="closed">closed — name owner only</option>
+              <option value="allowlist">allowlist — only listed addresses</option>
+              <option value="denylist">denylist — everyone except listed addresses</option>
+            </select>
+          </div>
+          <div class="ns-form-row" id="toolNpListRow" style="display:none;">
+            <label class="ns-form-label" for="toolNpList">Address list <span class="ns-form-required">required for allowlist/denylist</span></label>
+            <textarea class="ns-form-input" id="toolNpList" rows="3" placeholder="One address per line&#10;bc1p…&#10;bc1p…" spellcheck="false"></textarea>
+          </div>
+          <div class="ns-nonce-row">
+            <label class="ns-form-label" for="toolNpNonce">Nonce <span class="ns-form-required">required</span></label>
+            <input class="ns-form-input ns-form-input--mono" id="toolNpNonce" type="number" min="1" placeholder="2" />
+          </div>
+          <p class="ns-op-note">Sets who can register subnames under your name. <strong>open</strong>: anyone can self-register. <strong>closed</strong>: only you can register subnames. <strong>allowlist</strong>: only listed wallets. <strong>denylist</strong>: everyone except listed wallets. Must be inscribed from the name owner wallet.</p>
+        </div>
+
+        <!-- Op: namespace_transfer -->
+        <div class="ns-op-panel" id="panel-namespace_transfer">
+          <div class="ns-form-row">
+            <label class="ns-form-label" for="toolNtInherit">Stance on pre-sale subnames <span class="ns-form-required">required</span></label>
+            <select class="ns-form-input" id="toolNtInherit">
+              <option value="true">inherit: true — accept all existing subnames</option>
+              <option value="false">inherit: false — revoke all pre-sale subnames</option>
+            </select>
+          </div>
+          <div class="ns-nonce-row">
+            <label class="ns-form-label" for="toolNtNonce">Nonce <span class="ns-form-required">required</span></label>
+            <input class="ns-form-input ns-form-input--mono" id="toolNtNonce" type="number" min="1" placeholder="2" />
+          </div>
+          <p class="ns-op-note">Published by a new name owner after acquiring a name. <strong>inherit: true</strong> = existing subnames stay active. <strong>inherit: false</strong> = all subnames registered before this block become <code>unverified</code> and stop resolving until the new owner explicitly re-registers them. Must be inscribed from the new name owner wallet.</p>
         </div>
 
         <!-- Op: delegate -->
@@ -1758,6 +1816,13 @@ const FAMOUS_NAMES = new Set([
 ]);
 
 // ── Op tab state ───────────────────────────────────────────────────────────
+function onNsPolicyChange() {
+  const val = document.getElementById('toolNpPolicy')?.value;
+  const row = document.getElementById('toolNpListRow');
+  if (row) row.style.display = (val === 'allowlist' || val === 'denylist') ? '' : 'none';
+}
+
+
 let currentOp = 'profile';
 
 function switchOpTab(op) {
@@ -1784,8 +1849,11 @@ function switchOpTab(op) {
 function checkLabel(value) {
   const warnIds = {
     'profile': null,
-    'subname_register': 'toolSubLabelWarn',
-    'subname_update':   'toolUpdLabelWarn',
+    'subname_register':   'toolSubLabelWarn',
+    'subname_update':     'toolUpdLabelWarn',
+    'subname_transfer':   null,
+    'namespace_policy':   null,
+    'namespace_transfer': null,
     'subname_revoke':   'toolRevLabelWarn',
   };
   const warnId = warnIds[currentOp];
@@ -1828,6 +1896,7 @@ function buildEventJson() {
     const avatar  = (document.getElementById('toolProfileAvatar')?.value || '').trim();
     const url     = (document.getElementById('toolProfileUrl')?.value || '').trim();
     const twitter = (document.getElementById('toolProfileTwitter')?.value || '').trim().replace(/^@/, '');
+    // x is the canonical field; twitter kept for backward compat
 
     obj = { p: 'bnrp', op: 'profile' };
     if (rootName) obj.name = rootName;
@@ -1837,7 +1906,9 @@ function buildEventJson() {
     if (desc)    records.description = desc;
     if (btc)     records.btc_taproot = btc;
     if (avatar)  records.avatar = avatar;
-    if (url)     records.url = url;
+    if (url)     records.url     = url;
+    if (twitter)  records.x       = twitter;  // canonical
+    if (twitter)  records.twitter = twitter;  // compat
     if (twitter) records['com.twitter'] = twitter;
     if (Object.keys(records).length > 0) obj.records = records;
 
@@ -1906,6 +1977,38 @@ function buildEventJson() {
     obj = { p: 'bnrp', op: 'delegate_revoke' };
     if (rootName) obj.name = rootName;
     obj.nonce = nonce;
+    obj.v = 1;
+
+  } else if (currentOp === 'subname_transfer') {
+    const stSub  = (document.getElementById('toolStSub')?.value  || '').trim();
+    const stTo   = (document.getElementById('toolStTo')?.value   || '').trim();
+    const stNonce = parseInt(document.getElementById('toolStNonce')?.value) || nonce;
+    obj = { p: 'bnrp', op: 'subname_transfer' };
+    if (rootName) obj.name = rootName;
+    if (stSub)   obj.sub  = stSub;
+    if (stTo)    obj.to   = stTo;
+    obj.nonce = stNonce;
+    obj.v = 1;
+
+  } else if (currentOp === 'namespace_policy') {
+    const npPolicy  = document.getElementById('toolNpPolicy')?.value || 'open';
+    const npNonce   = parseInt(document.getElementById('toolNpNonce')?.value) || nonce;
+    const npListRaw = (document.getElementById('toolNpList')?.value || '');
+    const npList    = npListRaw.split('\n').map(s => s.trim()).filter(Boolean);
+    obj = { p: 'bnrp', op: 'namespace_policy' };
+    if (rootName) obj.name = rootName;
+    obj.policy = npPolicy;
+    if (npList.length) obj.list = npList;
+    obj.nonce = npNonce;
+    obj.v = 1;
+
+  } else if (currentOp === 'namespace_transfer') {
+    const ntInherit = document.getElementById('toolNtInherit')?.value !== 'false';
+    const ntNonce   = parseInt(document.getElementById('toolNtNonce')?.value) || nonce;
+    obj = { p: 'bnrp', op: 'namespace_transfer' };
+    if (rootName) obj.name = rootName;
+    obj.inherit = ntInherit;
+    obj.nonce   = ntNonce;
     obj.v = 1;
   }
 
