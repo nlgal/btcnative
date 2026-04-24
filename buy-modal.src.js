@@ -161,10 +161,33 @@ async function _bmGetFeeRate() {
 }
 
 // ── Wallet ────────────────────────────────────────────────────────────────────
+
+// Lazy-load sats-connect (Xverse mobile in-app browser API)
+let _satsConnectModule = null;
+async function _bmLoadSatsConnect() {
+  if (_satsConnectModule) return _satsConnectModule;
+  try {
+    _satsConnectModule = await import('https://esm.sh/sats-connect@2');
+    return _satsConnectModule;
+  } catch {
+    return null;
+  }
+}
+
+// Detect whether we're running inside the Xverse in-app browser on mobile.
+// Xverse mobile injects a custom UA segment and does NOT inject window.unisat
+// or window.XverseProviders — it uses sats-connect postMessage instead.
+function _bmIsXverseMobile() {
+  const ua = navigator.userAgent || '';
+  return /XverseMobile|XverseApp|Xverse\//i.test(ua);
+}
+
 function _bmDetectWallet() {
   if (window.unisat) return { type: 'unisat', api: window.unisat };
   if (window.XverseProviders?.BitcoinProvider) return { type: 'xverse', api: window.XverseProviders.BitcoinProvider };
   if (window.btc) return { type: 'xverse', api: window.btc };
+  // Xverse mobile in-app browser: no injected provider, use sats-connect
+  if (_bmIsXverseMobile()) return { type: 'xverse-mobile', api: null };
   return null;
 }
 
@@ -188,6 +211,24 @@ async function _bmGetAddress(wallet) {
     // The ordinals address is stored on wallet and used for inscription delivery.
     return wallet._paymentAddress;
   }
+  if (wallet.type === 'xverse-mobile') {
+    // Xverse mobile: use sats-connect request() API via postMessage bridge
+    const sc = await _bmLoadSatsConnect();
+    if (!sc?.request) throw new Error('Could not load Xverse mobile API. Update Xverse and try again.');
+    const res = await sc.request('getAccounts', {
+      purposes: ['ordinals', 'payment'],
+      message:  'BTCNative needs your address to complete this purchase.',
+    });
+    if (res.status !== 'success') throw new Error(res.error?.message || 'Xverse connection cancelled.');
+    const accounts    = res.result || [];
+    const ordinalsAcc = accounts.find(a => a.purpose === 'ordinals');
+    const paymentAcc  = accounts.find(a => a.purpose === 'payment');
+    wallet._ordinalsAddress = ordinalsAcc?.address || null;
+    wallet._paymentAddress  = paymentAcc?.address  || ordinalsAcc?.address || accounts[0]?.address;
+    wallet._ordinalsPubkey  = ordinalsAcc?.publicKey || null;
+    wallet._paymentPubkey   = paymentAcc?.publicKey  || null;
+    return wallet._paymentAddress;
+  }
   throw new Error('Unsupported wallet');
 }
 
@@ -198,7 +239,7 @@ async function _bmGetPubkey(wallet, address) {
   if (wallet.type === 'unisat') {
     return wallet.api.getPublicKey(); // already 66-char compressed
   }
-  if (wallet.type === 'xverse') {
+  if (wallet.type === 'xverse' || wallet.type === 'xverse-mobile') {
     // _bmGetAddress already fetched and cached pubkeys — use them.
     // Payment pubkey is used for signing payment inputs (compressed secp256k1).
     // Ordinals pubkey is used for the tapInternalKey on inscription outputs.
@@ -612,6 +653,19 @@ async function _bmSignPsbt(wallet, psbtB64, signIndexes, buyerAddress, buyerPubk
     });
     return res.result.psbt;
   }
+  if (wallet.type === 'xverse-mobile') {
+    // Xverse mobile: sats-connect signPsbt
+    const sc = await _bmLoadSatsConnect();
+    if (!sc?.request) throw new Error('Could not load Xverse mobile signing API.');
+    const res = await sc.request('signPsbt', {
+      psbt: psbtB64,
+      broadcast: false,
+      allowedSigHash: ['SIGHASH_DEFAULT', 'SIGHASH_SINGLE', 'SIGHASH_ANYONECANPAY', 'SIGHASH_SINGLE|SIGHASH_ANYONECANPAY'],
+      signInputs: Object.fromEntries(signIndexes.map(i => [String(i), ['SIGHASH_DEFAULT']])),
+    });
+    if (res.status !== 'success') throw new Error(res.error?.message || 'Signing cancelled in Xverse.');
+    return res.result.psbt;
+  }
   throw new Error('Unsupported wallet');
 }
 
@@ -783,13 +837,14 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
       stepEl.textContent = 'Step 1 of 4';
       const wallet = _bmDetectWallet();
       if (!wallet) {
-        _bmSetStatus(status, 'error', 'No wallet detected. Install <a href="https://unisat.io/download" target="_blank" rel="noopener">UniSat</a> and refresh.');
+        _bmSetStatus(status, 'error', 'No wallet detected. Open this page in the <a href="https://www.xverse.app" target="_blank" rel="noopener">Xverse</a> or <a href="https://unisat.io/download" target="_blank" rel="noopener">UniSat</a> browser, or install the extension on desktop.');
         btn.disabled = false;
         return;
       }
 
       btn.textContent = 'Connecting...';
       _bmSetStatus(status, 'info', `Connecting ${wallet.type === 'unisat' ? 'UniSat' : 'Xverse'}...`);
+      // xverse-mobile is treated the same as xverse for status display
       // Show UniSat CONFIRM tip only for UniSat users
       if (wallet.type === 'unisat') {
         const tip = backdrop.querySelector('#bnConfirmTip');
