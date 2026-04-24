@@ -487,13 +487,13 @@ html, body {
 /* Main headline — tighter, sharper */
 .hero__title {
   font-family: var(--font-display);
-  font-size: clamp(2rem, 4vw + 1rem, 4rem);
+  font-size: clamp(1.75rem, 3vw + 0.6rem, 3rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--color-text);
   margin: 0 0 14px;
-  line-height: 1.08;
-  max-width: 22ch;
+  line-height: 1.12;
+  max-width: 28ch;
   margin-inline: auto;
 }
 .hero__title span {
@@ -505,15 +505,26 @@ html, body {
   .hero__title { font-size: clamp(1.75rem, 8vw, 2.6rem); }
 }
 
-/* Namespace thesis line — secondary, understated */
+/* Namespace thesis line — poetic, tight */
 .hero__namespace-line {
-  font-size: clamp(15px, 1.4vw, 18px);
+  font-size: clamp(16px, 1.6vw, 20px);
+  font-weight: 500;
   color: var(--color-text-muted);
-  max-width: 56ch;
-  margin: 0 auto 28px;
+  max-width: 36ch;
+  margin: 0 auto 14px;
   line-height: 1.6;
   font-style: italic;
   letter-spacing: -0.005em;
+}
+
+/* Support copy line */
+.hero__support-line {
+  font-size: clamp(13px, 1.1vw, 15px);
+  color: var(--color-text-faint);
+  max-width: 58ch;
+  margin: 0 auto 28px;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
 }
 
 /* Search */
