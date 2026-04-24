@@ -208,7 +208,7 @@
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.04em;
-  color: #FFFFFF;
+  color: var(--color-text);
   line-height: 1;
 }
 .nav__logo-native {
@@ -2386,7 +2386,7 @@
   font-size: 42px;
   font-weight: 800;
   letter-spacing: 0.04em;
-  color: #FFFFFF;
+  color: var(--color-text);
   line-height: 1;
 }
 .hero__brand-native {
@@ -2560,7 +2560,7 @@
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.04em;
-  color: #FFFFFF;
+  color: var(--color-text);
   line-height: 1;
 }
 .footer__logo-native {
@@ -2701,7 +2701,7 @@
   font-size: clamp(28px, 3.5vw, 44px);
   font-weight: 700;
   line-height: 1.15;
-  color: #fff;
+  color: var(--color-text);
   margin: 0;
 }
 
