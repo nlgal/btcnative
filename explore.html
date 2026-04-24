@@ -9,8 +9,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Names — BTC Native</title>
   <meta name="description" content="Browse and filter Bitcoin names by category, TLD, length, rarity, and BNRP status." />
+  <!-- Fonts: non-blocking load via print media swap -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
   <link rel="stylesheet" href="./base.css" />
   <link rel="stylesheet" href="./style.css" />
   <script>document.documentElement.setAttribute("data-theme",localStorage.getItem("btcn-theme")||"dark");</script>
@@ -27,7 +30,7 @@
   <script>
     window.SENTRY_DSN = 'https://ff96a23b1818b47e6fc6f5bcdcd62355@o4511272583692288.ingest.us.sentry.io/4511272591491072';
   </script>
-  <script src="https://browser.sentry-cdn.com/7.120.3/bundle.tracing.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://browser.sentry-cdn.com/7.120.3/bundle.tracing.min.js" crossorigin="anonymous"></script>
   <script>
     if (window.Sentry && window.SENTRY_DSN) {
       Sentry.init({
@@ -418,7 +421,7 @@
     <div class="footer__inner">
       <div>
         <a href="./index.html" class="footer__logo">
-          <picture><source srcset="./logo.webp" type="image/webp"><img class="footer__logo-mark" src="./logo-source-gradient.png" alt="" aria-hidden="true" width="32" height="32" style="display:block;width:32px;height:32px;"></picture>
+          <picture><source srcset="./logo.webp" type="image/webp"><img class="footer__logo-mark" src="./logo-source-gradient.png" alt="" aria-hidden="true" width="32" height="32" style="display:block;width:32px;height:32px;" loading="lazy"></picture>
           <div>
             <div class="footer__logo-btc">BTC</div>
             <div class="footer__logo-native">NATIVE</div>
@@ -474,8 +477,8 @@
   </div>
 </footer>
 
-<script src="./app.js"></script>
-<script src="./nav-search.js"></script>
+<script defer src="./app.js"></script>
+<script defer src="./nav-search.js"></script>
 
 <!-- floor ticker removed: floors loaded via renderMarketIndexes when Market tab is active -->
 

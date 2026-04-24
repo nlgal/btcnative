@@ -1,8 +1,8 @@
 /* style.css — btcnative.name design system */
 /* Bitcoin-native dark terminal aesthetic: near-black bg, #f7931a orange accent, monospace data, clean sans body */
 
-/* ── Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+/* ── Fonts: loaded via non-blocking <link> in HTML — no @import here ── */
+/* System font stack used until web fonts arrive (prevents invisible text) */
 
 /* ── Type Scale ── */
 :root {
@@ -145,6 +145,7 @@
 }
 
 .skeleton {
+  will-change: background-position;
   background: linear-gradient(90deg, var(--color-surface-offset) 25%, var(--color-surface-dynamic) 50%, var(--color-surface-offset) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
@@ -2629,3 +2630,22 @@
 }
 .footer__trust-item svg { color: var(--color-brand-orange); }
 
+
+/* ── Mobile tap targets ── */
+@media (max-width: 768px) {
+  /* Ensure all interactive elements meet 44px minimum */
+  .btn, button, a.footer__link, .filter-chip,
+  .nav__wallet-btn, .search-btn, .name-card__buy-btn,
+  .filter-chip--sm {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .filter-chip--sm {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+  }
+  /* Prevent accidental horizontal scroll */
+  body { overflow-x: hidden; }
+  /* Faster tap response */
+  * { touch-action: manipulation; }
+}

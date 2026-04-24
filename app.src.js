@@ -66,6 +66,28 @@ function updateThemeIcon(btn, theme) {
     : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
 }
 
+// ── Security helpers ──────────────────────────────────────────────────────────
+// Sanitize user-controlled text before inserting into DOM
+function _esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+// Only allow https:// and http:// URLs (block javascript: and data: URIs)
+function _safeUrl(url) {
+  try {
+    const u = new URL(url);
+    return (u.protocol === 'https:' || u.protocol === 'http:') ? url : null;
+  } catch { return null; }
+}
+// Only allow alphanumeric + common Twitter handle chars
+function _safeHandle(handle) {
+  return /^[\w]{1,50}$/.test(handle) ? handle : null;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function qs(sel, ctx = document) { return ctx.querySelector(sel); }
 function qsa(sel, ctx = document) { return [...ctx.querySelectorAll(sel)]; }
@@ -1061,12 +1083,14 @@ async function initProfilePage() {
   // Twitter
   if (records['com.twitter']) {
     qs('#profileTwitterField').style.display = 'block';
-    qs('#profileTwitter').innerHTML = `<a href="https://x.com/${records['com.twitter']}" target="_blank" rel="noopener noreferrer">@${records['com.twitter']}</a>`;
+    const _handle = _safeHandle(records['com.twitter']);
+    if (_handle) qs('#profileTwitter').innerHTML = `<a href="https://x.com/${_esc(_handle)}" target="_blank" rel="noopener noreferrer">@${_esc(_handle)}</a>`;
   }
   // URL
   if (records.url) {
     qs('#profileUrlField').style.display = 'block';
-    qs('#profileUrl').innerHTML = `<a href="${records.url}" target="_blank" rel="noopener noreferrer">${records.url.replace('https://','')}</a>`;
+    const _url = _safeUrl(records.url);
+    if (_url) qs('#profileUrl').innerHTML = `<a href="${_esc(_url)}" target="_blank" rel="noopener noreferrer">${_esc(_url.replace('https://','').replace('http://',''))}</a>`;
   }
 
   // Inscription ID
@@ -2097,9 +2121,9 @@ async function renderMarketIndexes() {
     if (elTop && topTld && topTld.btcVolume > 0) elTop.textContent = '.' + topTld.domainType;
   }
 
-  // Active listings count from our worker
+  // Active listings count — use limit=1 to minimize payload, total is in response
   try {
-    const res = await fetch(`${MARKET_API}/api/market/listings?limit=200`, { signal: AbortSignal.timeout(4000) });
+    const res = await fetch(`${MARKET_API}/api/market/listings?limit=1`, { signal: AbortSignal.timeout(4000) });
     const data = await res.json();
     const elList = qs('#mktListings');
     if (elList && data.ok) elList.textContent = (data.total || 0).toLocaleString();
@@ -2281,7 +2305,7 @@ function showSearchResult(data, name, resultsEl) {
     <div class="search-result-avatar" data-initial="${base[0].toUpperCase()}" style="background:${(()=>{const g=nameGradient(name);return `linear-gradient(135deg,${g.from},${g.to})`;})()};"></div>
     <div>
       <div class="search-result-name">${base}<span style="color:var(--color-primary)">${tld}</span></div>
-      <div class="search-result-sub">${records.display || ''} ${records['com.twitter'] ? '· @'+records['com.twitter'] : ''}</div>
+      <div class="search-result-sub">${_esc(records.display || '')} ${_safeHandle(records['com.twitter']) ? '· @'+_esc(records['com.twitter']) : ''}</div>
     </div>
     <span class="badge badge--green search-result-badge">BNRP ✓</span>
   `;
@@ -2737,8 +2761,8 @@ function renderMetadata(data) {
     { label: 'BNRP records', value: records && Object.keys(records).length > 0 ? Object.keys(records).join(', ') : 'None' },
     { label: 'Avatar',       value: records.avatar ? (records.avatar.startsWith('ord:') ? `<a href="https://ordinals.com/inscription/${records.avatar.slice(4)}" target="_blank" rel="noopener noreferrer">ord inscription</a>` : records.avatar) : '—' },
     { label: 'Display name', value: records.display || '—' },
-    { label: 'Twitter',      value: records['com.twitter'] ? `<a href="https://x.com/${records['com.twitter']}" target="_blank" rel="noopener noreferrer">@${records['com.twitter']}</a>` : '—' },
-    { label: 'Website',      value: records.url ? `<a href="${records.url}" target="_blank" rel="noopener noreferrer">${records.url.replace('https://','')}</a>` : '—' },
+    { label: 'Twitter',      value: (() => { const h = _safeHandle(records['com.twitter']); return h ? `<a href="https://x.com/${_esc(h)}" target="_blank" rel="noopener noreferrer">@${_esc(h)}</a>` : '—'; })() },
+    { label: 'Website',      value: (() => { const u = _safeUrl(records.url); return u ? `<a href="${_esc(u)}" target="_blank" rel="noopener noreferrer">${_esc(u.replace('https://','').replace('http://',''))}</a>` : '—'; })() },
     { label: 'Description',  value: records.description || '—' },
     { label: 'BNRP resolver',value: `<a href="https://bnrp.name/api/resolve?domain=${encodeURIComponent(name)}" target="_blank" rel="noopener noreferrer">Resolve live</a>` },
   ];
@@ -3487,11 +3511,13 @@ async function initProfilePageMVP() {
   }
   if (records['com.twitter']) {
     qs('#profileTwitterField').style.display = 'block';
-    qs('#profileTwitter').innerHTML = `<a href="https://x.com/${records['com.twitter']}" target="_blank" rel="noopener noreferrer">@${records['com.twitter']}</a>`;
+    const _handle = _safeHandle(records['com.twitter']);
+    if (_handle) qs('#profileTwitter').innerHTML = `<a href="https://x.com/${_esc(_handle)}" target="_blank" rel="noopener noreferrer">@${_esc(_handle)}</a>`;
   }
   if (records.url) {
     qs('#profileUrlField').style.display = 'block';
-    qs('#profileUrl').innerHTML = `<a href="${records.url}" target="_blank" rel="noopener noreferrer">${records.url.replace('https://','')}</a>`;
+    const _url = _safeUrl(records.url);
+    if (_url) qs('#profileUrl').innerHTML = `<a href="${_esc(_url)}" target="_blank" rel="noopener noreferrer">${_esc(_url.replace('https://','').replace('http://',''))}</a>`;
   }
 
   const inscId = resolvedData.inscriptionId || resolvedData.nameInscriptionId;
