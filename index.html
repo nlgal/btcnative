@@ -169,6 +169,49 @@
       <button class="hero__hint" onclick="setSearch('bitcoin.x')">bitcoin.x</button>
       <button class="hero__hint" onclick="setSearch('ord.ord')">ord.ord</button>
     </div>
+    <div class="bnrp-pill-wrap">
+      <button class="bnrp-pill" id="bnrpPillBtn" aria-label="Learn what Powered by BNRP means" aria-expanded="false" aria-controls="bnrpTooltip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        Powered by BNRP open resolution
+        <span class="bnrp-pill__info" aria-hidden="true">?</span>
+      </button>
+    </div>
+
+    <!-- BNRP tooltip backdrop -->
+    <div class="bnrp-tooltip-backdrop" id="bnrpBackdrop" aria-hidden="true"></div>
+
+    <!-- BNRP tooltip modal -->
+    <div class="bnrp-tooltip" id="bnrpTooltip" role="dialog" aria-modal="true" aria-labelledby="bnrpTooltipTitle" hidden>
+      <div class="bnrp-tooltip__header">
+        <div class="bnrp-tooltip__title" id="bnrpTooltipTitle">What does "Powered by BNRP" mean?</div>
+        <button class="bnrp-tooltip__close" id="bnrpTooltipClose" aria-label="Close">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="bnrp-tooltip__body">
+        <p>BNRP stands for Bitcoin Name Resolution Protocol. BTCNative uses BNRP open resolution to help verify and display BTC-native name records, including owner data, address records, avatar or inscription links, primary identity records, and marketplace listing status.</p>
+        <div class="bnrp-tooltip__resolves">
+          <div class="bnrp-tooltip__resolves-title">BNRP resolves</div>
+          <ul>
+            <li>name &rarr; owner address</li>
+            <li>name &rarr; primary Bitcoin address</li>
+            <li>name &rarr; avatar / inscription</li>
+            <li>name &rarr; text records</li>
+            <li>name &rarr; marketplace listing status</li>
+            <li>address &rarr; primary name (reverse lookup)</li>
+            <li>namespace &rarr; supported resolver / indexer</li>
+          </ul>
+        </div>
+        <p>BNRP does not own the names. It is the resolver layer that helps BTCNative read and organize name data in a consistent way.</p>
+      </div>
+      <div class="bnrp-tooltip__footer">
+        <a href="./bnrp.html" class="bnrp-tooltip__learn">
+          Learn more about BNRP
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+        <button class="bnrp-tooltip__dismiss" id="bnrpTooltipDismiss">Dismiss</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -575,6 +618,7 @@
           </div>
         </a>
         <p class="footer__tagline">Built on Bitcoin. Native to the future.</p>
+        <p style="font-family:var(--font-mono);font-size:11px;color:var(--color-text-faint);margin-top:6px;">Powered by <a href="./bnrp.html" style="color:var(--color-brand-orange);text-decoration:none;">BNRP</a> open resolution.</p>
       </div>
       <div>
         <div class="footer__col-title">Explore</div>
@@ -596,7 +640,8 @@
       <div>
         <div class="footer__col-title">Protocol</div>
         <div class="footer__links">
-          <a href="./about.html" class="footer__link">About BNRP</a>
+          <a href="./bnrp.html" class="footer__link">Powered by BNRP</a>
+          <a href="./about.html" class="footer__link">About</a>
           <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
           <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
         </div>
@@ -830,5 +875,39 @@ window.switchLiveMarket = function(tab, btn) {
 })();
 </script>
 
+<script>
+(function() {
+  var pill = document.getElementById('bnrpPillBtn');
+  var tooltip = document.getElementById('bnrpTooltip');
+  var backdrop = document.getElementById('bnrpBackdrop');
+  var closeBtn = document.getElementById('bnrpTooltipClose');
+  var dismissBtn = document.getElementById('bnrpTooltipDismiss');
+  if (!pill || !tooltip) return;
+
+  function openTooltip() {
+    tooltip.removeAttribute('hidden');
+    tooltip.classList.add('open');
+    backdrop.classList.add('open');
+    pill.setAttribute('aria-expanded', 'true');
+    closeBtn && closeBtn.focus();
+  }
+
+  function closeTooltip() {
+    tooltip.setAttribute('hidden', '');
+    tooltip.classList.remove('open');
+    backdrop.classList.remove('open');
+    pill.setAttribute('aria-expanded', 'false');
+    pill.focus();
+  }
+
+  pill.addEventListener('click', openTooltip);
+  backdrop.addEventListener('click', closeTooltip);
+  closeBtn && closeBtn.addEventListener('click', closeTooltip);
+  dismissBtn && dismissBtn.addEventListener('click', closeTooltip);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && tooltip.classList.contains('open')) closeTooltip();
+  });
+})();
+</script>
 </body>
 </html>

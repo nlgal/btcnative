@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BNRP: Bitcoin Name Resolution Protocol — BTCNative</title>
+  <meta name="description" content="BNRP is an open resolution layer for BTC-native names. Learn how BTCNative uses BNRP to verify ownership, avatars, address records, and provenance." />
+  <link rel="canonical" href="https://btcnative.name/bnrp" />
+
+  <!-- OG / Twitter -->
+  <meta property="og:title" content="BNRP: Bitcoin Name Resolution Protocol" />
+  <meta property="og:description" content="An open resolution layer for BTC-native names. Verify ownership, avatars, address records, and provenance." />
+  <meta property="og:url" content="https://btcnative.name/bnrp" />
+  <meta property="og:image" content="https://btcnative.name/social-banner.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@btcnativename" />
+  <meta name="twitter:title" content="BNRP: Bitcoin Name Resolution Protocol" />
+  <meta name="twitter:description" content="An open resolution layer for BTC-native names. Verify ownership, avatars, address records, and provenance." />
+  <meta name="twitter:image" content="https://btcnative.name/social-banner.png" />
+
+  <!-- Icons / PWA -->
+  <link rel="icon" type="image/png" href="./logo-source-gradient.png" />
+  <link rel="manifest" href="./manifest.json" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav__inner container">
+    <a href="./index.html" class="nav__logo" aria-label="BTC Native home">
+      <picture><source srcset="./logo.webp" type="image/webp"><img class="nav__logo-mark" src="./logo-source-gradient.png" alt="" aria-hidden="true" width="36" height="36" style="display:block;width:36px;height:36px;" fetchpriority="high"></picture>
+      <div class="nav__logo-text">
+        <span class="nav__logo-btc">BTC</span>
+        <span class="nav__logo-native">NATIVE</span>
+      </div>
+    </a>
+    <ul class="nav__links" role="list">
+      <li><a href="./index.html" class="nav__link">Names</a></li>
+      <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
+      <li><a href="./sell.html" class="nav__link">Sell</a></li>
+      <li><a href="./portfolio.html" class="nav__link">My Names</a></li>
+    </ul>
+    <div class="nav__actions">
+      <button class="nav__theme-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button class="nav__wallet-btn" id="navWalletBtn" aria-label="Connect wallet">Connect</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── PAGE HERO ── -->
+<section class="bnrp-hero">
+  <div class="container container--narrow">
+    <div class="bnrp-hero__eyebrow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      Open Resolution Standard
+    </div>
+    <h1 class="bnrp-hero__title">BNRP: Bitcoin Name<br>Resolution Protocol</h1>
+    <p class="bnrp-hero__sub">An open resolution layer for BTC-native names. BTCNative uses BNRP to read name records, verify ownership, resolve avatars, and display provenance — without claiming to own the names.</p>
+    <div class="bnrp-hero__actions">
+      <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener noreferrer" class="bnrp-btn bnrp-btn--primary">
+        API Reference
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+      </a>
+      <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer" class="bnrp-btn bnrp-btn--ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+        GitHub
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── MAIN CONTENT ── -->
+<main class="bnrp-main">
+  <div class="container">
+    <div class="bnrp-grid">
+
+      <!-- ══ SECTION 1: What is BNRP? ══ -->
+      <section class="bnrp-section" id="what-is-bnrp" aria-labelledby="s1-heading">
+        <div class="bnrp-section__num" aria-hidden="true">01</div>
+        <h2 class="bnrp-section__title" id="s1-heading">What is BNRP?</h2>
+        <div class="bnrp-section__body">
+          <p>BNRP is an open resolution layer for BTC-native names. It gives wallets, marketplaces, and apps a shared way to read name records — ownership, avatars, addresses, inscriptions, and provenance data — directly from Bitcoin-native sources.</p>
+          <p>It is not a registry. It does not issue names. It is the resolver: a standard for reading what already exists on-chain.</p>
+
+          <div class="bnrp-resolves" aria-label="What BNRP resolves">
+            <div class="bnrp-resolves__title">BNRP resolves</div>
+            <ul class="bnrp-resolves__list" role="list">
+              <li class="bnrp-resolves__item">
+                <span class="bnrp-resolves__arrow" aria-hidden="true">→</span>
+                <span class="bnrp-resolves__from">name</span>
+                <span class="bnrp-resolves__sep" aria-hidden="true">·</span>
+                <span class="bnrp-resolves__to">owner address</span>
+              </li>
+              <li class="bnrp-resolves__item">
+                <span class="bnrp-resolves__arrow" aria-hidden="true">→</span>
+                <span class="bnrp-resolves__from">name</span>
+                <span class="bnrp-resolves__sep" aria-hidden="true">·</span>
+                <span class="bnrp-resolves__to">primary Bitcoin address</span>
+              </li>
+              <li class="bnrp-resolves__item">
+                <span class="bnrp-resolves__arrow" aria-hidden="true">→</span>
+                <span class="bnrp-resolves__from">name</span>
+                <span class="bnrp-resolves__sep" aria-hidden="true">·</span>
+                <span class="bnrp-resolves__to">avatar / inscription link</span>
+              </li>
+              <li class="bnrp-resolves__item">
+                <span class="bnrp-resolves__arrow" aria-hidden="true">→</span>
+                <span class="bnrp-resolves__from">name</span>
+                <span class="bnrp-resolves__sep" aria-hidden="true">·</span>
+                <span class="bnrp-resolves__to">text records (Twitter, website, description)</span>
+              </li>
+              <li class="bnrp-resolves__item">
+                <span class="bnrp-resolves__arrow" aria-hidden="true">→</span>
+                <span class="bnrp-resolves__from">name</span>
+                <span class="bnrp-resolves__sep" aria-hidden="true">·</span>
+                <span class="bnrp-resolves__to">marketplace listing status</span>
+              </li>
+              <li class="bnrp-resolves__item">
+                <span class="bnrp-resolves__arrow" aria-hidden="true">→</span>
+                <span class="bnrp-resolves__from">address</span>
+                <span class="bnrp-resolves__sep" aria-hidden="true">·</span>
+                <span class="bnrp-resolves__to">primary name (reverse lookup)</span>
+              </li>
+              <li class="bnrp-resolves__item">
+                <span class="bnrp-resolves__arrow" aria-hidden="true">→</span>
+                <span class="bnrp-resolves__from">namespace</span>
+                <span class="bnrp-resolves__sep" aria-hidden="true">·</span>
+                <span class="bnrp-resolves__to">supported resolver / indexer</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ SECTION 2: What BTCNative uses it for ══ -->
+      <section class="bnrp-section" id="btcnative-usage" aria-labelledby="s2-heading">
+        <div class="bnrp-section__num" aria-hidden="true">02</div>
+        <h2 class="bnrp-section__title" id="s2-heading">What BTCNative uses it for</h2>
+        <div class="bnrp-section__body">
+          <p>BTCNative uses BNRP to index, verify, and display BTC-native identity records across supported namespaces including <code class="bnrp-code">.btc</code>, <code class="bnrp-code">.sats</code>, <code class="bnrp-code">.x</code>, <code class="bnrp-code">.ord</code>, and others.</p>
+
+          <div class="bnrp-usage-grid">
+            <div class="bnrp-usage-item">
+              <div class="bnrp-usage-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div>
+                <div class="bnrp-usage-label">Verify ownership</div>
+                <div class="bnrp-usage-desc">Cross-reference name inscriptions with on-chain owner data before displaying any listing.</div>
+              </div>
+            </div>
+            <div class="bnrp-usage-item">
+              <div class="bnrp-usage-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+              </div>
+              <div>
+                <div class="bnrp-usage-label">Resolve identity cards</div>
+                <div class="bnrp-usage-desc">Display avatars, display names, descriptions, and linked social handles from on-chain records.</div>
+              </div>
+            </div>
+            <div class="bnrp-usage-item">
+              <div class="bnrp-usage-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </div>
+              <div>
+                <div class="bnrp-usage-label">Address resolution</div>
+                <div class="bnrp-usage-desc">Map Bitcoin names to wallet addresses for display and payment routing.</div>
+              </div>
+            </div>
+            <div class="bnrp-usage-item">
+              <div class="bnrp-usage-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div>
+                <div class="bnrp-usage-label">Provenance signals</div>
+                <div class="bnrp-usage-desc">Flag first-inscription canonicality and surface re-inscription warnings on buy/sell surfaces.</div>
+              </div>
+            </div>
+            <div class="bnrp-usage-item">
+              <div class="bnrp-usage-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div>
+                <div class="bnrp-usage-label">Reverse lookup</div>
+                <div class="bnrp-usage-desc">When a wallet connects, resolve the address back to a primary name for display in the nav.</div>
+              </div>
+            </div>
+            <div class="bnrp-usage-item">
+              <div class="bnrp-usage-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
+              <div>
+                <div class="bnrp-usage-label">Marketplace status</div>
+                <div class="bnrp-usage-desc">Show whether a name is currently listed, its price, and last sale data alongside BNRP records.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ SECTION 3: What BNRP does not mean ══ -->
+      <section class="bnrp-section" id="what-bnrp-is-not" aria-labelledby="s3-heading">
+        <div class="bnrp-section__num" aria-hidden="true">03</div>
+        <h2 class="bnrp-section__title" id="s3-heading">What BNRP does not mean</h2>
+        <div class="bnrp-section__body">
+          <div class="bnrp-not-list" role="list" aria-label="What BNRP is not">
+            <div class="bnrp-not-item" role="listitem">
+              <span class="bnrp-not-x" aria-hidden="true">✕</span>
+              <div>
+                <strong>BNRP does not custody names.</strong>
+                <span>Names are Bitcoin inscriptions. They live on-chain. BNRP only reads them.</span>
+              </div>
+            </div>
+            <div class="bnrp-not-item" role="listitem">
+              <span class="bnrp-not-x" aria-hidden="true">✕</span>
+              <div>
+                <strong>BNRP does not own names.</strong>
+                <span>Ownership is determined by which address holds the inscription on Bitcoin.</span>
+              </div>
+            </div>
+            <div class="bnrp-not-item" role="listitem">
+              <span class="bnrp-not-x" aria-hidden="true">✕</span>
+              <div>
+                <strong>BNRP does not replace Bitcoin.</strong>
+                <span>It is a read layer on top of Bitcoin. Bitcoin consensus is the ground truth.</span>
+              </div>
+            </div>
+            <div class="bnrp-not-item" role="listitem">
+              <span class="bnrp-not-x" aria-hidden="true">✕</span>
+              <div>
+                <strong>BNRP does not guarantee market value.</strong>
+                <span>Resolution and indexing have no bearing on price. Markets determine value.</span>
+              </div>
+            </div>
+            <div class="bnrp-not-item" role="listitem">
+              <span class="bnrp-not-x" aria-hidden="true">✕</span>
+              <div>
+                <strong>BNRP is not a partnership claim.</strong>
+                <span>Displaying a name from any collection does not imply partnership with that project, marketplace, or wallet unless explicitly stated.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ SECTION 4: Resolver examples ══ -->
+      <section class="bnrp-section" id="resolver-examples" aria-labelledby="s4-heading">
+        <div class="bnrp-section__num" aria-hidden="true">04</div>
+        <h2 class="bnrp-section__title" id="s4-heading">Resolver examples</h2>
+        <div class="bnrp-section__body">
+          <p>These are illustrative examples of how BNRP reads name data. Live data is fetched from on-chain sources at resolution time.</p>
+
+          <div class="bnrp-examples">
+
+            <article class="bnrp-example-card" aria-label="satoshi.btc resolver example">
+              <div class="bnrp-example-card__header">
+                <div class="bnrp-example-card__avatar" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" fill="#1A0A00"/><circle cx="24" cy="24" r="16" fill="none" stroke="#FF8A00" stroke-width="2.5"/><text x="24" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#FF8A00" font-family="monospace">₿</text></svg>
+                </div>
+                <div>
+                  <div class="bnrp-example-card__name">satoshi.btc</div>
+                  <div class="bnrp-example-card__ns">.btc namespace · BNRP verified</div>
+                </div>
+                <span class="bnrp-badge bnrp-badge--ok" aria-label="Verified">verified</span>
+              </div>
+              <dl class="bnrp-example-card__rows">
+                <div class="bnrp-example-card__row"><dt>Owner</dt><dd class="bnrp-val--ok">verified on-chain</dd></div>
+                <div class="bnrp-example-card__row"><dt>Primary address</dt><dd class="bnrp-val--ok">bc1p… connected</dd></div>
+                <div class="bnrp-example-card__row"><dt>Avatar</dt><dd class="bnrp-val--ok">inscription-linked</dd></div>
+                <div class="bnrp-example-card__row"><dt>Listing</dt><dd class="bnrp-val--none">not listed</dd></div>
+              </dl>
+            </article>
+
+            <article class="bnrp-example-card" aria-label="pizza.btc resolver example">
+              <div class="bnrp-example-card__header">
+                <div class="bnrp-example-card__avatar" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" fill="#1A0800"/><polygon points="24,8 40,38 8,38" fill="#C84000" stroke="#FF6B00" stroke-width="1.5" stroke-linejoin="round"/><polygon points="24,14 36,36 12,36" fill="#E05000"/><circle cx="22" cy="28" r="2.5" fill="#FF3030"/><circle cx="29" cy="32" r="2" fill="#FF3030"/><circle cx="26" cy="22" r="1.8" fill="#FF3030"/></svg>
+                </div>
+                <div>
+                  <div class="bnrp-example-card__name">pizza.btc</div>
+                  <div class="bnrp-example-card__ns">.btc namespace · BNRP verified</div>
+                </div>
+                <span class="bnrp-badge bnrp-badge--ok" aria-label="Verified">verified</span>
+              </div>
+              <dl class="bnrp-example-card__rows">
+                <div class="bnrp-example-card__row"><dt>Owner</dt><dd class="bnrp-val--ok">verified on-chain</dd></div>
+                <div class="bnrp-example-card__row"><dt>Primary address</dt><dd class="bnrp-val--ok">bc1p… connected</dd></div>
+                <div class="bnrp-example-card__row"><dt>Avatar</dt><dd class="bnrp-val--none">none set</dd></div>
+                <div class="bnrp-example-card__row"><dt>Listing</dt><dd class="bnrp-val--listed">listed</dd></div>
+              </dl>
+            </article>
+
+            <article class="bnrp-example-card" aria-label="puppet.btc resolver example">
+              <div class="bnrp-example-card__header">
+                <div class="bnrp-example-card__avatar" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" fill="#1A0A00"/><circle cx="24" cy="22" r="11" fill="#FF8A00"/><circle cx="20" cy="20" r="2.5" fill="#1A0A00"/><circle cx="28" cy="20" r="2.5" fill="#1A0A00"/><path d="M19 27 Q24 31 29 27" stroke="#1A0A00" stroke-width="2" stroke-linecap="round" fill="none"/><line x1="18" y1="10" x2="18" y2="4" stroke="#666" stroke-width="1.5"/><line x1="30" y1="10" x2="30" y2="4" stroke="#666" stroke-width="1.5"/><line x1="14" y1="4" x2="34" y2="4" stroke="#555" stroke-width="1.5"/></svg>
+                </div>
+                <div>
+                  <div class="bnrp-example-card__name">puppet.btc</div>
+                  <div class="bnrp-example-card__ns">.btc namespace · unresolved</div>
+                </div>
+                <span class="bnrp-badge bnrp-badge--pending" aria-label="Unresolved">unresolved</span>
+              </div>
+              <dl class="bnrp-example-card__rows">
+                <div class="bnrp-example-card__row"><dt>Owner</dt><dd class="bnrp-val--pending">unresolved placeholder</dd></div>
+                <div class="bnrp-example-card__row"><dt>Primary address</dt><dd class="bnrp-val--none">unavailable</dd></div>
+                <div class="bnrp-example-card__row"><dt>Avatar</dt><dd class="bnrp-val--none">none set</dd></div>
+                <div class="bnrp-example-card__row"><dt>Listing</dt><dd class="bnrp-val--listed">listed</dd></div>
+              </dl>
+            </article>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ SECTION 5: Developer reference ══ -->
+      <section class="bnrp-section" id="developer" aria-labelledby="s5-heading">
+        <div class="bnrp-section__num" aria-hidden="true">05</div>
+        <h2 class="bnrp-section__title" id="s5-heading">Developer reference</h2>
+        <div class="bnrp-section__body">
+          <p>BNRP provides a normalized record model for BTC-native names. The API returns a consistent shape regardless of which underlying indexer resolved the name.</p>
+
+          <div class="bnrp-api-endpoints">
+            <div class="bnrp-endpoint">
+              <span class="bnrp-method">GET</span>
+              <code class="bnrp-code bnrp-code--url">/v1/resolve/{name}</code>
+              <span class="bnrp-endpoint__desc">Forward resolve — name → records</span>
+            </div>
+            <div class="bnrp-endpoint">
+              <span class="bnrp-method">GET</span>
+              <code class="bnrp-code bnrp-code--url">/v1/reverse/{address}</code>
+              <span class="bnrp-endpoint__desc">Reverse resolve — address → primary name</span>
+            </div>
+            <div class="bnrp-endpoint">
+              <span class="bnrp-method">GET</span>
+              <code class="bnrp-code bnrp-code--url">/v1/batch?names=a,b,c</code>
+              <span class="bnrp-endpoint__desc">Batch resolve — up to 20 names</span>
+            </div>
+          </div>
+
+          <p class="bnrp-section__note">Base URL: <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener noreferrer" class="bnrp-link">https://api.bnrp.name/v1/</a></p>
+
+          <div class="bnrp-code-block" aria-label="BNRP normalized record model">
+            <div class="bnrp-code-block__label">Normalized record model</div>
+            <pre class="bnrp-pre"><code>{
+  "name": "example.btc",
+  "owner": "bc1p...",
+  "primaryAddress": "bc1p...",
+  "avatar": "inscriptionId or URL",
+  "records": {
+    "twitter": "",
+    "website": "",
+    "description": ""
+  },
+  "listing": {
+    "status": "listed",
+    "price": "",
+    "marketplace": "BTCNative"
+  },
+  "provenance": {
+    "source": "unisat | btcname | sns",
+    "verifiedAt": "2026-01-01T00:00:00Z"
+  }
+}</code></pre>
+          </div>
+
+          <div class="bnrp-dev-links">
+            <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener noreferrer" class="bnrp-btn bnrp-btn--ghost bnrp-btn--sm">
+              Live API
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+            </a>
+            <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer" class="bnrp-btn bnrp-btn--ghost bnrp-btn--sm">
+              Source on GitHub
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /bnrp-grid -->
+  </div>
+</main>
+
+<!-- ── FOOTER ── -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer__inner">
+      <div>
+        <a href="./index.html" class="footer__logo">
+          <picture><source srcset="./logo.webp" type="image/webp"><img class="footer__logo-mark" src="./logo-source-gradient.png" alt="" aria-hidden="true" width="32" height="32" style="display:block;width:32px;height:32px;" loading="lazy"></picture>
+          <div>
+            <div class="footer__logo-btc">BTC</div>
+            <div class="footer__logo-native">NATIVE</div>
+          </div>
+        </a>
+        <p class="footer__tagline">Powered by BNRP open resolution<br>for BTC-native names.</p>
+      </div>
+      <div>
+        <div class="footer__col-title">Explore</div>
+        <div class="footer__links">
+          <a href="./explore.html" class="footer__link">Categories</a>
+          <a href="./explore.html?tab=listings" class="footer__link">Listings</a>
+          <a href="./explore.html?tab=market" class="footer__link">Market Data</a>
+          <a href="./bulk.html" class="footer__link">Bulk Search</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Account</div>
+        <div class="footer__links">
+          <a href="./sell.html" class="footer__link">List a Name</a>
+          <a href="./portfolio.html" class="footer__link">My Names</a>
+          <a href="./points.html" class="footer__link">My Points</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Protocol</div>
+        <div class="footer__links">
+          <a href="./bnrp.html" class="footer__link">Powered by BNRP</a>
+          <a href="./about.html" class="footer__link">About</a>
+          <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
+          <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Support</div>
+        <div class="footer__links">
+          <a href="https://x.com/btcnativename" target="_blank" rel="noopener" class="footer__link">@btcnativename</a>
+          <a href="mailto:hello@btcnative.name" class="footer__link">hello@btcnative.name</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span class="footer__copy">&copy; 2026 BTC Native. Trustless by design.</span>
+      <div class="footer__trust">
+        <span class="footer__trust-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Verifiable on Bitcoin
+        </span>
+        <span class="footer__trust-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Open Protocol
+        </span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script defer src="./app.js"></script>
+<script>
+(function() {
+  const saved = localStorage.getItem('btcn-theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  else if (window.matchMedia('(prefers-color-scheme: light)').matches) document.documentElement.setAttribute('data-theme', 'light');
+})();
+const themeBtn = document.getElementById('themeToggle');
+if (themeBtn) themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('btcn-theme', next);
+});
+</script>
+
+</body>
+</html>
