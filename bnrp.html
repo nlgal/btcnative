@@ -386,6 +386,144 @@
         </div>
       </section>
 
+      <!-- ── SECTION: Cross-chain records ── -->
+      <section class="bnrp-section" id="cross-chain">
+        <div class="bnrp-section__label">Records</div>
+        <h2 class="bnrp-section__title">One name. Many addresses.</h2>
+        <p class="bnrp-section__body">A single BTC-native name can carry records for any chain. Your <code class="bnrp-inline-code">.btc</code> name is the canonical identity root. Every record below is optional and set by the owner.</p>
+
+        <div class="bnrp-usage-grid" style="margin-top:28px;">
+          <div class="bnrp-usage-item">
+            <div class="bnrp-usage-item__icon" style="background:rgba(247,147,26,0.12);color:#f7931a;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+            </div>
+            <div>
+              <div class="bnrp-usage-item__label">Bitcoin (P2TR)</div>
+              <div class="bnrp-usage-item__desc">Primary on-chain address. Verified against the inscription owner at resolution time.</div>
+            </div>
+          </div>
+          <div class="bnrp-usage-item">
+            <div class="bnrp-usage-item__icon" style="background:rgba(139,92,246,0.12);color:#a78bfa;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <div>
+              <div class="bnrp-usage-item__label">Lightning address</div>
+              <div class="bnrp-usage-item__desc">LNURL or Lightning address for instant, low-fee BTC payments without on-chain fees.</div>
+            </div>
+          </div>
+          <div class="bnrp-usage-item">
+            <div class="bnrp-usage-item__icon" style="background:rgba(100,160,255,0.1);color:#7eb8ff;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 19 22 19"/></svg>
+            </div>
+            <div>
+              <div class="bnrp-usage-item__label">Ethereum</div>
+              <div class="bnrp-usage-item__desc">Optional ETH address record for cross-ecosystem interoperability. Never the root of trust.</div>
+            </div>
+          </div>
+          <div class="bnrp-usage-item">
+            <div class="bnrp-usage-item__icon" style="background:rgba(20,241,149,0.1);color:#14f195;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+            </div>
+            <div>
+              <div class="bnrp-usage-item__label">Solana</div>
+              <div class="bnrp-usage-item__desc">Optional SOL address record. Useful for holders who operate across chains.</div>
+            </div>
+          </div>
+          <div class="bnrp-usage-item">
+            <div class="bnrp-usage-item__icon" style="background:rgba(255,255,255,0.06);color:var(--color-text-muted);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+            </div>
+            <div>
+              <div class="bnrp-usage-item__label">Website</div>
+              <div class="bnrp-usage-item__desc">URL to a personal site, portfolio, or project. Resolved and surfaced on name profiles.</div>
+            </div>
+          </div>
+          <div class="bnrp-usage-item">
+            <div class="bnrp-usage-item__icon" style="background:rgba(255,255,255,0.06);color:var(--color-text-muted);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 4s-2.5 1.5-4 2c-1.1-1.2-2.6-2-4.3-2A5.7 5.7 0 008 9.7c0 .4 0 .8.1 1.2C5.2 10.7 2.7 9.3 1 7.2c-.4.7-.6 1.5-.6 2.3 0 1.6.8 3 2 3.8-.7 0-1.4-.2-2-.6v.1c0 2.2 1.6 4.1 3.7 4.5-.4.1-.8.2-1.2.2-.3 0-.6 0-.9-.1.6 1.8 2.2 3 4.1 3.1A11.4 11.4 0 012 22c2.1 1.3 4.5 2 7.1 2 8.5 0 13.2-7 13.2-13.1l-.1-.6C23.1 9.7 22 4 22 4z"/></svg>
+            </div>
+            <div>
+              <div class="bnrp-usage-item__label">X / Twitter</div>
+              <div class="bnrp-usage-item__desc">Social handle stored in your inscription record. Displayed on your BTC Native profile page.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bnrp-code-block" style="margin-top:28px;" aria-label="Cross-chain record example">
+          <div class="bnrp-code-block__label">Example — full record set</div>
+          <pre class="bnrp-pre"><code>GET https://api.bnrp.name/v1/resolve?name=satoshi.btc
+
+{
+  "name": "satoshi.btc",
+  "owner": "bc1p...",
+  "addresses": {
+    "BTC":       "bc1p...",
+    "LIGHTNING": "satoshi@getalby.com",
+    "ETH":       "0x...",
+    "SOL":       "So1..."
+  },
+  "profile": {
+    "display":      "Satoshi",
+    "com.twitter": "satoshi",
+    "url":         "https://bitcoin.org"
+  },
+  "via": "unisat",
+  "resolved_at": "2026-04-23T20:00:00Z",
+  "cached": true
+}</code></pre>
+        </div>
+        <p class="bnrp-section__note" style="margin-top:16px;">Bitcoin is always the root. All other address fields are optional owner-set records.</p>
+      </section>
+
+      <!-- ── SECTION: Subnames &amp; namespace roadmap ── -->
+      <section class="bnrp-section" id="subnames">
+        <div class="bnrp-section__label">Roadmap</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <h2 class="bnrp-section__title" style="margin:0;">Subnames &amp; namespaces</h2>
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:rgba(255,138,0,0.12);color:var(--color-brand-orange);border:1px solid rgba(255,138,0,0.25);">Coming next</span>
+        </div>
+        <p class="bnrp-section__body">Top-level names will be able to issue subnames under their namespace. A collector who owns <code class="bnrp-inline-code">artist.btc</code> could issue <code class="bnrp-inline-code">shop.artist.btc</code> or <code class="bnrp-inline-code">vault.artist.btc</code> as independently resolvable names. Each subname carries its own BNRP records and resolves through the same open protocol.</p>
+
+        <div class="bnrp-resolves" style="margin-top:28px;">
+          <div class="bnrp-resolves__item">
+            <code class="bnrp-resolves__name">shop.artist.btc</code>
+            <svg class="bnrp-resolves__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <span class="bnrp-resolves__to">Storefront — issued by <code>artist.btc</code> holder</span>
+          </div>
+          <div class="bnrp-resolves__item">
+            <code class="bnrp-resolves__name">vault.punk.btc</code>
+            <svg class="bnrp-resolves__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <span class="bnrp-resolves__to">Cold storage namespace — controlled by <code>punk.btc</code></span>
+          </div>
+          <div class="bnrp-resolves__item">
+            <code class="bnrp-resolves__name">dev.satoshi.btc</code>
+            <svg class="bnrp-resolves__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <span class="bnrp-resolves__to">Developer identity — separate records, same root</span>
+          </div>
+          <div class="bnrp-resolves__item">
+            <code class="bnrp-resolves__name">pay.brand.btc</code>
+            <svg class="bnrp-resolves__arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <span class="bnrp-resolves__to">Payment address sub-namespace for brands</span>
+          </div>
+        </div>
+
+        <div class="bnrp-examples" style="margin-top:28px;">
+          <div class="bnrp-example">
+            <div class="bnrp-example__title">Issuance model</div>
+            <p class="bnrp-example__body">The parent name holder controls subname issuance. No platform permission required. Records are inscribed on Ordinals and resolved via BNRP API.</p>
+          </div>
+          <div class="bnrp-example">
+            <div class="bnrp-example__title">Resolution</div>
+            <p class="bnrp-example__body">Subnames resolve through the same <code class="bnrp-inline-code">api.bnrp.name/v1/resolve</code> endpoint. No new DNS or off-chain infrastructure needed.</p>
+          </div>
+          <div class="bnrp-example">
+            <div class="bnrp-example__title">Ownership</div>
+            <p class="bnrp-example__body">Each subname is an inscription owned by the subname holder. Transfer of the parent does not transfer subnames — each resolves independently.</p>
+          </div>
+        </div>
+        <p class="bnrp-section__note" style="margin-top:20px;">This is a protocol roadmap item. Subname issuance is not yet live. Follow <a href="https://x.com/btcnativename" target="_blank" rel="noopener" class="bnrp-link">@btcnativename</a> for updates.</p>
+      </section>
+
     </div><!-- /bnrp-grid -->
   </div>
 </main>
@@ -425,6 +563,7 @@
         <div class="footer__col-title">Protocol</div>
         <div class="footer__links">
           <a href="./bnrp.html" class="footer__link">Powered by BNRP</a>
+          <a href="./docs.html" class="footer__link">Docs</a>
           <a href="./about.html" class="footer__link">About</a>
           <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
           <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>

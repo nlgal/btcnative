@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script>
+    (function(){var t=localStorage.getItem('btcn-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developer Docs — BTC Native</title>
+  <meta name="description" content="BNRP API reference — resolver endpoint, name record schema, listing schema, verification, error responses, and rate limits." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="BTC Native" />
+  <meta property="og:title" content="Developer Docs — BTC Native" />
+  <meta property="og:description" content="BNRP API reference for Bitcoin-native name resolution." />
+  <meta property="og:image" content="https://btcnative.name/assets/social-banner.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@btcnativename" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
+  <link rel="stylesheet" href="./base.css" />
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" type="image/x-icon" href="./favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="./icon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
+  <meta name="theme-color" content="#0D0D0D">
+  <script defer data-domain="btcnative.name" src="https://plausible.io/js/script.tagged-events.js"></script>
+  <script>window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)}</script>
+  <link rel="canonical" href="https://btcnative.name/docs.html" />
+  <link rel="manifest" href="./manifest.json" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container">
+    <div class="nav__inner">
+      <a href="./index.html" class="nav__logo" aria-label="BTC Native home">
+        <picture><source srcset="./logo-36.webp" type="image/webp"><img class="nav__logo-mark" src="./logo-36.png" alt="" aria-hidden="true" width="36" height="36" style="display:block;width:36px;height:36px;"></picture>
+        <span class="nav__logo-text">
+          <span class="nav__logo-btc">BTC</span><span class="nav__logo-native">NATIVE</span>
+        </span>
+      </a>
+      <ul class="nav__links" role="list">
+        <li class="nav__item">
+          <a href="./explore.html" class="nav__link nav__link--has-dropdown">
+            Names<svg class="nav__caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5l3 3 3-3"/></svg>
+          </a>
+          <div class="nav__dropdown">
+            <div class="nav__dropdown-label">Browse</div>
+            <a href="./explore.html" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="5" height="5" rx="0.5"/><rect x="8" y="1" width="5" height="5" rx="0.5"/><rect x="1" y="8" width="5" height="5" rx="0.5"/><rect x="8" y="8" width="5" height="5" rx="0.5"/></svg> Categories</a>
+            <a href="./explore.html?tab=listings" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="3.5" x2="13" y2="3.5"/><line x1="5" y1="7" x2="13" y2="7"/><line x1="5" y1="10.5" x2="13" y2="10.5"/><circle cx="2" cy="3.5" r="0.75" fill="currentColor"/><circle cx="2" cy="7" r="0.75" fill="currentColor"/><circle cx="2" cy="10.5" r="0.75" fill="currentColor"/></svg> Listings</a>
+            <a href="./bulk.html" class="nav__dropdown-item"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg> Bulk Search</a>
+          </div>
+        </li>
+        <li class="nav__item">
+          <a href="./explore.html?tab=market" class="nav__link nav__link--has-dropdown">
+            Market<svg class="nav__caret" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5l3 3 3-3"/></svg>
+          </a>
+          <div class="nav__dropdown">
+            <div class="nav__dropdown-label">Data</div>
+            <a href="./explore.html?tab=market" class="nav__dropdown-item">Overview</a>
+            <a href="./explore.html?tab=listings&sort=price_asc" class="nav__dropdown-item">Floor Prices</a>
+            <a href="./explore.html?tab=market" class="nav__dropdown-item">Recent Sales</a>
+          </div>
+        </li>
+        <li class="nav__item">
+          <a href="./bnrp.html" class="nav__link">Protocol</a>
+        </li>
+        <li class="nav__item">
+          <a href="./docs.html" class="nav__link active">Docs</a>
+        </li>
+      </ul>
+      <div class="nav__actions">
+        <button id="themeToggle" class="btn btn--ghost btn--sm nav__theme-btn" aria-label="Toggle theme">
+          <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+        <a href="./sell.html" class="btn btn--primary btn--sm">List a Name</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="container">
+
+    <!-- Hero -->
+    <div class="docs-hero">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,138,0,0.08);border:1px solid rgba(255,138,0,0.2);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:var(--color-brand-orange);margin-bottom:20px;letter-spacing:0.04em;">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        Developer Reference
+      </div>
+      <h1 class="docs-hero__title">BNRP API</h1>
+      <p class="docs-hero__sub">Open resolution protocol for Bitcoin-native names. No API keys required for read endpoints. Base URL: <code style="font-family:var(--font-mono);font-size:0.9em;color:var(--color-brand-orange);">https://api.bnrp.name/v1</code></p>
+    </div>
+
+    <!-- Sidebar layout -->
+    <div class="docs-sidebar">
+
+      <!-- Left nav -->
+      <nav class="docs-nav" aria-label="Docs navigation">
+        <div class="docs-nav__section">
+          <div class="docs-nav__label">Resolution</div>
+          <a href="#resolve" class="docs-nav__link">Resolve name</a>
+          <a href="#reverse" class="docs-nav__link">Reverse lookup</a>
+        </div>
+        <div class="docs-nav__section">
+          <div class="docs-nav__label">Schemas</div>
+          <a href="#name-record-schema" class="docs-nav__link">Name record</a>
+          <a href="#listing-schema" class="docs-nav__link">Listing</a>
+          <a href="#verification-schema" class="docs-nav__link">Verification</a>
+        </div>
+        <div class="docs-nav__section">
+          <div class="docs-nav__label">Reference</div>
+          <a href="#errors" class="docs-nav__link">Error responses</a>
+          <a href="#rate-limits" class="docs-nav__link">Rate limits</a>
+          <a href="#contact" class="docs-nav__link">Contact</a>
+        </div>
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border);">
+          <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="docs-nav__link" style="display:flex;align-items:center;gap:6px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            Source on GitHub
+          </a>
+          <a href="./bnrp.html" class="docs-nav__link">Protocol overview</a>
+        </div>
+      </nav>
+
+      <!-- Main content -->
+      <div>
+
+        <!-- ── Resolve name ── -->
+        <section class="docs-section" id="resolve">
+          <div class="docs-section__title">Resolve name</div>
+          <p class="docs-section__desc">Returns the canonical BNRP record for a Bitcoin-native name. The resolver queries upstream indexers (UniSat, BTCName, SNS), selects the first inscription as canonical, and caches the result for 300 seconds.</p>
+
+          <div class="docs-endpoint">
+            <div class="docs-endpoint__header">
+              <span class="docs-method">GET</span>
+              <code class="docs-path">/v1/resolve?name={name}</code>
+            </div>
+            <div class="docs-endpoint__body">
+              <p class="docs-endpoint__desc">Resolves a name string (e.g. <code style="font-family:var(--font-mono);font-size:11px;">satoshi.btc</code>) to its owner, inscription ID, addresses, and profile records. Uses query-param routing to avoid WAF blocks on dot-containing URL paths.</p>
+              <table class="docs-param-table">
+                <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td>name</td><td>string</td><td><span class="docs-tag docs-tag--required">Required</span></td><td>Full name including TLD, e.g. <code style="font-family:var(--font-mono);font-size:10px;">satoshi.btc</code>, <code style="font-family:var(--font-mono);font-size:10px;">punk.ord</code></td></tr>
+                </tbody>
+              </table>
+              <pre class="docs-code" style="margin-top:16px;">GET https://api.bnrp.name/v1/resolve?name=satoshi.btc
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "name": "satoshi.btc",
+  "inscription_id": "abc123...i0",
+  "owner": "bc1p...",
+  "addresses": {
+    "BTC":       "bc1p...",
+    "LIGHTNING": "satoshi@getalby.com",
+    "ETH":       "0x...",
+    "SOL":       "So1..."
+  },
+  "profile": {
+    "avatar":       "ord:abc123...i0",
+    "display":      "Satoshi",
+    "description":  "Bitcoin.",
+    "com.twitter":  "satoshi",
+    "url":          "https://bitcoin.org"
+  },
+  "via": "unisat",
+  "resolved_at": "2026-04-23T20:00:00Z",
+  "cached": true
+}</pre>
+              <div class="docs-note">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Only the first inscription for a name is canonical. Re-inscriptions are ignored. The <code style="font-family:var(--font-mono);font-size:11px;">via</code> field indicates which upstream indexer sourced the data.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── Reverse lookup ── -->
+        <section class="docs-section" id="reverse">
+          <div class="docs-section__title">Reverse lookup</div>
+          <p class="docs-section__desc">Returns all BNRP names owned by a given Bitcoin address. Cached for 120 seconds.</p>
+
+          <div class="docs-endpoint">
+            <div class="docs-endpoint__header">
+              <span class="docs-method">GET</span>
+              <code class="docs-path">/v1/reverse?address={address}</code>
+            </div>
+            <div class="docs-endpoint__body">
+              <p class="docs-endpoint__desc">Returns an array of name strings currently owned by the provided Taproot address.</p>
+              <table class="docs-param-table">
+                <thead><tr><th>Parameter</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td>address</td><td>string</td><td><span class="docs-tag docs-tag--required">Required</span></td><td>Bitcoin Taproot address (bc1p...)</td></tr>
+                </tbody>
+              </table>
+              <pre class="docs-code" style="margin-top:16px;">GET https://api.bnrp.name/v1/reverse?address=bc1p...
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "address": "bc1p...",
+  "names": [
+    "satoshi.btc",
+    "punk.ord"
+  ],
+  "cached": false
+}</pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── Name record schema ── -->
+        <section class="docs-section" id="name-record-schema">
+          <div class="docs-section__title">Name record schema</div>
+          <p class="docs-section__desc">Full shape of a resolved BNRP name record. All fields except <code style="font-family:var(--font-mono);font-size:11px;">name</code> and <code style="font-family:var(--font-mono);font-size:11px;">inscription_id</code> are optional.</p>
+
+          <pre class="docs-code">{
+  "name":           string,   // Full name with TLD, e.g. "satoshi.btc"
+  "inscription_id": string,   // Ordinals inscription ID (txid + "i" + index)
+  "owner":          string,   // Current Bitcoin owner address
+  "addresses": {
+    "BTC":          string,   // Primary Bitcoin address (P2TR)
+    "LIGHTNING":    string,   // LNURL or Lightning address
+    "ETH":          string,   // Ethereum address (optional)
+    "SOL":          string    // Solana address (optional)
+  },
+  "profile": {
+    "avatar":       string,   // "ord:{inscriptionId}" or https URL
+    "display":      string,   // Display name
+    "description":  string,   // Bio / description
+    "com.twitter":  string,   // Twitter/X handle (without @)
+    "com.github":   string,   // GitHub username
+    "url":          string    // Website URL
+  },
+  "via":            string,   // Upstream source: "unisat" | "btcname" | "sns"
+  "resolved_at":    string,   // ISO 8601 timestamp of resolution
+  "cached":         boolean   // true when served from KV cache
+}</pre>
+        </section>
+
+        <!-- ── Listing schema ── -->
+        <section class="docs-section" id="listing-schema">
+          <div class="docs-section__title">Listing schema</div>
+          <p class="docs-section__desc">Market listing data returned by the BTCNative market worker. Listings are created via UniSat's PSBT-based auction protocol and proxied through the BTC Native market worker.</p>
+
+          <div class="docs-endpoint">
+            <div class="docs-endpoint__header">
+              <span class="docs-method">GET</span>
+              <code class="docs-path">https://btcnative-market.galanin.workers.dev/api/market/listings</code>
+            </div>
+            <div class="docs-endpoint__body">
+              <table class="docs-param-table">
+                <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+                <tbody>
+                  <tr><td>limit</td><td>number</td><td>20</td><td>Number of listings to return (max 100)</td></tr>
+                  <tr><td>offset</td><td>number</td><td>0</td><td>Pagination offset</td></tr>
+                  <tr><td>tld</td><td>string</td><td><span class="docs-tag docs-tag--optional">Optional</span></td><td>Filter by TLD, e.g. <code style="font-family:var(--font-mono);font-size:10px;">btc</code></td></tr>
+                </tbody>
+              </table>
+              <pre class="docs-code" style="margin-top:16px;">{
+  "ok": true,
+  "listings": [
+    {
+      "name":        "satoshi.btc",
+      "auctionId":   "abc123",
+      "unitPrice":   150000,       // sats
+      "inscriptionId": "abc...i0",
+      "seller":      "bc1p...",
+      "listedAt":    "2026-04-01T12:00:00Z"
+    }
+  ],
+  "total": 42
+}</pre>
+            </div>
+          </div>
+          <div class="docs-note" style="margin-top:0;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Platform fee is 1% (100 bps), minimum 1,000 sats, applied at settlement. UniSat charges an additional 0.5% taker fee. Re-inscriptions are blocked from all buy and sell surfaces.
+          </div>
+        </section>
+
+        <!-- ── Verification schema ── -->
+        <section class="docs-section" id="verification-schema">
+          <div class="docs-section__title">Verification schema</div>
+          <p class="docs-section__desc">How BNRP determines canonical ownership. There is no smart contract. Verification is a read of Ordinals inscription data.</p>
+
+          <pre class="docs-code">Canonical rule:
+  The FIRST inscription matching name + TLD is canonical.
+  All subsequent inscriptions for the same name are ignored.
+
+Ownership:
+  owner = current UTXO holder of the inscription.
+  Transfers follow Bitcoin UTXO rules — no protocol overhead.
+
+Spoof detection:
+  - Re-inscriptions: blocked at resolver level.
+  - Unicode homoglyphs: flagged client-side by BNRP trust layer.
+  - Mixed scripts: flagged as "Confusable" in name card badges.
+
+Resolution chain:
+  1. Query upstream (UniSat / BTCName / SNS)
+  2. Select inscription with lowest block height (first = canonical)
+  3. Verify owner address matches current UTXO holder
+  4. Return normalized record with via + resolved_at
+  5. Cache in Cloudflare KV for 300s</pre>
+        </section>
+
+        <!-- ── Error responses ── -->
+        <section class="docs-section" id="errors">
+          <div class="docs-section__title">Error responses</div>
+          <p class="docs-section__desc">All errors return JSON with a consistent shape.</p>
+
+          <pre class="docs-code">{
+  "error": "name_not_found",  // Machine-readable error code
+  "message": "No inscription found for this name.",
+  "status": 404
+}</pre>
+
+          <table class="docs-param-table" style="margin-top:20px;">
+            <thead><tr><th>Status</th><th>Code</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>400</td><td><code style="font-family:var(--font-mono);font-size:10px;">invalid_name</code></td><td>Name format invalid or TLD not supported</td></tr>
+              <tr><td>404</td><td><code style="font-family:var(--font-mono);font-size:10px;">name_not_found</code></td><td>No inscription found for the name</td></tr>
+              <tr><td>429</td><td><code style="font-family:var(--font-mono);font-size:10px;">rate_limited</code></td><td>Too many requests from this IP</td></tr>
+              <tr><td>502</td><td><code style="font-family:var(--font-mono);font-size:10px;">upstream_error</code></td><td>Upstream indexer (UniSat/BTCName) failed</td></tr>
+              <tr><td>503</td><td><code style="font-family:var(--font-mono);font-size:10px;">resolver_unavailable</code></td><td>BNRP resolver temporarily unavailable</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ── Rate limits ── -->
+        <section class="docs-section" id="rate-limits">
+          <div class="docs-section__title">Rate limits</div>
+          <p class="docs-section__desc">The public resolver API has IP-based rate limiting enforced at the Cloudflare Worker edge.</p>
+
+          <table class="docs-param-table">
+            <thead><tr><th>Endpoint</th><th>Limit</th><th>Window</th></tr></thead>
+            <tbody>
+              <tr><td><code style="font-family:var(--font-mono);font-size:10px;">/v1/resolve</code></td><td>60 requests</td><td>60 seconds per IP</td></tr>
+              <tr><td><code style="font-family:var(--font-mono);font-size:10px;">/v1/reverse</code></td><td>30 requests</td><td>60 seconds per IP</td></tr>
+              <tr><td>Market proxy</td><td>120 requests</td><td>60 seconds per IP</td></tr>
+            </tbody>
+          </table>
+
+          <div class="docs-note" style="margin-top:20px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Cache hits (KV-served responses) do not count toward your rate limit quota. Most name lookups are cache-warm within 5 minutes of first resolution.
+          </div>
+        </section>
+
+        <!-- ── Contact ── -->
+        <section class="docs-section" id="contact">
+          <div class="docs-section__title">Contact</div>
+          <p class="docs-section__desc">BNRP is an open protocol. Bug reports, integration questions, and protocol proposals are welcome.</p>
+
+          <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px;">
+            <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;color:var(--color-text);text-decoration:none;font-size:var(--text-sm);font-weight:500;padding:10px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--color-brand-orange)'" onmouseout="this.style.borderColor='var(--color-border)'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+              Open an issue on GitHub
+            </a>
+            <a href="mailto:hello@btcnative.name" style="display:inline-flex;align-items:center;gap:8px;color:var(--color-text);text-decoration:none;font-size:var(--text-sm);font-weight:500;padding:10px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--color-brand-orange)'" onmouseout="this.style.borderColor='var(--color-border)'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              hello@btcnative.name
+            </a>
+            <a href="https://x.com/btcnativename" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;color:var(--color-text);text-decoration:none;font-size:var(--text-sm);font-weight:500;padding:10px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--color-brand-orange)'" onmouseout="this.style.borderColor='var(--color-border)'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              @btcnativename
+            </a>
+          </div>
+        </section>
+
+      </div><!-- /main content -->
+    </div><!-- /docs-sidebar -->
+  </div>
+</main>
+
+<!-- ── FOOTER ── -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer__inner">
+      <div>
+        <a href="./index.html" class="footer__logo">
+          <picture><source srcset="./logo-36.webp" type="image/webp"><img class="footer__logo-mark" src="./logo-36.png" alt="" aria-hidden="true" width="32" height="32" style="display:block;width:32px;height:32px;" loading="lazy"></picture>
+          <div>
+            <div class="footer__logo-btc">BTC</div>
+            <div class="footer__logo-native">NATIVE</div>
+          </div>
+        </a>
+        <p class="footer__tagline">Powered by BNRP open resolution<br>for BTC-native names.</p>
+      </div>
+      <div>
+        <div class="footer__col-title">Explore</div>
+        <div class="footer__links">
+          <a href="./explore.html" class="footer__link">Categories</a>
+          <a href="./explore.html?tab=listings" class="footer__link">Listings</a>
+          <a href="./explore.html?tab=market" class="footer__link">Market Data</a>
+          <a href="./bulk.html" class="footer__link">Bulk Search</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Account</div>
+        <div class="footer__links">
+          <a href="./sell.html" class="footer__link">List a Name</a>
+          <a href="./portfolio.html" class="footer__link">My Names</a>
+          <a href="./points.html" class="footer__link">My Points</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Protocol</div>
+        <div class="footer__links">
+          <a href="./bnrp.html" class="footer__link">Powered by BNRP</a>
+          <a href="./docs.html" class="footer__link">Docs</a>
+          <a href="./about.html" class="footer__link">About</a>
+          <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
+          <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Support</div>
+        <div class="footer__links">
+          <a href="https://x.com/btcnativename" target="_blank" rel="noopener" class="footer__link">@btcnativename</a>
+          <a href="mailto:hello@btcnative.name" class="footer__link">hello@btcnative.name</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span class="footer__copy">&copy; 2026 BTC Native. Trustless by design.</span>
+      <div class="footer__trust">
+        <span class="footer__trust-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Verifiable on Bitcoin
+        </span>
+        <span class="footer__trust-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Open Protocol
+        </span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script defer src="./app.js"></script>
+<script>
+(function() {
+  const saved = localStorage.getItem('btcn-theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  else if (window.matchMedia('(prefers-color-scheme: light)').matches) document.documentElement.setAttribute('data-theme', 'light');
+})();
+const themeBtn = document.getElementById('themeToggle');
+if (themeBtn) themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('btcn-theme', next);
+});
+
+// Docs nav active state on scroll
+(function() {
+  const sections = document.querySelectorAll('.docs-section[id]');
+  const navLinks = document.querySelectorAll('.docs-nav__link[href^="#"]');
+  if (!sections.length || !navLinks.length) return;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.docs-nav__link[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+  sections.forEach(s => obs.observe(s));
+})();
+</script>
+
+</body>
+</html>

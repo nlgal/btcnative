@@ -678,8 +678,21 @@ function buildNameCard(data) {
     const span = document.createElement('span');
     span.className = `badge badge--${b.color}`;
     span.textContent = b.label;
+    if (b.title) span.title = b.title;
     if (badgesEl) badgesEl.appendChild(span);
   });
+
+  // Resolver status — show when BNRP data is present or explicitly missing
+  const hasResolverData = !!(data.bnrp);
+  if (hasResolverData) {
+    const resolverInfo = getResolverStatus(data.bnrp, null);
+    if (resolverInfo.status !== 'verified') {
+      // Only show non-verified states inline on cards to avoid cluttering verified rows
+      const rsBadge = buildResolverStatusBadge(resolverInfo);
+      rsBadge.className += ' name-card__resolver-status';
+      if (badgesEl) badgesEl.appendChild(rsBadge);
+    }
+  }
 
   return card;
 }
@@ -721,7 +734,165 @@ function computeBadges(data) {
   if (base === rev && len > 1) badges.push({ label: 'Palindrome', color: 'purple' });
   if (data.bnrp && data.bnrp.records) badges.push({ label: 'BNRP', color: 'green' });
   if (tld) badges.push({ label: tld, color: 'muted' });
+  // Trust layer — confusable / famous name warnings (appended after standard badges, max 4 total)
+  const confusableWarn = detectConfusable(data.name || '');
+  if (confusableWarn) badges.push({ label: '\u26A0 Confusable', color: 'warn', title: confusableWarn });
+  const famousWarn = detectFamousName(base);
+  if (famousWarn) badges.push({ label: '\u24D8 Disclaimer', color: 'caution', title: famousWarn });
   return badges.slice(0, 4);
+}
+
+// ── Trust / confusable / resolver-status layer ──────────────────────────────────────────
+// These run synchronously on the name string and do NOT require network calls.
+
+/**
+ * detectConfusable(name) → string|null
+ * Returns a short human-readable warning if the base label contains characters
+ * that could visually impersonate another name (mixed scripts, homoglyphs, etc.).
+ * Returns null when the name is clean.
+ */
+function detectConfusable(name) {
+  const base = getBase(name || '').toLowerCase();
+  if (!base) return null;
+
+  // 1. Mixed-script detection — more than one Unicode script in the base
+  //    Uses Intl.Segmenter if available; falls back to codepoint ranges.
+  const latinRe    = /[\u0041-\u007A\u00C0-\u024F]/;  // Latin + Latin extended
+  const cyrillicRe = /[\u0400-\u04FF]/;
+  const greekRe    = /[\u0370-\u03FF]/;
+  const arabicRe   = /[\u0600-\u06FF]/;
+  const hanRe      = /[\u4E00-\u9FFF]/;
+
+  const scripts = [
+    latinRe.test(base)    && 'Latin',
+    cyrillicRe.test(base) && 'Cyrillic',
+    greekRe.test(base)    && 'Greek',
+    arabicRe.test(base)   && 'Arabic',
+    hanRe.test(base)      && 'CJK',
+  ].filter(Boolean);
+
+  if (scripts.length > 1) {
+    return `Mixed scripts detected (${scripts.join(' + ')}). This name may visually impersonate another.`;
+  }
+
+  // 2. Known single-char homoglyph substitutions (Cyrillic/Greek letters that look Latin)
+  //    Map: confusable codepoint → lookalike Latin letter
+  const HOMOGLYPHS = {
+    '\u0430': 'a',  // Cyrillic а
+    '\u0435': 'e',  // Cyrillic е
+    '\u043E': 'o',  // Cyrillic о
+    '\u0440': 'r',  // Cyrillic р
+    '\u0441': 'c',  // Cyrillic с
+    '\u0445': 'x',  // Cyrillic х
+    '\u0456': 'i',  // Cyrillic і
+    '\u0440': 'p',  // Cyrillic р
+    '\u03BF': 'o',  // Greek ο
+    '\u03B1': 'a',  // Greek α
+    '\u03B5': 'e',  // Greek ε
+    '\u0966': '0',  // Devanagari digit
+    '\u2019': "'",  // Right single quote (looks like apostrophe)
+    '\u02BC': "'",  // Modifier letter apostrophe
+    '\u0000': '\x00', // Null byte
+  };
+  for (const ch of base) {
+    if (HOMOGLYPHS[ch]) {
+      return `Contains character \u201C${ch}\u201D (U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0')}) which looks like \u201C${HOMOGLYPHS[ch]}\u201D. Possible visual spoof.`;
+    }
+  }
+
+  // 3. Invisible / zero-width chars
+  if (/[\u200B-\u200F\u2028\u2029\uFEFF\u00AD]/.test(base)) {
+    return 'Contains invisible or zero-width characters. This name may be a spoof.';
+  }
+
+  return null;
+}
+
+/**
+ * detectFamousName(base) → string|null
+ * Returns a disclaimer string when the base matches a culturally significant name
+ * that is unlikely to be owned by the actual person/brand.
+ */
+function detectFamousName(base) {
+  const b = (base || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Tier 1: Public figures / brands with obvious impersonation risk
+  const FAMOUS = new Set([
+    'satoshi','bitcoin','nakamoto','hal','finney','halfinney',
+    'vitalik','buterin','gavin','andresen',
+    'trump','biden','obama','musk','elonmusk','tesla','spacex','x',
+    'apple','google','amazon','microsoft','meta','facebook','instagram','twitter',
+    'coinbase','binance','kraken','uniswap','opensea','blur',
+    'ordinals','casey','rodarmor',
+    'nike','adidas','gucci','rolex','lvmh','chanel','prada',
+    'fed','sec','cftc','whitehouse','congress','senate',
+    'pope','dalailama',
+  ]);
+  if (FAMOUS.has(b)) {
+    return 'This name references a well-known person or brand. It is not affiliated with or endorsed by that entity.';
+  }
+  return null;
+}
+
+/**
+ * getResolverStatus(bnrpData, resolveError) → { status, label, color, hint }
+ * Computes a resolver status badge for a name, given the resolved BNRP data object
+ * and any error that occurred during resolution.
+ *
+ * Status values:
+ *   verified   — inscription found, owner matches, records present
+ *   unresolved — no BNRP records set (inscription exists but no profile)
+ *   unavailable — resolver failed / timeout
+ *   mismatch   — address or inscription data conflict detected
+ *   stale      — cached data older than 10 minutes
+ */
+function getResolverStatus(bnrpData, resolveError) {
+  if (resolveError) {
+    return { status: 'unavailable', label: 'Resolver unavailable', color: 'warn', hint: 'Could not reach the BNRP resolver. Data shown may be incomplete.' };
+  }
+  if (!bnrpData) {
+    return { status: 'unresolved', label: 'Unresolved', color: 'muted', hint: 'No BNRP records found for this name.' };
+  }
+  // Stale check — resolved_at timestamp
+  const resolvedAt = bnrpData.resolved_at || bnrpData.resolvedAt;
+  if (resolvedAt) {
+    const age = Date.now() - new Date(resolvedAt).getTime();
+    if (age > 10 * 60 * 1000) {
+      return { status: 'stale', label: 'Stale data', color: 'caution', hint: 'Resolver data may be out of date. Last resolved: ' + new Date(resolvedAt).toLocaleTimeString() };
+    }
+  }
+  const records = bnrpData.records || {};
+  if (Object.keys(records).length === 0 && !bnrpData.inscriptionId && !bnrpData.inscription_id) {
+    return { status: 'unresolved', label: 'Unresolved', color: 'muted', hint: 'No BNRP records found for this name.' };
+  }
+  return { status: 'verified', label: 'Resolver verified', color: 'green', hint: 'Resolved via BNRP — first inscription is canonical.' };
+}
+
+/**
+ * buildResolverStatusBadge(status) → HTMLElement
+ * Returns a small inline badge element for the resolver status.
+ */
+function buildResolverStatusBadge(status) {
+  const ICONS = {
+    verified:    '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>',
+    unresolved:  '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    unavailable: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>',
+    mismatch:    '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    stale:       '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  };
+  const COLOR_MAP = {
+    verified: 'var(--color-green, #22c55e)',
+    unresolved: 'var(--color-text-faint)',
+    unavailable: 'var(--color-warn, #ef4444)',
+    mismatch: 'var(--color-warn, #ef4444)',
+    stale: 'var(--color-caution, #f59e0b)',
+  };
+  const el = document.createElement('span');
+  el.className = `resolver-status resolver-status--${status.status}`;
+  el.title = status.hint || status.label;
+  el.setAttribute('aria-label', status.label);
+  el.innerHTML = (ICONS[status.status] || '') + ' ' + status.label;
+  el.style.color = COLOR_MAP[status.status] || 'var(--color-text-faint)';
+  return el;
 }
 
 // ── Category definitions ──────────────────────────────────────────────────────────────────
@@ -1218,6 +1389,51 @@ async function initProfilePage() {
   if (inscId) {
     qs('#profileInscriptionId').innerHTML = `<a href="https://ordinals.com/inscription/${inscId}" target="_blank" rel="noopener noreferrer" title="${inscId}">${inscId.slice(0,20)}...${inscId.slice(-8)}</a>`;
   }
+
+  // ─ Provenance source (via field from BNRP resolver) ─
+  const provenanceVia = resolvedData.via || (liveData && liveData.via);
+  const provenanceEl = qs('#profileProvenanceField');
+  if (provenanceEl && provenanceVia) {
+    const VIA_LABELS = { unisat: 'UniSat', btcname: 'BTCName', sns: 'SNS' };
+    provenanceEl.style.display = 'block';
+    const provenanceVal = qs('#profileProvenanceValue');
+    if (provenanceVal) provenanceVal.textContent = VIA_LABELS[provenanceVia] || provenanceVia;
+  }
+
+  // ─ Resolver status banner (non-blocking, above profile card) ─
+  const resolverStatus = getResolverStatus(resolvedData, !liveData && !SEED_PROFILES[name] ? null : null);
+  const resolverBannerEl = qs('#profileResolverBanner');
+  if (resolverBannerEl) {
+    if (resolverStatus.status === 'unavailable' || resolverStatus.status === 'stale' || resolverStatus.status === 'mismatch') {
+      resolverBannerEl.innerHTML = `<div class="trust-warning trust-warning--${resolverStatus.status === 'unavailable' ? 'warn' : 'caution'}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        ${resolverStatus.hint}
+      </div>`;
+      resolverBannerEl.style.display = 'block';
+    }
+  }
+
+  // ─ Trust warnings (confusable / famous name) on profile ─
+  const trustWarnEl = qs('#profileTrustWarnings');
+  if (trustWarnEl) {
+    const warns = [];
+    const confWarn = detectConfusable(name);
+    if (confWarn) warns.push({ msg: confWarn, level: 'warn' });
+    const famWarn = detectFamousName(getBase(name));
+    if (famWarn) warns.push({ msg: famWarn, level: 'caution' });
+    if (warns.length) {
+      trustWarnEl.innerHTML = warns.map(w =>
+        `<div class="trust-warning trust-warning--${w.level}">
+           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+           ${w.msg}
+         </div>`
+      ).join('');
+      trustWarnEl.style.display = 'block';
+    }
+  }
+
+  // Expose resolver status on window for external use
+  window._currentResolverStatus = resolverStatus;
 
   // Score ring
   const circ = qs('#scoreCircle');

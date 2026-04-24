@@ -144,6 +144,11 @@
       <span id="breadcrumbName" style="color:var(--color-text-muted);">loading...</span>
     </div>
 
+    <!-- Resolver status banner (shown when resolver unavailable/stale/mismatch) -->
+    <div id="profileResolverBanner" style="display:none;margin-bottom:var(--space-4);"></div>
+    <!-- Trust warnings (confusable / famous name disclaimers) -->
+    <div id="profileTrustWarnings" style="display:none;margin-bottom:var(--space-4);"></div>
+
     <!-- Loading skeleton -->
     <div id="profileSkeleton" class="profile-layout">
       <div class="profile-card">
@@ -201,6 +206,10 @@
           <div class="profile-card__field" id="profileUrlField" style="display:none;">
             <span class="profile-card__field-label">Website</span>
             <span class="profile-card__field-value" id="profileUrl">—</span>
+          </div>
+          <div class="profile-card__field" id="profileProvenanceField" style="display:none;">
+            <span class="profile-card__field-label">Resolved via</span>
+            <span class="profile-card__field-value provenance-tag" id="profileProvenanceValue">—</span>
           </div>
           <div class="profile-card__field">
             <span class="profile-card__field-label">Inscription ID</span>
@@ -429,6 +438,7 @@
         <div class="footer__col-title">Protocol</div>
         <div class="footer__links">
           <a href="./bnrp.html" class="footer__link">Powered by BNRP</a>
+          <a href="./docs.html" class="footer__link">Docs</a>
           <a href="./about.html" class="footer__link">About</a>
           <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
           <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
