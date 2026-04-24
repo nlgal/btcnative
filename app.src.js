@@ -4058,6 +4058,21 @@ async function initNavWallet() {
   }
 }
 
+function _navApplyIdentity(btn, address, name, avatarField) {
+  if (btn.dataset.addr !== address) return;
+  const avatarSpan = document.createElement('span');
+  avatarSpan.className = 'nav__wallet-avatar';
+  if (avatarField) initAvatar(avatarSpan, avatarField, '');
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'nav__wallet-name';
+  nameSpan.textContent = name;
+  btn.innerHTML = '';
+  btn.appendChild(avatarSpan);
+  btn.appendChild(nameSpan);
+  btn.classList.add('nav__wallet-btn--has-identity');
+  btn.title = `${name} (${address})`;
+}
+
 async function setNavWalletConnected(address) {
   const btn = document.getElementById('navWalletBtn');
   if (!btn) return;
@@ -4065,9 +4080,23 @@ async function setNavWalletConnected(address) {
   const shortAddr = address.slice(0, 6) + '...' + address.slice(-4);
   btn.title = address;
 
-  // Immediately show truncated address while resolving
-  btn.innerHTML = `<span class="nav__wallet-name">${shortAddr}</span>`;
-  btn.classList.add('nav__wallet-btn--connected');
+  // ── Cache: show identity instantly if we've seen this address before ──
+  const CACHE_KEY = `btcn-identity-${address}`;
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (cached && cached.name) {
+      btn.innerHTML = `<span class="nav__wallet-name">${cached.name}</span>`;
+      btn.classList.add('nav__wallet-btn--connected');
+      _navApplyIdentity(btn, address, cached.name, cached.avatar || '');
+    } else {
+      btn.innerHTML = `<span class="nav__wallet-name">${shortAddr}</span>`;
+      btn.classList.add('nav__wallet-btn--connected');
+    }
+  } catch {
+    btn.innerHTML = `<span class="nav__wallet-name">${shortAddr}</span>`;
+    btn.classList.add('nav__wallet-btn--connected');
+  }
+
   _track('Wallet Connected');
   // Points: fire-and-forget, never blocks connect flow
   _ptsEvent(address, 'connect_wallet');
@@ -4075,14 +4104,14 @@ async function setNavWalletConnected(address) {
   // Daily check-in on wallet connect (silent)
   _ptsEvent(address, 'daily_checkin');
 
-  // Async identity resolution — both calls get 15s timeouts
-  // (BNRP worker makes multiple upstream calls; cold starts take 8-12s)
+  // Async identity resolution — both calls get 20s timeouts
+  // (BNRP worker makes multiple upstream calls; cold starts take 8-15s)
   try {
     const BNRP = 'https://api.bnrp.name/v1';
 
     // Step 1: reverse resolve address → name
     const revCtrl = new AbortController();
-    const revTimer = setTimeout(() => revCtrl.abort(), 15000);
+    const revTimer = setTimeout(() => revCtrl.abort(), 20000);
     let revData;
     try {
       const revRes = await fetch(`${BNRP}/reverse/${encodeURIComponent(address)}`, { signal: revCtrl.signal });
@@ -4094,41 +4123,23 @@ async function setNavWalletConnected(address) {
     if (!name) throw new Error('no name');
 
     // Step 2: forward resolve name → profile.avatar
-    let avatarHtml = '';
+    let avatarField = '';
     try {
       const fwdCtrl = new AbortController();
-      const fwdTimer = setTimeout(() => fwdCtrl.abort(), 15000);
+      const fwdTimer = setTimeout(() => fwdCtrl.abort(), 20000);
       let fwdData;
       try {
         const fwdRes = await fetch(`${BNRP}/resolve/${encodeURIComponent(name)}`, { signal: fwdCtrl.signal });
         clearTimeout(fwdTimer);
         if (fwdRes.ok) fwdData = await fwdRes.json();
       } finally { clearTimeout(fwdTimer); }
-      const rawAvatar = fwdData?.profile?.avatar || '';
-      const avatarVal = rawAvatar || null;
-      if (avatarVal) avatarHtml = avatarVal;
+      avatarField = fwdData?.profile?.avatar || '';
     } catch { /* no avatar — gradient fallback */ }
 
-    // Guard: only update if this address is still the active wallet
-    // (user may have switched again while we were resolving)
-    if (btn.dataset.addr !== address) return;
+    // Persist to cache so next page load is instant
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ name, avatar: avatarField, ts: Date.now() })); } catch {}
 
-    const avatarSpan = document.createElement('span');
-    avatarSpan.className = 'nav__wallet-avatar';
-    if (avatarHtml) {
-      // Use initAvatar so image loads cleanly — same pattern as profile cards
-      initAvatar(avatarSpan, avatarHtml, '');
-    }
-
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'nav__wallet-name';
-    nameSpan.textContent = name;
-
-    btn.innerHTML = '';
-    btn.appendChild(avatarSpan);
-    btn.appendChild(nameSpan);
-    btn.classList.add('nav__wallet-btn--has-identity');
-    btn.title = `${name} (${address})`;
+    _navApplyIdentity(btn, address, name, avatarField);
   } catch {
     if (btn.dataset.addr !== address) return;
     // No name resolved — show gradient avatar + truncated address
