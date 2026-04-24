@@ -4,7 +4,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net https://esm.sh https://browser.sentry-cdn.com https://plausible.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://btcnative-market.galanin.workers.dev https://api.bnrp.name https://mempool.space https://ordinals.com https://ord.io https://esm.sh https://open-api.unisat.io https://plausible.io https://*.ingest.sentry.io; frame-ancestors 'none';
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net https://esm.sh https://browser.sentry-cdn.com https://plausible.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://btcnative-market.galanin.workers.dev https://api.bnrp.name https://mempool.space https://ordinals.com https://ord.io https://esm.sh https://open-api.unisat.io https://static.unisat.space https://plausible.io https://*.ingest.sentry.io; frame-ancestors 'none';
 
 /app.js
   Cache-Control: public, max-age=31536000, immutable
@@ -21,10 +21,65 @@
 /base.css
   Cache-Control: public, max-age=31536000, immutable
 
+# Logo images — long cache (content-addressed by filename)
 /logo.webp
   Cache-Control: public, max-age=31536000, immutable
 
+/logo-36.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-36.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-48.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-48.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-64.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-64.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-96.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-96.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-128.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-128.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-192.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-192.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-512.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/logo-512.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon.ico
+  Cache-Control: public, max-age=86400
+
+/manifest.json
+  Cache-Control: public, max-age=86400
+
+# FIX 4: Block the raw source files — redirect to 36px logo
+/logo-source.png
+  X-Robots-Tag: noindex
+  Cache-Control: public, max-age=31536000, immutable
+
 /logo-source-gradient.png
+  X-Robots-Tag: noindex
   Cache-Control: public, max-age=31536000, immutable
 
 /*.html
