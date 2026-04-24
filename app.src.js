@@ -500,7 +500,8 @@ async function resolveName(name) {
     const timer = setTimeout(() => ctrl.abort(), 15000);
     let data;
     try {
-      const res = await fetch(`${BNRP_API}/resolve/${encodeURIComponent(name)}`, {
+      // Query param form bypasses Cloudflare WAF which blocks dots in URL paths
+      const res = await fetch(`${BNRP_API}/resolve?name=${encodeURIComponent(name)}`, {
         headers: { Accept: 'application/json' },
         signal: ctrl.signal,
       });
@@ -4123,7 +4124,7 @@ async function setNavWalletConnected(address) {
     const revTimer = setTimeout(() => revCtrl.abort(), 20000);
     let revData;
     try {
-      const revRes = await fetch(`${BNRP}/reverse/${encodeURIComponent(address)}`, { signal: revCtrl.signal });
+      const revRes = await fetch(`${BNRP}/reverse?address=${encodeURIComponent(address)}`, { signal: revCtrl.signal });
       clearTimeout(revTimer);
       if (!revRes.ok) throw new Error('no reverse');
       revData = await revRes.json();
@@ -4138,7 +4139,7 @@ async function setNavWalletConnected(address) {
       const fwdTimer = setTimeout(() => fwdCtrl.abort(), 20000);
       let fwdData;
       try {
-        const fwdRes = await fetch(`${BNRP}/resolve/${encodeURIComponent(name)}`, { signal: fwdCtrl.signal });
+        const fwdRes = await fetch(`${BNRP}/resolve?name=${encodeURIComponent(name)}`, { signal: fwdCtrl.signal });
         clearTimeout(fwdTimer);
         if (fwdRes.ok) fwdData = await fwdRes.json();
       } finally { clearTimeout(fwdTimer); }
