@@ -2226,8 +2226,7 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
         </div>
         <h3>No history loaded</h3>
-        <p>History loading from the BNRP indexer is a roadmap feature. Check back when the resolver is fully live.</p>
-        <span class="snm-experimental-badge" style="margin-top:4px;">Coming soon</span>
+        <p id="history-empty-msg">Select a name in the sidebar, then switch to this tab to see its inscription history.</p>
       </div>
     </section>
 
@@ -2437,14 +2436,65 @@
 
     state.walletConnected = true;
     state.walletAddress = addr;
-    state.customNames = [
-      { name: 'artist.btc', status: 'Ready' },
-      { name: 'protocol.btc', status: 'Ready' },
-    ];
+    state.customNames = [];
 
     renderWalletState();
     renderNameList();
     updateOverviewState();
+
+    // Fetch real BTC names owned by this wallet from UniSat
+    loadWalletNames(addr);
+  }
+
+  async function loadWalletNames(addr) {
+    try {
+      const res = await fetch(
+        `https://wallet-api.unisat.io/v5/address/search?domain=&address=${encodeURIComponent(addr)}`
+      );
+      // UniSat doesn't have a "list all names by address" endpoint,
+      // so we check inscriptions and resolve each .btc one via domain search.
+      // Fallback: scan inscriptions for name-like content.
+      const SUPPORTED = ['btc','sats','x','ord','xbt','gm','unisat','sat'];
+      const listRes = await fetch(
+        `https://wallet-api.unisat.io/v5/address/inscriptions?address=${encodeURIComponent(addr)}&cursor=0&size=50`
+      );
+      const listData = await listRes.json();
+      const inscriptions = listData?.data?.list || [];
+      const names = [];
+      const seen = new Set();
+      for (const ins of inscriptions) {
+        // UniSat name inscriptions have contentType text/plain and contentBody or a name-like preview
+        const preview = ins.preview || '';
+        const cType = (ins.contentType || '').toLowerCase();
+        // Try content body if present
+        let body = ins.contentBody || '';
+        if (!body && cType.includes('text') && ins.content) {
+          try {
+            const cr = await fetch(ins.content);
+            body = await cr.text();
+          } catch { /* skip */ }
+        }
+        // Check if it looks like a plain name inscription (e.g. "satoshi.btc" text)
+        const trimmed = body.trim();
+        const tld = trimmed.split('.').pop();
+        if (
+          trimmed &&
+          !trimmed.includes('{') &&
+          trimmed.split('.').length === 2 &&
+          SUPPORTED.includes(tld) &&
+          /^[a-z0-9][a-z0-9-]*[a-z0-9]\.[a-z]+$/.test(trimmed) &&
+          !seen.has(trimmed)
+        ) {
+          seen.add(trimmed);
+          names.push({ name: trimmed, status: 'Ready', inscriptionId: ins.inscriptionId || ins.id });
+        }
+      }
+      if (names.length > 0) {
+        state.customNames = names;
+        renderNameList();
+        updateOverviewState();
+      }
+    } catch { /* best-effort */ }
   }
 
   function disconnectWallet() {
@@ -2546,6 +2596,144 @@
     if (navBtn) {
       navBtn.classList.add('active');
       navBtn.setAttribute('aria-selected', 'true');
+    }
+
+    // Live data loading on tab switch
+    if (tab === 'overview' && state.walletConnected) {
+      loadSubnamesForWallet();
+    }
+    if (tab === 'history' && state.parentName) {
+      loadHistory(state.parentName);
+    }
+  }
+
+  /* ─────────────────────────────────────────
+     Hint store — persists inscription IDs in
+     localStorage so the API can discover them
+  ───────────────────────────────────────── */
+  const HINT_KEY = 'bnrp_hints_v1';
+
+  function saveHint(subname, inscriptionId) {
+    try {
+      const hints = JSON.parse(localStorage.getItem(HINT_KEY) || '{}');
+      hints[subname] = inscriptionId;
+      localStorage.setItem(HINT_KEY, JSON.stringify(hints));
+    } catch { /* storage disabled */ }
+  }
+
+  function getHintsForName(parentName) {
+    // Returns all known inscription IDs for subnames under parentName
+    try {
+      const hints = JSON.parse(localStorage.getItem(HINT_KEY) || '{}');
+      return Object.entries(hints)
+        .filter(([sub]) => sub.endsWith('.' + parentName))
+        .map(([, id]) => id);
+    } catch { return []; }
+  }
+
+  function buildSubnamesUrl(parentName, extra = {}) {
+    const hints = getHintsForName(parentName);
+    const params = new URLSearchParams();
+    if (hints.length > 0) params.set('hint', hints[0]); // API takes one hint at a time
+    Object.entries(extra).forEach(([k,v]) => params.set(k, v));
+    const qs = params.toString();
+    return `https://api.bnrp.name/v1/names/${encodeURIComponent(parentName)}/subnames` + (qs ? '?' + qs : '');
+  }
+
+  function buildHistoryUrl(parentName) {
+    const hints = getHintsForName(parentName);
+    const params = new URLSearchParams();
+    if (hints.length > 0) params.set('hint', hints[0]);
+    const qs = params.toString();
+    return `https://api.bnrp.name/v1/names/${encodeURIComponent(parentName)}/history` + (qs ? '?' + qs : '');
+  }
+
+  /* ─────────────────────────────────────────
+     Load subnames for all wallet-owned names
+  ───────────────────────────────────────── */
+  async function loadSubnamesForWallet() {
+    if (!state.walletConnected || state.customNames.length === 0) return;
+    const allSubnames = [];
+    await Promise.allSettled(
+      state.customNames.map(async ({ name }) => {
+        try {
+          const url = buildSubnamesUrl(name);
+          const res = await fetch(url);
+          if (!res.ok) return;
+          const data = await res.json();
+          (data.subnames || []).forEach(s => allSubnames.push(s));
+        } catch { /* skip */ }
+      })
+    );
+    state._loadedSubnames = allSubnames;
+    updateOverviewState();
+  }
+
+  /* ─────────────────────────────────────────
+     Load history for a parent name
+  ───────────────────────────────────────── */
+  async function loadHistory(parentName) {
+    const panel = document.querySelector('[data-panel="history"]');
+    if (!panel) return;
+    const emptyDiv = panel.querySelector('.snm-overview-empty');
+    const msgEl = document.getElementById('history-empty-msg');
+    const h2 = panel.querySelector('h3');
+
+    if (msgEl) msgEl.textContent = 'Loading history from Bitcoin…';
+
+    // Remove any existing history list
+    panel.querySelectorAll('.snm-history-list').forEach(el => el.remove());
+
+    try {
+      const url = buildHistoryUrl(parentName);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('API error ' + res.status);
+      const data = await res.json();
+      const events = data.history || [];
+
+      if (events.length === 0) {
+        if (msgEl) msgEl.textContent = `No BNRP events found for ${parentName}.`;
+        if (h2) h2.textContent = 'No history found';
+        return;
+      }
+
+      // Hide the empty state, build the list
+      if (emptyDiv) emptyDiv.style.display = 'none';
+      if (h2) h2.style.display = 'none';
+
+      const list = document.createElement('div');
+      list.className = 'snm-history-list';
+      list.style.cssText = 'display:flex;flex-direction:column;gap:10px;margin-top:16px;';
+
+      events.slice().reverse().forEach(ev => {
+        const insId = ev.inscriptionId || '';
+        const shortId = insId ? insId.slice(0,10) + '…' + insId.slice(-8) : '—';
+        const block = ev.blockHeight ? `Block ${ev.blockHeight.toLocaleString()}` : '';
+        const opColor = ev.op === 'subname_register' ? 'var(--color-brand-orange)'
+          : ev.op === 'subname_revoke' ? '#e05' : 'var(--color-text-muted)';
+        const validBadge = ev.valid
+          ? `<span class="snm-status-badge snm-status-badge--ready">valid</span>`
+          : `<span class="snm-status-badge" style="background:#2a1515;color:#e05;">invalid</span>`;
+        const card = document.createElement('div');
+        card.style.cssText = 'background:#111;border:1px solid #222;border-radius:8px;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;';
+        card.innerHTML = `
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <span style="font-size:12px;font-weight:600;color:${opColor};letter-spacing:.03em;">${ev.op}</span>
+              ${validBadge}
+              ${block ? `<span style="font-size:11px;color:var(--color-text-faint);">${block}</span>` : ''}
+            </div>
+            ${ev.sub ? `<div style="font-size:13px;color:#eee;font-family:monospace;margin-bottom:4px;">${ev.sub}</div>` : ''}
+            <div style="font-size:11px;color:var(--color-text-faint);font-family:monospace;">${shortId}</div>
+          </div>
+          <a href="https://unisat.io/inscription/${insId}" target="_blank" rel="noopener" class="snm-action-btn" style="font-size:11px;white-space:nowrap;">View inscription</a>
+        `;
+        list.appendChild(card);
+      });
+
+      panel.appendChild(list);
+    } catch (e) {
+      if (msgEl) msgEl.textContent = `Failed to load history: ${e.message}`;
     }
   }
 
@@ -3048,10 +3236,18 @@
         const content = JSON.stringify(state.generatedJSON);
         // UniSat inscribeContent API (if available)
         if (window.unisat.inscribeContent) {
-          await window.unisat.inscribeContent({
+          const result = await window.unisat.inscribeContent({
             content,
             contentType: 'application/json',
           });
+          // result may be { txid } or a string txid
+          // Store the genesis txid so we can build a hint inscription ID later.
+          // UniSat inscription ID = txid + 'i0' for the first inscription.
+          const txid = (typeof result === 'string') ? result : (result?.txid || result?.inscriptionId || null);
+          if (txid && state.generatedJSON?.sub) {
+            const insId = txid.includes('i') ? txid : txid + 'i0';
+            saveHint(state.generatedJSON.sub, insId);
+          }
         } else {
           const jsonStr = JSON.stringify(state.generatedJSON, null, 2);
           snmNotify({
@@ -3107,28 +3303,32 @@
 
     emptyWallet.style.display = 'none';
 
-    // mock: no subnames yet
-    const subnames = [];
-    if (subnames.length === 0) {
+    // Load real subnames from BNRP API for each owned name
+    const allSubnames = state._loadedSubnames || [];
+    if (allSubnames.length === 0) {
       emptySubnames.style.display = '';
       tableEl.style.display = 'none';
     } else {
       emptySubnames.style.display = 'none';
       tableEl.style.display = '';
-      tbody.innerHTML = subnames.map(s => `
-        <tr>
+      tbody.innerHTML = allSubnames.map(s => {
+        const btcAddr = s.records?.btc || s.owner || '';
+        const block = s.provenance?.confirmedAt ? `#${s.provenance.confirmedAt.toLocaleString()}` : '—';
+        const insId = s.provenance?.inscriptionId || '';
+        const shortIns = insId ? insId.slice(0,8) + '…' + insId.slice(-6) : '—';
+        return `<tr>
           <td class="mono">${s.name}</td>
-          <td class="mono">${truncateAddr(s.destination, 8)}</td>
-          <td><span class="snm-status-badge snm-status-badge--ready">${s.status}</span></td>
-          <td>${s.updated}</td>
+          <td class="mono" title="${btcAddr}">${truncateAddr(btcAddr, 8)}</td>
+          <td><span class="snm-status-badge snm-status-badge--ready">${s.status || 'active'}</span></td>
+          <td title="Block ${s.provenance?.confirmedAt || ''}">${block}</td>
           <td>
             <div class="snm-table-actions">
-              <button class="snm-action-btn">Edit</button>
-              <button class="snm-action-btn snm-action-btn--danger">Revoke</button>
-              <button class="snm-action-btn">History</button>
+              <a class="snm-action-btn" href="https://unisat.io/inscription/${insId}" target="_blank" rel="noopener">View</a>
+              <button class="snm-action-btn" onclick="switchTab('history')">History</button>
             </div>
           </td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
     }
   }
 
@@ -3247,6 +3447,22 @@ function snmNotify({ title, body, type = 'info', json = null, cta = null }) {
     });
   }
 }
+
+  // Seed known hints for existing inscriptions that predate the hint-store
+  // so users who inscribed before this feature don't need to re-inscribe.
+  (function seedKnownHints() {
+    const known = [
+      { sub: 'donald.trump.btc', id: 'c0145c67c049e5a78860b5df54eb9896cc613090a37b3463569f19596d53bb66i0' },
+    ];
+    try {
+      const hints = JSON.parse(localStorage.getItem(HINT_KEY) || '{}');
+      let changed = false;
+      known.forEach(({ sub, id }) => {
+        if (!hints[sub]) { hints[sub] = id; changed = true; }
+      });
+      if (changed) localStorage.setItem(HINT_KEY, JSON.stringify(hints));
+    } catch { /* storage disabled */ }
+  })();
 </script>
 </body>
 </html>
