@@ -871,11 +871,14 @@ async function buildAndSignListingPsbt(wallet, inscUtxo, sellerAddress, priceSat
     sighashType:    SigHash.SINGLE_ANYONECANPAY,  // 0x83 = 131
   });
 
-  // NO outputs in seller PSBT.
-  // SIGHASH_SINGLE binds input[0] to output[0]. If we add output[0] here,
-  // the inscription would transfer to that address (the seller). Correct model:
-  // seller signs only the input; buyer builds all outputs including output[0]
-  // which is the buyer's inscription delivery address.
+  // output[0]: seller receives priceSats.
+  // SIGHASH_SINGLE binds input[0] → output[0], so the seller's sig commits to
+  // exactly this amount + script. In the combined buyer PSBT, the seller's input
+  // is moved to input[2] (after 2 buyer dummies), and SIGHASH_SINGLE then pairs
+  // it with output[2] — the buy-modal copies this output[0] there verbatim.
+  // Including output[0] also prevents UniSat wallet from showing the
+  // "Inscription burning detected" risk warning.
+  tx.addOutput({ script: sellerScript, amount: BigInt(priceSats) });
 
   // Serialize to base64 for wallet signing
   const psbtB64 = base64.encode(tx.toPSBT());
