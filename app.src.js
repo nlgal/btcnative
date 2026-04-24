@@ -144,13 +144,87 @@ async function unisatPost(path, body = {}) {
 
 // ── UniSat market data layer ───────────────────────────────────────────────────
 
+// ── Batch price queue for unlisted name cards ────────────────────────────────
+// Instead of firing one auction/list call per unlisted card, we collect all
+// names that need a price check and fire a SINGLE call with keywords=all of them.
+// Cards register via _enqueuePriceCheck(); the flush fires on the next tick.
+const _priceQueue = []; // [{ name, tld, domainType, resolve }]
+let _priceFlushPending = false;
+
+function _enqueuePriceCheck(name) {
+  return new Promise(resolve => {
+    const tld = getTld(name).replace('.', '');
+    _priceQueue.push({ name, domainType: tld, resolve });
+    if (!_priceFlushPending) {
+      _priceFlushPending = true;
+      // Collect all cards built in this JS tick, then fire one call per domainType
+      Promise.resolve().then(_flushPriceQueue);
+    }
+  });
+}
+
+async function _flushPriceQueue() {
+  _priceFlushPending = false;
+  if (_priceQueue.length === 0) return;
+  // Drain the queue
+  const batch = _priceQueue.splice(0, _priceQueue.length);
+  // Group by domainType — UniSat keyword filter is per-type
+  const byType = {};
+  batch.forEach(item => {
+    if (!byType[item.domainType]) byType[item.domainType] = [];
+    byType[item.domainType].push(item);
+  });
+  // Fire one request per domainType group (usually just 1-2 groups)
+  await Promise.all(Object.entries(byType).map(async ([domainType, items]) => {
+    // Build a single request. UniSat doesn't support multi-keyword in one call,
+    // but we can use a broad listing query (no keyword) sorted by unitPrice and
+    // match results server-side. For small seed sets (<=8), fire 1 request with
+    // limit=50 and match by name locally — far cheaper than 8 individual calls.
+    try {
+      const data = await unisatPost('/v3/market/domain/auction/list', {
+        filter: { nftType: 'domain', domainType },
+        start: 0,
+        limit: 50,
+        sort: { unitPrice: 1 },
+      });
+      const listItems = (data && data.list) ? data.list : [];
+      // Build lookup map by domain name (base only, no TLD)
+      const priceMap = {};
+      listItems.forEach(li => {
+        const liBase = li.domain ? li.domain.split('.')[0] : null;
+        if (liBase && !priceMap[liBase]) priceMap[liBase] = li;
+      });
+      items.forEach(item => {
+        const itemBase = getBase(item.name);
+        _resolvePrice(item, priceMap[itemBase] || null);
+      });
+    } catch (e) {
+      items.forEach(item => _resolvePrice(item, null));
+    }
+  }));
+}
+
+function _resolvePrice(item, listing) {
+  item.resolve(listing);
+}
+
+// ── UniSat market data layer ───────────────────────────────────────────────────
+
 // Returns { btc, sats, x, ord, gm, xbt, unisat } with curPrice (floor in sats) + btcVolume
+// Module-level promise cache — deduplicates concurrent calls on the same page load.
+let _domainTypesPromise = null;
 async function fetchDomainTypes() {
-  const data = await unisatPost('/v3/market/domain/auction/domain_types', {});
-  if (!data || !data.list) return null;
-  const map = {};
-  data.list.forEach(item => { map[item.domainType] = item; });
-  return map;
+  if (_domainTypesPromise) return _domainTypesPromise;
+  _domainTypesPromise = (async () => {
+    const data = await unisatPost('/v3/market/domain/auction/domain_types', {});
+    if (!data || !data.list) return null;
+    const map = {};
+    data.list.forEach(item => { map[item.domainType] = item; });
+    return map;
+  })();
+  // Clear cache after 5 minutes so a stale page eventually refreshes
+  setTimeout(() => { _domainTypesPromise = null; }, 5 * 60 * 1000);
+  return _domainTypesPromise;
 }
 
 // Returns floor price (sats) for a specific TLD, or null
@@ -512,17 +586,13 @@ function buildNameCard(data) {
     });
   }
 
-  // async listing check for seed/unlisted cards
+  // async listing check for seed/unlisted cards — BATCHED
+  // All cards built in the same JS tick share ONE auction-list request.
   if (!price) {
     const priceEl = card.querySelector('.name-card__price--unlisted');
     if (priceEl) {
-      const domainType = tld.replace('.', '');
-      unisatPost('/v3/market/domain/auction/list', {
-        filter: { nftType: 'domain', domainType, keyword: base },
-        start: 0, limit: 1, sort: { unitPrice: 1 }
-      }).then(d => {
+      _enqueuePriceCheck(name).then(item => {
         if (!priceEl.isConnected) return;
-        const item = d && d.list && d.list[0];
         if (item && item.unitPrice) {
           priceEl.textContent = formatSats(item.unitPrice);
           priceEl.classList.remove('name-card__price--unlisted');
