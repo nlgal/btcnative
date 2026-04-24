@@ -478,6 +478,93 @@
       font-weight: 600;
       color: var(--color-text-muted, #a09880);
       letter-spacing: 0.03em;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ―― Field hint tooltip ―――――――――――――――――――――――――――――――― */
+    .field-hint {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .field-hint__icon {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid var(--color-text-faint, #6a6050);
+      color: var(--color-text-faint, #6a6050);
+      font-size: 9px;
+      font-weight: 700;
+      font-style: normal;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      line-height: 1;
+      flex-shrink: 0;
+      transition: border-color 0.12s, color 0.12s;
+      font-family: var(--font-mono, monospace);
+      letter-spacing: 0;
+    }
+    .field-hint:hover .field-hint__icon,
+    .field-hint:focus-within .field-hint__icon {
+      border-color: var(--color-brand-gold, #FFB100);
+      color: var(--color-brand-gold, #FFB100);
+    }
+    .field-hint__tip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 240px;
+      background: #1a1710;
+      border: 1px solid rgba(255,177,0,0.25);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--color-text-muted, #a09880);
+      line-height: 1.55;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 200;
+      text-align: left;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      letter-spacing: 0;
+    }
+    .field-hint__tip strong {
+      display: block;
+      color: var(--color-text, #fff);
+      font-weight: 700;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .field-hint__tip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: rgba(255,177,0,0.25);
+    }
+    .field-hint:hover .field-hint__tip,
+    .field-hint:focus-within .field-hint__tip {
+      opacity: 1;
+    }
+    /* keep tip on screen when near right edge */
+    .field-hint__tip--left {
+      left: auto;
+      right: 0;
+      transform: none;
+    }
+    .field-hint__tip--left::after {
+      left: auto;
+      right: 8px;
+      transform: none;
     }
     .ns-form-required {
       font-size: 10px;
@@ -1272,11 +1359,11 @@
         <div class="ns-shared-fields">
           <div class="ns-shared-fields-label">Shared fields</div>
           <div class="ns-form-row">
-            <label class="ns-form-label" for="toolRootName">Root name <span class="ns-form-required">required</span></label>
-            <input type="text" id="toolRootName" class="ns-form-input" placeholder="artist.btc" autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
+            <label class="ns-form-label" for="toolRootName">Root name <span class="ns-form-required">required</span><span class="field-hint" tabindex="0" aria-label="What is a root name?"><span class="field-hint__icon">?</span><span class="field-hint__tip"><strong>Root name</strong>The Bitcoin-native name you own. e.g. <code>artist.btc</code>. You must hold the inscription in your wallet to authorize updates.</span></span></label>
+            <input type="text" id="toolRootName" class="ns-form-input" placeholder="artist.btc" autocomplete="off" spellcheck="false" oninput="buildEventJson()" onblur="if(this.value.trim()) fetchNonce()" />
           </div>
           <div class="ns-form-row">
-            <label class="ns-form-label" for="toolNonce">Nonce <span class="ns-form-required">required</span></label>
+            <label class="ns-form-label" for="toolNonce">Nonce <span class="ns-form-required">required</span><span class="field-hint" tabindex="0" aria-label="What is a nonce?"><span class="field-hint__icon">?</span><span class="field-hint__tip"><strong>Nonce</strong>A counter that must increase with every update. If your last record had nonce 3, your next must be 4 or higher. This prevents old inscriptions from overriding newer ones. Use &ldquo;Fetch nonce&rdquo; to get the right value automatically.</span></span></label>
             <div class="ns-nonce-row">
               <input type="number" id="toolNonce" class="ns-form-input" min="1" value="1" placeholder="1" oninput="buildEventJson()" />
               <button class="ns-fetch-btn" id="toolFetchNonce" onclick="fetchNonce()">
@@ -1306,7 +1393,7 @@
             <input type="text" id="toolProfileBtc" class="ns-form-input" placeholder="bc1p..." autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
           </div>
           <div class="ns-form-row">
-            <label class="ns-form-label">Avatar inscription ID <span class="ns-form-optional">optional</span></label>
+            <label class="ns-form-label">Avatar inscription ID <span class="ns-form-optional">optional</span><span class="field-hint" tabindex="0" aria-label="What is an inscription ID?"><span class="field-hint__icon">?</span><span class="field-hint__tip"><strong>Avatar inscription ID</strong>The on-chain ID of an Ordinal inscription to use as your avatar. Format: <code>txid</code>i<code>0</code>. Resolvers that support BNRP will display this image as your profile picture.</span></span></label>
             <input type="text" id="toolProfileAvatar" class="ns-form-input" placeholder="abc123...i0" maxlength="90" autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
             <div style="margin-top:4px;font-size:11px;color:var(--color-text-faint);">Use an Ordinal inscription ID. Format: <code style="font-family:var(--font-mono);">txid...i0</code></div>
           </div>
@@ -1324,12 +1411,12 @@
         <!-- Op: subname_register -->
         <div class="ns-op-panel" id="panel-subname_register">
           <div class="ns-form-row">
-            <label class="ns-form-label" for="toolSubLabel">Subname label <span class="ns-form-required">required</span></label>
+            <label class="ns-form-label" for="toolSubLabel">Subname label <span class="ns-form-required">required</span><span class="field-hint" tabindex="0" aria-label="What is a subname label?"><span class="field-hint__icon">?</span><span class="field-hint__tip"><strong>Subname label</strong>The prefix that goes before your root name. e.g. <code>shop</code> creates <code>shop.artist.btc</code>. Lowercase letters, numbers, and hyphens only. Max 63 characters.</span></span></label>
             <input type="text" id="toolSubLabel" class="ns-form-input" placeholder="shop" autocomplete="off" spellcheck="false" maxlength="32" oninput="buildEventJson(); checkLabel(this.value)" />
             <div class="ns-label-warn" id="toolSubLabelWarn" style="display:none;"></div>
           </div>
           <div class="ns-form-row">
-            <label class="ns-form-label" for="toolSubOwner">Owner address <span class="ns-form-required">required</span></label>
+            <label class="ns-form-label" for="toolSubOwner">Owner address <span class="ns-form-required">required</span><span class="field-hint" tabindex="0" aria-label="What is the owner address?"><span class="field-hint__icon">?</span><span class="field-hint__tip field-hint__tip--left"><strong>Owner address</strong>The Bitcoin wallet that will control this subname. Usually your own taproot address (bc1p...). This wallet can update or revoke the subname later.</span></span></label>
             <input type="text" id="toolSubOwner" class="ns-form-input" placeholder="bc1p..." autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
           </div>
           <div class="ns-form-row">
@@ -1384,7 +1471,7 @@
         <!-- Op: delegate -->
         <div class="ns-op-panel" id="panel-delegate">
           <div class="ns-form-row">
-            <label class="ns-form-label" for="toolDelAddr">Delegate address <span class="ns-form-required">required</span></label>
+            <label class="ns-form-label" for="toolDelAddr">Delegate address <span class="ns-form-required">required</span><span class="field-hint" tabindex="0" aria-label="What is a delegate?"><span class="field-hint__icon">?</span><span class="field-hint__tip field-hint__tip--left"><strong>Delegate</strong>A wallet you authorize to create or update subnames on your behalf. The root name stays yours &mdash; the delegate just has permission to manage records under it.</span></span></label>
             <input type="text" id="toolDelAddr" class="ns-form-input" placeholder="bc1p..." autocomplete="off" spellcheck="false" oninput="buildEventJson()" />
           </div>
           <p class="ns-op-note">A delegate can register and revoke subnames on your behalf. They cannot transfer your root name. Delegate rights are tied to this address until you inscribe a delegate_revoke event.</p>
@@ -2095,6 +2182,20 @@ if (nsDashInput) {
 
 // ── Initial JSON render ───────────────────────────────────────────────────────
 buildEventJson();
+
+// ── URL param: ?name=foo.btc → pre-fill + auto-fetch nonce ───────────────────
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const nameParam = (params.get('name') || '').trim();
+  if (nameParam) {
+    const rootEl = document.getElementById('toolRootName');
+    if (rootEl) {
+      rootEl.value = nameParam;
+      buildEventJson();
+      fetchNonce();
+    }
+  }
+})();
 </script>
 
 </body>
