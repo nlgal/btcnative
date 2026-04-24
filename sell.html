@@ -978,6 +978,8 @@ async function lookupName() {
   document.getElementById('ownershipNote').textContent = '';
   document.getElementById('panelStep2').style.display = 'none';
   document.getElementById('panelDelist').style.display = 'none';
+  document.getElementById('listBtn').textContent = 'List for sale';
+  document.getElementById('panelStep2').querySelector('.sell-label').textContent = 'Listing price';
 
   try {
     // 1. Resolve inscription via BNRP
@@ -1027,12 +1029,20 @@ async function lookupName() {
     }
 
     if (listData.ok && listData.listed) {
-      // Already listed — show delist panel
+      // Already listed — show current price panel AND price-change form
       document.getElementById('previewStatus').textContent = 'Listed';
       document.getElementById('previewStatus').className = 'name-preview__status name-preview__status--listed';
       document.getElementById('delistPrice').textContent = fmtBtc(listData.priceSats);
-  
+
+      // Pre-fill the price input with current price so user can adjust
+      const currentBtc = (listData.priceSats / 1e8).toFixed(4);
+      document.getElementById('sellPriceInput').value = currentBtc;
+      document.getElementById('listBtn').textContent = 'Update price';
+      document.getElementById('panelStep2').querySelector('.sell-label').textContent = 'New listing price';
+
       document.getElementById('panelDelist').style.display = 'block';
+      document.getElementById('panelStep2').style.display = 'block';
+      updateFeePreview();
       setStep(2);
     } else {
       // Not listed — show price form
