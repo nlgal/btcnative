@@ -358,7 +358,7 @@ async function _bmBuildCombinedPsbt({
   const sellerOutputAmount = sellerCommittedOutput ? sellerCommittedOutput.amount : priceSats;
   const sellerOutputScript = sellerCommittedOutput ? sellerCommittedOutput.script : sellerScript;
   if (!sellerCommittedOutput) {
-    console.log('[buy-modal] No output in seller PSBT — using declared price/address fallback:', priceSats, sellerAddress);
+    // Using declared price/address fallback — seller PSBT has no committed output
   }
 
   // ── Step 3: Fee + UTXO selection ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -882,15 +882,13 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
         const finalTx = ScureTx.fromPSBT(signedPsbtBytes);
         finalTx.finalize();
         rawTxHex = _bmBytesToHex(finalTx.extract());
-        console.log('broadcast: scure finalize succeeded, rawTxHex length:', rawTxHex.length);
+        // scure finalize succeeded
       } catch (finalizeErr) {
         // Scure finalize() is strict about PSBT_IN_FINAL_SCRIPTWITNESS (0x08).
         // Input 0 (seller) only has PSBT_IN_TAP_KEY_SIG (0x13) — so scure
         // can't finalize it. Fall back to our manual extractor which handles
         // both 0x08 and 0x13 as valid witness sources.
-        console.warn('scure finalize failed, using manual extraction:', finalizeErr.message);
         rawTxHex = _bmExtractRawTx(signedPsbtB64Norm);
-        console.log('broadcast: manual extract succeeded, rawTxHex length:', rawTxHex.length);
       }
 
       btn.textContent = 'Broadcasting...';

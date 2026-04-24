@@ -2227,13 +2227,23 @@ async function renderMarketIndexes() {
   // Show skeletons immediately
   renderMarketSkeletons();
 
-  
+  // Fallback: if data never arrives after 8s, clear skeletons with an error state
+  const fallbackTimer = setTimeout(() => {
+    const lb = qs('#tldLeaderboard');
+    const sf = qs('#salesFeed');
+    const msg = '<div style="color:var(--color-text-faint);font-size:var(--text-sm);padding:var(--space-8) 0;text-align:center;">Market data unavailable — try again shortly</div>';
+    if (lb && lb.querySelector('[style*="shimmer"]')) lb.innerHTML = msg;
+    if (sf && sf.querySelector('[style*="shimmer"]')) sf.innerHTML = msg;
+  }, 8000);
+
   const [domainTypes, liveSales, btcRate, tldFloors] = await Promise.all([
     fetchDomainTypes(),
     fetchRecentSales(16),
     getBtcUsd(),
     fetchAllTldFloors(),
   ]);
+
+  clearTimeout(fallbackTimer);
 
   // Stats strip
   if (domainTypes) {
