@@ -717,10 +717,55 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.name-card__bnrp-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
 .name-card__bnrp {
   width: 14px; height: 14px;
   color: var(--color-primary);
   flex-shrink: 0;
+}
+.name-card__bnrp-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background: var(--color-surface-2, #1a1a1a);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 11px;
+  font-family: var(--font-body);
+  font-weight: 400;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  white-space: normal;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.name-card__bnrp-tip a {
+  color: var(--color-primary);
+  text-decoration: none;
+  pointer-events: all;
+}
+.name-card__bnrp-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--color-border);
+}
+.name-card__bnrp-wrap:hover .name-card__bnrp-tip,
+.name-card__bnrp-wrap:focus-within .name-card__bnrp-tip {
+  display: block;
 }
 .name-card__price {
   font-size: var(--text-sm);

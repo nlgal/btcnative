@@ -472,7 +472,10 @@ function buildNameCard(data) {
         <div class="name-card__name">${base}<span style="color:var(--color-primary);">${tld}</span></div>
         ${displayName ? `<div style="font-size:10px;color:var(--color-text-faint);">${displayName}</div>` : ''}
       </div>
-      ${bnrp && bnrp.records ? `<svg class="name-card__bnrp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" title="BNRP verified"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+      ${bnrp && bnrp.records ? `<span class="name-card__bnrp-wrap" aria-label="BNRP verified">
+        <svg class="name-card__bnrp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="name-card__bnrp-tip" role="tooltip">BNRP verified &mdash; first inscription is canonical, resolved on-chain via open protocol. <a href="./about.html" target="_blank" rel="noopener">Learn more</a></span>
+      </span>` : ''}
     </div>
     <div class="name-card__badges"></div>
     ${price ? `<div class="name-card__price">${formatSats(price)}<span class="name-card__usd"></span></div>` : '<div class="name-card__price name-card__price--unlisted" id="ncprice-' + encodeURIComponent(name) + '">—</div>'}
@@ -540,10 +543,15 @@ function buildNameCard(data) {
 }
 
 // Buy button handler for name cards on explore/index grids
+function _track(event, props) {
+  try { if (typeof window.plausible === 'function') window.plausible(event, { props }); } catch {}
+}
+
 function _openCardBuy(btn) {
   const name = btn.dataset.name;
   const priceSats = parseInt(btn.dataset.price, 10);
   if (!name || !priceSats) return;
+  _track('Buy Click', { name });
 
   // Open buy modal directly — modal fetches listing PSBT from our worker
   if (typeof window.openBuyModal === 'function') {
@@ -3883,6 +3891,7 @@ async function setNavWalletConnected(address) {
   // Immediately show truncated address while resolving
   btn.innerHTML = `<span class="nav__wallet-name">${shortAddr}</span>`;
   btn.classList.add('nav__wallet-btn--connected');
+  _track('Wallet Connected');
 
   // Async identity resolution — both calls get 15s timeouts
   // (BNRP worker makes multiple upstream calls; cold starts take 8-12s)
@@ -4023,7 +4032,7 @@ document.addEventListener('DOMContentLoaded', () => {
       initSearchInput(heroSearch, heroResults);
       qs('#heroSearchBtn').addEventListener('click', () => {
         const q = heroSearch.value.trim();
-        if (q) navigateToName(q);
+        if (q) { _track('Search', { query: q }); navigateToName(q); }
       });
     }
   }

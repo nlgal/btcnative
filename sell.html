@@ -424,6 +424,25 @@
   <link rel="icon" type="image/png" sizes="16x16" href="./icon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
   <meta name="theme-color" content="#0D0D0D">
+  <!-- Analytics: Plausible (privacy-first, no cookies) -->
+  <script defer data-domain="btcnative.name" src="https://plausible.io/js/script.tagged-events.js"></script>
+  <script>window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)}</script>
+  <!-- Error monitoring: Sentry -->
+  <script>
+    window.SENTRY_DSN = window.SENTRY_DSN || ''; // Set via: <script>window.SENTRY_DSN="https://xxx@yyy.ingest.sentry.io/zzz"</script> before this line
+  </script>
+  <script src="https://browser.sentry-cdn.com/7.120.3/bundle.tracing.min.js" crossorigin="anonymous"></script>
+  <script>
+    if (window.Sentry && window.SENTRY_DSN) {
+      Sentry.init({
+        dsn: window.SENTRY_DSN,
+        release: 'btcnative@2.2.0',
+        environment: location.hostname === 'btcnative.name' ? 'production' : 'preview',
+        tracesSampleRate: 0.1,
+        ignoreErrors: ['ResizeObserver loop', 'Non-Error promise rejection'],
+      });
+    }
+  </script>
 </head>
 <body>
 
@@ -595,6 +614,20 @@
         <button class="sell-cta" id="listBtn">List for sale</button>
         <div class="sell-status" id="listStatus"></div>
         <p class="sell-wallet-note">Requires UniSat or Xverse extension. You sign a PSBT, no custody.</p>
+        <div style="display:flex; gap:var(--space-5); justify-content:center; margin-top:var(--space-4); padding-top:var(--space-4); border-top:1px solid var(--color-divider);">
+          <span style="display:flex; align-items:center; gap:5px; font-size:10px; color:var(--color-text-faint);">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Non-custodial
+          </span>
+          <span style="display:flex; align-items:center; gap:5px; font-size:10px; color:var(--color-text-faint);">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            PSBT-signed
+          </span>
+          <span style="display:flex; align-items:center; gap:5px; font-size:10px; color:var(--color-text-faint);">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Trustless
+          </span>
+        </div>
       </div>
     </div>
 
@@ -664,6 +697,13 @@
           <a href="./about.html" class="footer__link">About BNRP</a>
           <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
           <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Support</div>
+        <div class="footer__links">
+          <a href="https://x.com/btcnativename" target="_blank" rel="noopener" class="footer__link">@btcnativename</a>
+          <a href="mailto:hello@btcnative.name" class="footer__link">hello@btcnative.name</a>
         </div>
       </div>
     </div>
@@ -1123,6 +1163,7 @@ async function listName() {
     `);
     btn.textContent = 'Listed';
     btn.style.background = '#22c55e';
+    try { if (typeof window.plausible === 'function') window.plausible('Listing Created', { props: { name: currentName } }); } catch {}
 
   } catch (e) {
     const msg = e.message || String(e);

@@ -22,6 +22,25 @@
   <link rel="icon" type="image/png" sizes="16x16" href="./icon-16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
   <meta name="theme-color" content="#0D0D0D">
+  <!-- Analytics: Plausible (privacy-first, no cookies) -->
+  <script defer data-domain="btcnative.name" src="https://plausible.io/js/script.tagged-events.js"></script>
+  <script>window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)}</script>
+  <!-- Error monitoring: Sentry -->
+  <script>
+    window.SENTRY_DSN = window.SENTRY_DSN || ''; // Set via: <script>window.SENTRY_DSN="https://xxx@yyy.ingest.sentry.io/zzz"</script> before this line
+  </script>
+  <script src="https://browser.sentry-cdn.com/7.120.3/bundle.tracing.min.js" crossorigin="anonymous"></script>
+  <script>
+    if (window.Sentry && window.SENTRY_DSN) {
+      Sentry.init({
+        dsn: window.SENTRY_DSN,
+        release: 'btcnative@2.2.0',
+        environment: location.hostname === 'btcnative.name' ? 'production' : 'preview',
+        tracesSampleRate: 0.1,
+        ignoreErrors: ['ResizeObserver loop', 'Non-Error promise rejection'],
+      });
+    }
+  </script>
 </head>
 <body>
 
@@ -422,6 +441,13 @@
           <a href="./about.html" class="footer__link">About BNRP</a>
           <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
           <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Support</div>
+        <div class="footer__links">
+          <a href="https://x.com/btcnativename" target="_blank" rel="noopener" class="footer__link">@btcnativename</a>
+          <a href="mailto:hello@btcnative.name" class="footer__link">hello@btcnative.name</a>
         </div>
       </div>
     </div>

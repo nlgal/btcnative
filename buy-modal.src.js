@@ -917,6 +917,7 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
         `Purchase complete. ${name} is now yours.` +
         (txid ? `<div class="bn-modal__txid"><a href="https://mempool.space/tx/${txid}" target="_blank" rel="noopener">${txid}</a></div>` : '')
       );
+      try { if (typeof window.plausible === 'function') window.plausible('Purchase Complete', { props: { name } }); } catch {}
       btn.textContent = 'Done';
       btn.style.background = '#22c55e';
       btn.style.color = '#fff';
