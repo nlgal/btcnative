@@ -23,6 +23,143 @@
       padding: var(--space-10) var(--space-4) var(--space-16);
     }
 
+    /* ── Name list (row layout) ── */
+    .pn-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .pn-row {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--color-divider);
+      background: var(--color-surface);
+      transition: background 0.12s;
+    }
+    .pn-row:last-child { border-bottom: none; }
+    .pn-row:hover { background: var(--color-surface-2); }
+    .pn-row--listed {
+      border-left: 2px solid var(--color-brand-orange);
+    }
+    .pn-name {
+      flex: 1;
+      min-width: 0;
+    }
+    .pn-name__text {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pn-name__tld { color: var(--color-brand-orange); }
+    .pn-name__sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--color-text-faint);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pn-price {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--color-brand-orange);
+      white-space: nowrap;
+      min-width: 90px;
+      text-align: right;
+    }
+    .pn-price__usd {
+      font-weight: 400;
+      color: var(--color-text-faint);
+      display: block;
+      font-size: 10px;
+    }
+    .pn-actions {
+      display: flex;
+      gap: var(--space-2);
+      flex-shrink: 0;
+    }
+    .pn-btn {
+      height: 28px;
+      padding: 0 var(--space-3);
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      transition: opacity 0.12s;
+    }
+    .pn-btn:hover { opacity: 0.82; }
+    .pn-btn--primary  { background: var(--color-primary); color: #000; border: none; }
+    .pn-btn--outline  { background: none; border: 1px solid var(--color-border); color: var(--color-text-muted); }
+    .pn-btn--danger   { background: none; border: 1px solid rgba(248,113,113,0.35); color: var(--color-error, #f87171); }
+    @media (max-width: 600px) {
+      .pn-price { display: none; }
+      .pn-btn { padding: 0 var(--space-2); font-size: 10px; }
+    }
+
+    /* ── Skeleton rows ── */
+    .pn-skel {
+      height: 58px;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-divider);
+      display: flex;
+      align-items: center;
+      padding: 0 var(--space-4);
+      gap: var(--space-4);
+    }
+    .pn-skel__bar {
+      height: 12px;
+      border-radius: 6px;
+      background: linear-gradient(90deg,var(--color-surface-offset) 25%,var(--color-surface-dynamic) 50%,var(--color-surface-offset) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+
+    /* Header toolbar */
+    .port-toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-5);
+      flex-wrap: wrap;
+    }
+    .port-toolbar__title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      flex: 1;
+      min-width: 0;
+    }
+    .port-toolbar__addr {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      background: var(--color-surface-offset);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      padding: 3px 10px;
+      white-space: nowrap;
+    }
+    .port-toolbar__count {
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+    }
+
     /* Search bar */
     .port-search-row {
       display: flex;
@@ -512,30 +649,20 @@
 
 <main>
   <div class="port-wrap">
-    <div class="port-hero">
-      <h1 style="letter-spacing:-0.03em;">My Names</h1>
+
+    <!-- Toolbar -->
+    <div class="port-toolbar">
+      <div class="port-toolbar__title">My Names</div>
+      <span class="port-toolbar__addr" id="portAddrChip" style="display:none;"></span>
+      <span class="port-toolbar__count" id="portCountChip"></span>
+      <button id="portRefreshBtn" title="Refresh" onclick="portRefresh()"
+        style="display:none; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border:1px solid var(--color-border); border-radius:var(--radius-md); background:none; cursor:pointer; color:var(--color-text-muted); flex-shrink:0;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
     </div>
 
-    <!-- My Names section (shown when wallet is connected) -->
-    <section id="myNamesSection" style="display:none; margin-bottom:var(--space-8);">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-4);">
-        <div>
-          <h2 style="font-family:var(--font-display); font-size:var(--text-xl); font-weight:700; margin:0; letter-spacing:-0.02em;">My Names</h2>
-          <p style="font-size:var(--text-xs); color:var(--color-text-faint); margin:var(--space-1) 0 0; font-family:var(--font-mono);" id="myNamesAddr"></p>
-        </div>
-        <button class="btn btn--outline btn--sm" onclick="loadMyNamesRefresh()" id="myNamesRefreshBtn" title="Refresh"
-          style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; padding:0; border:1px solid var(--color-border); border-radius:var(--radius-md); background:none; cursor:pointer; color:var(--color-text-muted); flex-shrink:0;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        </button>
-      </div>
-      <div id="myNamesGrid" class="name-grid">
-        <!-- populated by JS -->
-      </div>
-    </section>
-
-    <!-- Look up another wallet -->
-    <div style="margin-bottom:var(--space-4);">
-      <p style="font-size:var(--text-sm); color:var(--color-text-muted); margin-bottom:var(--space-3);">Look up any wallet or name</p>
+    <!-- Lookup bar (shown when no wallet or for other addresses) -->
+    <div id="portLookupBar" style="margin-bottom:var(--space-5);">
       <div class="port-search-row">
         <input class="port-addr-input" id="addrInput" type="text"
           placeholder="bc1p... address or trump.btc" spellcheck="false" autocomplete="off" />
@@ -543,65 +670,16 @@
       </div>
     </div>
 
-    <!-- Results panel (hidden until searched) -->
-    <div id="resultsPanel" style="display:none;">
-
-      <!-- Address chip -->
-      <div class="port-addr-chip" id="addrChip">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        <span id="addrChipText"></span>
-      </div>
-
-      <!-- Stats -->
-      <div class="port-stats" id="portStats">
-        <div class="port-stat">
-          <div class="port-stat__label">Total names</div>
-          <div class="port-stat__val" id="statTotal">—</div>
-        </div>
-        <div class="port-stat">
-          <div class="port-stat__label">Listed</div>
-          <div class="port-stat__val port-stat__val--accent" id="statListed">—</div>
-        </div>
-        <div class="port-stat">
-          <div class="port-stat__label">Listed value</div>
-          <div class="port-stat__val" id="statValue">—</div>
-          <div class="port-stat__sub" id="statValueUsd"></div>
-        </div>
-        <div class="port-stat">
-          <div class="port-stat__label">With identity</div>
-          <div class="port-stat__val" id="statBnrp">—</div>
-        </div>
-      </div>
-
-      <!-- Tabs + Sort -->
-      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--space-3);">
-        <div class="port-tabs">
-          <button class="port-tab active" data-tab="all" id="tabAll">All <span class="port-tab-count" id="tabAllCount">0</span></button>
-          <button class="port-tab" data-tab="listed" id="tabListed">Listed <span class="port-tab-count" id="tabListedCount">0</span></button>
-          <button class="port-tab" data-tab="identity" id="tabIdentity">Identity <span class="port-tab-count" id="tabIdentityCount">0</span></button>
-        </div>
-        <select id="portSortSelect" onchange="portSortChange(this.value)" style="font-size:var(--text-xs); font-family:var(--font-mono); background:var(--color-surface-offset); border:1px solid var(--color-border); color:var(--color-text); border-radius:var(--radius-md); padding:5px 10px; cursor:pointer; outline:none;">
-          <option value="insc_asc">Lowest inscription</option>
-          <option value="insc_desc">Highest inscription</option>
-          <option value="name_asc">A to Z</option>
-          <option value="listed_first">Listed first</option>
-          <option value="identity_first">Identity first</option>
-        </select>
-      </div>
-
-      <!-- Grid -->
-      <div class="port-grid" id="portGrid"></div>
-
-      <!-- Load more -->
-      <div class="port-load-wrap" id="loadMoreWrap" style="display:none;">
-        <button class="port-load-btn" id="loadMoreBtn">Load more</button>
-      </div>
+    <!-- Main names list -->
+    <div id="portListWrap">
+      <!-- populated by JS -->
     </div>
 
     <!-- Error state -->
-    <div id="errorPanel" style="display:none;">
-      <p style="color: var(--color-error, #ef4444); font-size: var(--text-sm); margin-top: var(--space-4);" id="errorMsg"></p>
+    <div id="errorPanel" style="display:none; margin-top:var(--space-4);">
+      <p style="color:var(--color-error,#ef4444); font-size:var(--text-sm);" id="errorMsg"></p>
     </div>
+
   </div>
 </main>
 
@@ -674,15 +752,10 @@
 <script defer src="./nav-search.js"></script>
 <script>
 // ── Portfolio page ─────────────────────────────────────────────────────────────
-// MARKET_API is declared as const in app.js (defer). Since defer scripts
-// run after inline scripts, we set it on window so both share the same value
-// without a const redeclaration clash.
 if (typeof MARKET_API === 'undefined') window.MARKET_API = 'https://btcnative-market.galanin.workers.dev';
-const UNISAT_BASE    = 'https://open-api.unisat.io';
-const PAGE_SIZE      = 20;
-const BTCNAME_TLDS   = ['.btc', '.sats', '.x', '.ord', '.gm', '.xbt', '.sat', '.unisat', '.fb'];
+const BTCNAME_TLDS = ['.btc','.sats','.x','.ord','.gm','.xbt','.sat','.unisat','.fb'];
 
-// BTC/USD
+// ── Utilities ──
 let _portBtcUsd = null;
 async function getPortBtcUsd() {
   if (_portBtcUsd) return _portBtcUsd;
@@ -703,522 +776,255 @@ function fmtBtc(sats) {
 }
 function fmtUsd(sats, rate) {
   if (!sats || !rate) return '';
-  const usd = (sats / 1e8) * rate;
-  if (usd >= 1000) return '$' + Math.round(usd).toLocaleString();
-  if (usd >= 1) return '$' + usd.toFixed(2);
-  return '$' + usd.toFixed(2);
+  const usd = sats / 1e8 * rate;
+  return usd >= 1000 ? '$' + Math.round(usd).toLocaleString() : '$' + usd.toFixed(2);
 }
 
-function isBtcName(content) {
-  if (!content) return false;
-  const lower = content.toLowerCase().trim();
-  return BTCNAME_TLDS.some(tld => lower.endsWith(tld));
-}
 
-// State
-let allNames = [];         // all loaded name objects
-let listedMap = {};        // name -> { listed, priceSats, auctionId }
-let currentTab = 'all';
-let portSort = 'insc_asc';
+// ── State ──
+let portNames    = [];
+let portAddress  = '';
+let portIsOwner  = false;
+var _portForceRefresh = false;
 
-function portSortChange(val) {
-  portSort = val;
-  renderGrid();
-}
-let currentAddress = '';
-let currentPage = 0;
-let hasMore = false;
-
-// Tab switching
-document.querySelectorAll('.port-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.port-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentTab = btn.dataset.tab;
-    renderGrid();
-  });
-});
-
-// Load more
-document.getElementById('loadMoreBtn').addEventListener('click', loadMore);
-
-// Search button / enter
-document.getElementById('lookupBtn').addEventListener('click', startLookup);
-document.getElementById('addrInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') startLookup();
-});
-
-// Pre-fill from URL
-(function() {
-  const params = new URLSearchParams(location.search);
-  const addr = params.get('address') || params.get('addr');
-  if (addr) {
-    document.getElementById('addrInput').value = addr;
-    startLookup();
-  }
-})();
-
-async function startLookup() {
-  let addr = document.getElementById('addrInput').value.trim();
-  if (!addr) return;
-
-  // If input looks like a name (contains a dot, no spaces, not starting with bc1/1/3)
-  const looksLikeName = addr.includes('.') && !addr.startsWith('bc1') && !addr.startsWith('1') && !addr.startsWith('3') && !addr.includes('@');
-  if (looksLikeName) {
-    const btn = document.getElementById('lookupBtn');
-    btn.disabled = true;
-    btn.textContent = 'Resolving...';
-    try {
-      const res = await fetch(`https://api.bnrp.name/v1/resolve/${encodeURIComponent(addr)}`);
-      const data = await res.json();
-      const owner = data?.owner || data?.address;
-      if (owner) {
-        document.getElementById('addrInput').value = owner;
-        addr = owner;
-      } else {
-        document.getElementById('errorPanel').style.display = 'block';
-        document.getElementById('errorMsg').textContent = `Could not resolve ${addr} to an address.`;
-        btn.disabled = false;
-        btn.textContent = 'Look up';
-        return;
-      }
-    } catch {
-      document.getElementById('errorPanel').style.display = 'block';
-      document.getElementById('errorMsg').textContent = 'Resolution failed. Try entering the address directly.';
-      btn.disabled = false;
-      btn.textContent = 'Look up';
-      return;
-    }
-  }
-
-  if (addr.length < 26) {
-    document.getElementById('errorPanel').style.display = 'block';
-    document.getElementById('errorMsg').textContent = 'Enter a valid Bitcoin address (bc1p..., bc1q..., or 1...).';
-    return;
-  }
-
-  currentAddress = addr;
-  currentPage = 0;
-  allNames = [];
-  listedMap = {};
-
-  document.getElementById('errorPanel').style.display = 'none';
-  document.getElementById('resultsPanel').style.display = 'block';
-
-  // Show address chip
-  document.getElementById('addrChipText').textContent = addr.length > 32
-    ? addr.slice(0, 16) + '...' + addr.slice(-8)
-    : addr;
-
-  // Reset stats
-  ['statTotal','statListed','statValue','statBnrp'].forEach(id => {
-    document.getElementById(id).textContent = '—';
-  });
-  ['statValueUsd'].forEach(id => document.getElementById(id).textContent = '');
-
-  // Show skeleton
-  showSkeleton();
-
-  const btn = document.getElementById('lookupBtn');
-  btn.disabled = true;
-  btn.textContent = 'Scanning...';
-
-  try {
-    await fetchPage(0);
-    renderGrid();
-    updateStats();
-    // Async: fetch listing data
-    fetchListingData();
-  } catch (e) {
-    document.getElementById('portGrid').innerHTML = `
-      <div class="port-empty">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <h3>Could not load portfolio</h3>
-        <p>${e.message || 'API error. Try again.'}</p>
-      </div>`;
-  }
-
-  btn.disabled = false;
-  btn.textContent = 'Look up';
-}
-
-var _fetchNamesForceRefresh = false;
-async function fetchPage(page) {
-  // Use market worker /api/names for reliable BNS content filtering
-  // Worker fetches all inscriptions, resolves content via ordinals.com, and filters by TLD
-  const refreshParam = _fetchNamesForceRefresh ? '&refresh=1' : '';
-  _fetchNamesForceRefresh = false;
-  const res = await fetch(
-    `${MARKET_API}/api/names?address=${encodeURIComponent(currentAddress)}${refreshParam}`,
-    { signal: AbortSignal.timeout(60000) }
-  );
-  if (!res.ok) throw new Error(`Worker error ${res.status}`);
-  const payload = await res.json();
-  if (!payload.ok) throw new Error(payload.error || 'Worker returned error');
-
-  const names = payload.names || [];
-  const found = names.map(item => ({
-    name: (item.name || '').trim().toLowerCase(),
-    inscriptionId: item.inscriptionId || null,
-    inscriptionNumber: item.inscriptionNumber || null,
-    satpoint: null,
-    hasBnrp: false,
-    listed: false,
-    priceSats: null,
-  })).filter(n => n.name);
-
-  allNames = found;  // worker returns all at once, no pagination needed
-  hasMore = false;
-  currentPage = 0;
-
-  document.getElementById('loadMoreWrap').style.display = 'none';
-  document.getElementById('loadMoreBtn').disabled = false;
-}
-
-async function loadMore() {
-  const btn = document.getElementById('loadMoreBtn');
-  btn.disabled = true;
-  btn.textContent = 'Loading...';
-  try {
-    await fetchPage(currentPage + 1);
-    renderGrid();
-    updateStats();
-  } catch {}
-  btn.textContent = 'Load more';
-}
-
-async function fetchListingData() {
-  // Check listing status and BNRP data for all names in parallel (batched)
-  const names = allNames.map(n => n.name);
-  const BATCH = 6;
-
-  for (let i = 0; i < names.length; i += BATCH) {
-    const batch = names.slice(i, i + BATCH);
-    await Promise.allSettled(batch.map(async (name) => {
-      try {
-        // Check market listing
-        const listRes = await fetch(`${MARKET_API}/api/psbt/listing?name=${encodeURIComponent(name)}`);
-        const listData = await listRes.json();
-        const nameObj = allNames.find(n => n.name === name);
-        if (nameObj && listData.ok && listData.listed) {
-          nameObj.listed = true;
-          nameObj.priceSats = listData.priceSats;
-          nameObj.auctionId = listData.auctionId;
-        }
-
-        // Check BNRP identity
-        const bnrpRes = await fetch(`https://api.bnrp.name/v1/resolve/${encodeURIComponent(name)}`);
-        const bnrpData = await bnrpRes.json();
-        if (nameObj) {
-          const records = bnrpData?.profile || bnrpData?.records;
-          nameObj.hasBnrp = !!(records && (records.avatar || records.display || records.url));
-          nameObj.avatar = records?.avatar;
-          nameObj.display = records?.display;
-        }
-      } catch {}
-    }));
-    // Re-render after each batch
-    renderGrid();
-    updateStats();
-  }
-}
-
-function getFilteredNames() {
-  let names;
-  switch (currentTab) {
-    case 'listed':   names = allNames.filter(n => n.listed); break;
-    case 'identity': names = allNames.filter(n => n.hasBnrp); break;
-    default:         names = [...allNames];
-  }
-  // Apply sort
-  if (portSort === 'insc_asc')       names.sort((a, b) => (a.inscriptionNumber || 99999999) - (b.inscriptionNumber || 99999999));
-  if (portSort === 'insc_desc')      names.sort((a, b) => (b.inscriptionNumber || 0) - (a.inscriptionNumber || 0));
-  if (portSort === 'name_asc')       names.sort((a, b) => a.name.localeCompare(b.name));
-  if (portSort === 'listed_first')   names.sort((a, b) => (b.listed ? 1 : 0) - (a.listed ? 1 : 0));
-  if (portSort === 'identity_first') names.sort((a, b) => (b.hasBnrp ? 1 : 0) - (a.hasBnrp ? 1 : 0));
-  return names;
-}
-
-function renderGrid() {
-  const names = getFilteredNames();
-  const grid = document.getElementById('portGrid');
-
-  if (names.length === 0 && allNames.length === 0) {
-    grid.innerHTML = `
-      <div class="port-empty">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-        <h3>No names found</h3>
-        <p>This address does not own any Bitcoin names.</p>
-      </div>`;
-    return;
-  }
-
-  if (names.length === 0) {
-    grid.innerHTML = `
-      <div class="port-empty">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <h3>No names in this filter</h3>
-        <p>Try switching to All.</p>
-      </div>`;
-    return;
-  }
-
-  grid.innerHTML = names.map(n => renderCard(n)).join('');
-
-  // Update tab counts
-  document.getElementById('tabAllCount').textContent = allNames.length;
-  document.getElementById('tabListedCount').textContent = allNames.filter(n => n.listed).length;
-  document.getElementById('tabIdentityCount').textContent = allNames.filter(n => n.hasBnrp).length;
-}
-
-function renderCard(n) {
-  // Avatar: use static.unisat.space CDN (faster than ordinals.com)
-  const avatarSrc = n.avatar && n.avatar.startsWith('ord:')
-    ? `https://static.unisat.space/content/${n.avatar.replace('ord:', '')}`
-    : '';
-  const inscShort = n.inscriptionId
-    ? n.inscriptionId.slice(0, 10) + '...' + n.inscriptionId.slice(-6)
-    : '';
-
-  // Deterministic gradient — NO letter initials
-  const grad = (typeof nameGradient === 'function') ? nameGradient(n.name) : { from: '#f7931a', to: '#c0620a' };
-  const avatarGradStyle = `background:linear-gradient(135deg,${grad.from},${grad.to});`;
-  const avatarContent = avatarSrc
-    ? `<img src="${avatarSrc}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;" onerror="this.style.display='none';" />`
-    : '';
-
-  const priceHtml = n.listed && n.priceSats
-    ? `<div class="port-card__price">
-        <span>Listed</span>
-        <span class="port-card__price-val">${fmtBtc(n.priceSats)}</span>
-       </div>`
-    : '';
-
-  const badges = [];
-  if (n.listed)          badges.push(`<span class="port-card__badge port-card__badge--listed">Listed</span>`);
-  if (n.hasBnrp)         badges.push(`<span class="port-card__badge">Identity</span>`);
-  if (n.isReInscription) badges.push(`<span class="port-card__badge" style="background:rgba(239,68,68,0.15);color:#ef4444;border-color:rgba(239,68,68,0.3);" title="This is a re-inscription. Only the first inscription is the canonical BNS name.">Re-inscription</span>`);
-
-  const encodedName = encodeURIComponent(n.name);
-
-  return `<a class="port-card" href="./name.html?name=${encodedName}" title="${n.name}">
-    <div class="port-card__header">
-      <div class="port-card__avatar" style="${avatarGradStyle}">
-        ${avatarContent}
-      </div>
-      <div style="min-width:0;">
-        <div class="port-card__name">${n.name}</div>
-        ${n.display ? `<div class="port-card__insc" style="color:var(--color-text-faint);">${n.display}</div>` : `<div class="port-card__insc">${inscShort}</div>`}
-      </div>
-    </div>
-    ${badges.length ? `<div class="port-card__badges">${badges.join('')}</div>` : ''}
-    ${priceHtml}
-    <div class="port-card__actions" onclick="event.preventDefault()">
-      <a class="port-card__btn port-card__btn--primary" href="./name.html?name=${encodedName}">Profile</a>
-      ${n.isReInscription
-        ? `<span class="port-card__btn port-card__btn--outline" style="opacity:0.4;cursor:not-allowed;" title="Re-inscriptions cannot be listed">Sell</span>`
-        : `<a class="port-card__btn port-card__btn--outline" href="./sell.html?name=${encodedName}" onclick="event.stopPropagation()">Sell</a>`
-      }
-    </div>
-  </a>`;
-}
-
-async function updateStats() {
-  const total = allNames.length;
-  const listed = allNames.filter(n => n.listed).length;
-  const withBnrp = allNames.filter(n => n.hasBnrp).length;
-  const listedSats = allNames.filter(n => n.listed && n.priceSats).reduce((s, n) => s + n.priceSats, 0);
-
-  document.getElementById('statTotal').textContent = total;
-  document.getElementById('statListed').textContent = listed;
-  document.getElementById('statBnrp').textContent = withBnrp;
-
-  if (listedSats > 0) {
-    document.getElementById('statValue').textContent = fmtBtc(listedSats);
-    const rate = await getPortBtcUsd();
-    document.getElementById('statValueUsd').textContent = fmtUsd(listedSats, rate);
-  } else {
-    document.getElementById('statValue').textContent = '—';
-  }
-}
-
-function showSkeleton() {
-  const grid = document.getElementById('portGrid');
-  grid.innerHTML = Array(8).fill(0).map(() =>
-    `<div class="port-card skeleton" style="height:156px; border-radius:var(--radius-lg);"></div>`
-  ).join('');
-}
-
-// ── My Names ──────────────────────────────────────────────────────
-
-// Wallet detection helper (mirrors buy-modal.js / sell.html)
+// ── Wallet detection ──
 function detectWallet() {
-  if (typeof window === 'undefined') return null;
   if (window.unisat) return { type: 'unisat', api: window.unisat };
   if (window.XverseProviders?.BitcoinProvider) return { type: 'xverse', api: window.XverseProviders.BitcoinProvider };
   if (window.btc) return { type: 'xverse', api: window.btc };
   return null;
 }
 
-async function loadMyNames(address) {
-  const section = document.getElementById('myNamesSection');
-  const grid    = document.getElementById('myNamesGrid');
-  const addrEl  = document.getElementById('myNamesAddr');
-  if (!section || !grid) return;
+// ── Render helpers ──
+function renderSkeleton() {
+  const wrap = document.getElementById('portListWrap');
+  const rows = Array(8).fill(0).map(() => `
+    <div class="pn-skel">
+      <div class="pn-skel__bar" style="width:140px;"></div>
+      <div style="flex:1;"></div>
+      <div class="pn-skel__bar" style="width:70px;"></div>
+      <div class="pn-skel__bar" style="width:55px; margin-left:8px;"></div>
+    </div>`).join('');
+  wrap.innerHTML = `<div class="pn-list">${rows}</div>`;
+}
 
-  section.style.display = 'block';
-  addrEl.textContent = address.slice(0, 12) + '...' + address.slice(-6);
+function renderList() {
+  const wrap = document.getElementById('portListWrap');
+  if (!portNames.length) {
+    wrap.innerHTML = `
+      <div style="text-align:center; padding:var(--space-16) var(--space-6); color:var(--color-text-faint);">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.3; margin-bottom:var(--space-3);"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+        <div style="font-size:var(--text-base); color:var(--color-text-muted); margin-bottom:var(--space-2);">No names found</div>
+        <div style="font-size:var(--text-sm);">This address doesn't own any Bitcoin names.</div>
+      </div>`;
+    return;
+  }
 
-  // Skeleton + loading note
-  grid.innerHTML = Array(6).fill(0).map(() =>
-    `<div class="name-card skeleton" style="height:88px; border-radius:var(--radius-lg);"></div>`
-  ).join('') + `<p style="grid-column:1/-1; font-size:var(--text-xs); color:var(--color-text-faint); margin-top:var(--space-2);" id="myNamesLoadingNote">Scanning inscriptions... this may take up to 30s for large wallets.</p>`;
+  const rows = portNames.map(n => {
+    const enc  = encodeURIComponent(n.name);
+    const dot  = n.name.lastIndexOf('.');
+    const base = dot > 0 ? n.name.slice(0, dot) : n.name;
+    const tld  = dot > 0 ? n.name.slice(dot) : '';
+    const inscSub = n.inscriptionNumber ? `#${n.inscriptionNumber.toLocaleString()}` : (n.inscriptionId ? n.inscriptionId.slice(0,8)+'...' : '');
 
+    let priceHtml = '';
+    if (n.listed && n.priceSats) {
+      priceHtml = `<div class="pn-price">${fmtBtc(n.priceSats)}<span class="pn-price__usd" id="pnusd-${enc}"></span></div>`;
+    }
+
+    let actionsHtml;
+    if (n.isReInscription) {
+      actionsHtml = `
+        <div class="pn-actions">
+          <a class="pn-btn pn-btn--outline" href="./name.html?name=${enc}">View</a>
+          <span class="pn-btn pn-btn--outline" style="opacity:.4; cursor:not-allowed;" title="Re-inscriptions cannot be listed">Re-inscription</span>
+        </div>`;
+    } else if (n.listed) {
+      actionsHtml = `
+        <div class="pn-actions">
+          <a class="pn-btn pn-btn--outline" href="./name.html?name=${enc}">View</a>
+          <a class="pn-btn pn-btn--outline" href="./sell.html?name=${enc}">Change price</a>
+          <a class="pn-btn pn-btn--danger" href="./sell.html?name=${enc}">Cancel</a>
+        </div>`;
+    } else if (portIsOwner) {
+      actionsHtml = `
+        <div class="pn-actions">
+          <a class="pn-btn pn-btn--outline" href="./name.html?name=${enc}">View</a>
+          <a class="pn-btn pn-btn--primary" href="./sell.html?name=${enc}">List</a>
+        </div>`;
+    } else {
+      actionsHtml = `
+        <div class="pn-actions">
+          <a class="pn-btn pn-btn--outline" href="./name.html?name=${enc}">View</a>
+        </div>`;
+    }
+
+    return `
+      <div class="pn-row${n.listed ? ' pn-row--listed' : ''}">
+        <div class="pn-name">
+          <div class="pn-name__text"><span>${base}</span><span class="pn-name__tld">${tld}</span></div>
+          ${inscSub ? `<div class="pn-name__sub">${inscSub}</div>` : ''}
+        </div>
+        ${priceHtml}
+        ${actionsHtml}
+      </div>`;
+  }).join('');
+
+  const reCount = portNames.filter(n => n.isReInscription).length;
+  const notice = reCount > 0
+    ? `<div style="padding:var(--space-3) var(--space-4); font-size:var(--text-xs); color:var(--color-error,#f87171); border-top:1px solid var(--color-divider);">${reCount} re-inscription${reCount > 1?'s':''} shown but cannot be listed. Only the first inscription is canonical.</div>`
+    : '';
+
+  wrap.innerHTML = `<div class="pn-list">${rows}${notice}</div>`;
+
+  const listedNames = portNames.filter(n => n.listed && n.priceSats);
+  if (listedNames.length) {
+    getPortBtcUsd().then(rate => {
+      listedNames.forEach(n => {
+        const el = document.getElementById('pnusd-' + encodeURIComponent(n.name));
+        if (el) el.textContent = fmtUsd(n.priceSats, rate);
+      });
+    });
+  }
+}
+
+function updateToolbar() {
+  const addrChip   = document.getElementById('portAddrChip');
+  const countChip  = document.getElementById('portCountChip');
+  const refreshBtn = document.getElementById('portRefreshBtn');
+  if (portAddress) {
+    addrChip.textContent = portAddress.slice(0,10)+'...'+portAddress.slice(-6);
+    addrChip.style.display = '';
+  } else {
+    addrChip.style.display = 'none';
+  }
+  const total  = portNames.length;
+  const listed = portNames.filter(n => n.listed).length;
+  countChip.textContent = total ? `${total} name${total!==1?'s':''} · ${listed} listed` : '';
+  if (portIsOwner) refreshBtn.style.display = 'flex';
+}
+
+// ── Load names for an address ──
+async function loadNamesForAddress(address, isOwner) {
+  portAddress = address; portIsOwner = isOwner; portNames = [];
+  updateToolbar(); renderSkeleton();
+  const refreshParam = _portForceRefresh ? '&refresh=1' : '';
+  _portForceRefresh = false;
   try {
-    // Fetch all BNS names owned by address via market worker proxy (avoids CORS)
-    // Worker fetches inscription-data from UniSat, then resolves content via ordinals.com
-    const res = await fetch(
-      `${MARKET_API}/api/names?address=${encodeURIComponent(address)}`,
-      { signal: AbortSignal.timeout(60000) }  // can take ~30s for large wallets
-    );
+    const res = await fetch(`${MARKET_API}/api/names?address=${encodeURIComponent(address)}${refreshParam}`, { signal: AbortSignal.timeout(60000) });
     if (!res.ok) throw new Error(`Worker error ${res.status}`);
     const payload = await res.json();
-    if (!payload.ok) throw new Error(payload.error || 'Worker returned error');
-    const names = payload.names || [];
+    if (!payload.ok) throw new Error(payload.error || 'Worker error');
+    portNames = (payload.names || []).map(item => ({
+      name: (item.name||'').trim().toLowerCase(),
+      inscriptionId: item.inscriptionId||null,
+      inscriptionNumber: item.inscriptionNumber||null,
+      isReInscription: !!item.isReInscription,
+      listed: false, priceSats: null, auctionId: null,
+    })).filter(n => n.name);
+    renderList(); updateToolbar();
+    fetchListingStatus(address);
+  } catch(e) {
+    document.getElementById('portListWrap').innerHTML =
+      `<div style="padding:var(--space-6); color:var(--color-error,#f87171); font-size:var(--text-sm);">Could not load names: ${e.message}</div>`;
+  }
+}
 
-    if (names.length === 0) {
-      grid.innerHTML = `
-        <div style="grid-column:1/-1; text-align:center; padding:var(--space-12) 0; color:var(--color-text-faint);">
-          <div style="font-size:var(--text-lg); margin-bottom:var(--space-2);">No names found</div>
-          <div style="font-size:var(--text-sm);">Register a Bitcoin name on <a href="https://unisat.io/bns" target="_blank" rel="noopener noreferrer" style="color:var(--color-primary);">UniSat</a></div>
-        </div>`;
-      return;
-    }
-
-    // Show re-inscription warning if any were filtered
-    // (declared here, appended to grid after cards are rendered)
-
-    // Filter out re-inscriptions — they are not the canonical name
-    const validNames = names.filter(n => !n.isReInscription);
-    const reInscriptionCount = names.length - validNames.length;
-
-    grid.innerHTML = '';
-    validNames.forEach(item => {
-      const fullName = item.name || '';
-      if (!fullName) return;
-
-      const card = document.createElement('div');
-      card.className = 'name-card';
-      card.id = 'myname-card-' + fullName.replace(/[^a-z0-9]/g, '_');
-      card.dataset.name = fullName;
-      card.style.cssText = 'cursor:default; position:relative;';
-
-      const base = fullName.includes('.') ? fullName.split('.').slice(0, -1).join('.') : fullName;
-      const tld  = fullName.includes('.') ? '.' + fullName.split('.').pop() : '';
-
-      card.innerHTML = `
-        <div class="name-card__name">
-          <span style="font-family:var(--font-mono); font-weight:700;">${base}</span><span style="color:var(--color-primary); font-family:var(--font-mono);">${tld}</span>
-        </div>
-        <div class="name-card__listing-badge" style="display:none; font-size:11px; font-family:var(--font-mono); font-weight:600; color:#f7931a; background:rgba(247,147,26,0.12); border:1px solid rgba(247,147,26,0.3); border-radius:99px; padding:3px 10px;"></div>
-        <div class="name-card__actions" style="display:flex; gap:var(--space-2); margin-top:auto;">
-          <a href="./name.html?name=${encodeURIComponent(fullName)}" class="port-card__btn port-card__btn--outline" style="flex:1; text-align:center; font-size:var(--text-xs); text-decoration:none; display:flex; align-items:center; justify-content:center;">View</a>
-          <a href="./sell.html?name=${encodeURIComponent(fullName)}" class="name-card__sell-btn port-card__btn port-card__btn--primary" style="flex:1; text-align:center; font-size:var(--text-xs); text-decoration:none; display:flex; align-items:center; justify-content:center;">List</a>
-        </div>
-      `;
-
-      grid.appendChild(card);
+async function fetchListingStatus(address) {
+  try {
+    const r = await fetch(`${MARKET_API}/api/my-listings?address=${encodeURIComponent(address)}`, { signal: AbortSignal.timeout(15000) });
+    const d = await r.json();
+    if (!d.ok || !Array.isArray(d.listings)) return;
+    const listedSet = {};
+    d.listings.forEach(l => { listedSet[l.name] = l; });
+    portNames.forEach(n => {
+      if (listedSet[n.name]) { n.listed=true; n.priceSats=listedSet[n.name].priceSats||null; n.auctionId=listedSet[n.name].auctionId||null; }
     });
-
-    // Show re-inscription notice if any were filtered out
-    if (reInscriptionCount > 0) {
-      const notice = document.createElement('div');
-      notice.style.cssText = 'grid-column:1/-1; font-size:var(--text-xs); color:#ef4444; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); margin-top:var(--space-2);';
-      notice.textContent = `${reInscriptionCount} re-inscription${reInscriptionCount > 1 ? 's' : ''} hidden. Only the first inscription of a name is valid.`;
-      grid.appendChild(notice);
-    }
-
-    // Async: fetch all listings by this address in one call, then patch cards
-    (async () => {
-      try {
-        const r = await fetch(
-          `${MARKET_API}/api/my-listings?address=${encodeURIComponent(address)}`,
-          { signal: AbortSignal.timeout(15000) }
-        );
-        const d = await r.json();
-        if (!d.ok || !Array.isArray(d.listings)) return;
-        d.listings.forEach(listing => {
-          const cardEl = grid.querySelector(`[data-name="${listing.name}"]`);
-          if (!cardEl) return;
-          const badge = cardEl.querySelector('.name-card__listing-badge');
-          const sellBtn = cardEl.querySelector('.name-card__sell-btn');
-          if (badge) {
-            const btcAmt = listing.priceSats
-              ? (listing.priceSats / 1e8).toFixed(8).replace(/0+$/, '').replace(/\.$/, '') + ' BTC'
-              : 'Listed';
-            badge.textContent = btcAmt;
-            badge.style.display = 'block';
-          }
-          if (sellBtn) {
-            sellBtn.textContent = 'Manage';
-            sellBtn.style.background = 'none';
-            sellBtn.style.border = '1px solid var(--color-border)';
-            sellBtn.style.color = 'var(--color-text-muted)';
-          }
-        });
-      } catch { /* silent */ }
-    })();
-  } catch (e) {
-    grid.innerHTML = `<div style="grid-column:1/-1; color:var(--color-error, #ef4444); font-size:var(--text-sm);">Failed to load names: ${e.message}</div>`;
-  }
+    renderList(); updateToolbar();
+  } catch {}
 }
 
-function loadMyNamesRefresh() {
-  _fetchNamesForceRefresh = true;
+function portRefresh() { _portForceRefresh = true; if (portAddress) loadNamesForAddress(portAddress, portIsOwner); }
+
+// ── Lookup bar ──
+document.getElementById('lookupBtn').addEventListener('click', startLookup);
+document.getElementById('addrInput').addEventListener('keydown', e => { if (e.key==='Enter') startLookup(); });
+
+async function startLookup() {
+  let addr = document.getElementById('addrInput').value.trim();
+  if (!addr) return;
+  const btn = document.getElementById('lookupBtn');
+  const looksLikeName = addr.includes('.') && !addr.startsWith('bc1') && !addr.startsWith('1') && !addr.startsWith('3') && !addr.includes('@');
+  if (looksLikeName) {
+    btn.disabled=true; btn.textContent='Resolving...';
+    try {
+      const res  = await fetch(`https://api.bnrp.name/v1/resolve/${encodeURIComponent(addr)}`);
+      const data = await res.json();
+      const owner = data?.owner || data?.address;
+      if (owner) { addr=owner; document.getElementById('addrInput').value=owner; }
+      else { showPortError('Could not resolve to an address.'); btn.disabled=false; btn.textContent='Look up'; return; }
+    } catch { showPortError('Resolution failed.'); btn.disabled=false; btn.textContent='Look up'; return; }
+  }
+  if (addr.length < 26) { showPortError('Enter a valid Bitcoin address.'); return; }
+  btn.disabled=true; btn.textContent='Scanning...';
+  document.getElementById('errorPanel').style.display='none';
+  const wallet = detectWallet();
+  let isOwner = false;
+  if (wallet) {
+    try {
+      let connectedAddr=null;
+      if (wallet.type==='unisat') connectedAddr=(await wallet.api.getAccounts())?.[0];
+      else if (wallet.type==='xverse') connectedAddr=(await wallet.api.request('getAccounts',{purposes:['ordinals']}))?.result?.[0]?.address;
+      if (connectedAddr && connectedAddr.toLowerCase()===addr.toLowerCase()) isOwner=true;
+    } catch {}
+  }
+  await loadNamesForAddress(addr, isOwner);
+  btn.disabled=false; btn.textContent='Look up';
+}
+
+function showPortError(msg) {
+  document.getElementById('errorPanel').style.display='block';
+  document.getElementById('errorMsg').textContent=msg;
+}
+
+// ── Auto-connect on load (UniSat + Xverse) ──
+function tryAutoConnect() {
   const wallet = detectWallet();
   if (!wallet) return;
-  if (wallet.type === 'unisat') {
-    wallet.api.requestAccounts().then(accounts => {
-      if (accounts?.[0]) loadMyNames(accounts[0]);
-    }).catch(() => {});
-  } else if (wallet.type === 'xverse') {
-    wallet.api.request('getAccounts', { purposes: ['ordinals'] }).then(res => {
-      const addr = res?.result?.[0]?.address;
-      if (addr) loadMyNames(addr);
-    }).catch(() => {});
-  }
-}
-
-// Wire nav wallet button: after app.js sets the connected address, also load My Names
-// We wrap setNavWalletConnected (defined in app.js) to call loadMyNames on this page.
-(function patchNavWallet() {
-  // Wait for app.js to define setNavWalletConnected, then wrap it
-  const patch = () => {
-    if (typeof setNavWalletConnected === 'function') {
-      const _orig = setNavWalletConnected;
-      window.setNavWalletConnected = function(address) {
-        _orig(address);
-        loadMyNames(address);
-      };
-    }
+  const onAddress = addr => {
+    if (!addr) return;
+    document.getElementById('portLookupBar').style.display='none';
+    loadNamesForAddress(addr, true);
   };
-  // app.js runs before this script, so it should already be defined
-  patch();
+  if (wallet.type==='unisat' && wallet.api.getAccounts)
+    wallet.api.getAccounts().then(accounts => onAddress(accounts?.[0])).catch(()=>{});
+  else if (wallet.type==='xverse')
+    wallet.api.request('getAccounts',{purposes:['ordinals']}).then(res => onAddress(res?.result?.[0]?.address)).catch(()=>{});
+}
+
+// ── Hook into nav wallet connect ──
+(function patchNavWallet() {
+  function applyPatch() {
+    if (typeof setNavWalletConnected !== 'function') return;
+    const _orig = setNavWalletConnected;
+    window.setNavWalletConnected = function(address) {
+      _orig(address);
+      document.getElementById('portLookupBar').style.display='none';
+      loadNamesForAddress(address, true);
+    };
+  }
+  applyPatch();
+  window.addEventListener('DOMContentLoaded', applyPatch);
+  setTimeout(applyPatch, 500);
 })();
 
-// Auto-detect wallet on load
-(function autoConnectWallet() {
-  const wallet = detectWallet();
-  if (!wallet) return;
-  // Silently check if already authorized (no prompt)
-  if (wallet.type === 'unisat' && wallet.api.getAccounts) {
-    wallet.api.getAccounts().then(accounts => {
-      if (accounts && accounts[0]) {
-        loadMyNames(accounts[0]);
-      }
-    }).catch(() => {});
-  }
+// Pre-fill from URL param
+(function() {
+  const addr = new URLSearchParams(location.search).get('address') || new URLSearchParams(location.search).get('addr');
+  if (addr) { document.getElementById('addrInput').value=addr; startLookup(); }
 })();
+
+setTimeout(tryAutoConnect, 300);
 </script>
 </body>
 </html>
