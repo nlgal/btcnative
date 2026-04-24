@@ -731,9 +731,9 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
       <button class="bn-modal__cta" id="bnBuyBtn">Connect wallet &amp; buy</button>
       <div class="bn-modal__status" id="bnBuyStatus"></div>
       <p class="bn-modal__wallet-note">UniSat or Xverse required. Your wallet signs directly — no keys leave your device.</p>
-      <div class="bn-modal__confirm-tip">
+      <div class="bn-modal__confirm-tip" id="bnConfirmTip" style="display:none">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span>Your wallet will prompt <strong>&ldquo;Changing inscription detected&rdquo;</strong> &mdash; type <strong>CONFIRM</strong> to complete the purchase. This is normal for all Ordinals transfers.</span>
+        <span>UniSat will prompt <strong>&ldquo;Changing inscription detected&rdquo;</strong> &mdash; type <strong>CONFIRM</strong> to proceed. This is a UniSat safety check on inscription transfers.</span>
       </div>
       <p class="bn-modal__step" id="bnStep"></p>
     </div>
@@ -768,6 +768,11 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
 
       btn.textContent = 'Connecting...';
       _bmSetStatus(status, 'info', `Connecting ${wallet.type === 'unisat' ? 'UniSat' : 'Xverse'}...`);
+      // Show UniSat CONFIRM tip only for UniSat users
+      if (wallet.type === 'unisat') {
+        const tip = backdrop.querySelector('#bnConfirmTip');
+        if (tip) tip.style.display = 'flex';
+      }
       const buyerAddress = await _bmGetAddress(wallet);
       wallet._address = buyerAddress;
 
