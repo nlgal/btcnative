@@ -20,6 +20,44 @@
   <meta name="twitter:title" content="BTC Native — Identity with Proof of Work" />
   <meta name="twitter:description" content="Buy, sell, and track .btc, .sats, .x, .ord Bitcoin names. Floor prices, BNRP identity cards." />
   <meta name="twitter:image" content="https://btcnative.name/assets/social-banner.png" />
+  <!-- Early access gate — fires before paint, async check against worker -->
+  <script>
+    (function() {
+      var EARLY_URL  = '/early';
+      var STORAGE_KEY = 'btcn_early_access';
+      var ADDR_KEY    = 'btcn_early_address';
+      var MARKET_API  = 'https://btcnative-market.galanin.workers.dev';
+
+      // Already verified this session — let through immediately
+      if (sessionStorage.getItem(STORAGE_KEY) === '1') return;
+
+      // Not verified — redirect to early page while we async-check
+      // (prevents flash of the full site for unverified visitors)
+      var addr = sessionStorage.getItem(ADDR_KEY);
+      if (!addr) {
+        window.location.replace(EARLY_URL);
+        return;
+      }
+
+      // Has an address in session — verify it's still approved in KV
+      fetch(MARKET_API + '/api/early/check?address=' + encodeURIComponent(addr))
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d.ok) {
+            sessionStorage.setItem(STORAGE_KEY, '1');
+          } else {
+            sessionStorage.removeItem(STORAGE_KEY);
+            sessionStorage.removeItem(ADDR_KEY);
+            window.location.replace(EARLY_URL);
+          }
+        })
+        .catch(function() {
+          // Network error — fail open so a broken worker doesn't lock everyone out
+          sessionStorage.setItem(STORAGE_KEY, '1');
+        });
+    })();
+  </script>
+
   <!-- Fonts: non-blocking load via print media swap -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -57,7 +57,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px 24px;
+      padding: 40px 24px 80px;
       gap: 0;
     }
 
@@ -142,7 +142,7 @@
 
     /* ── Subline ── */
     .subline {
-      font-size: clamp(1rem, 2vw, 1.2rem);
+      font-size: clamp(1rem, 2vw, 1.15rem);
       color: var(--muted);
       text-align: center;
       max-width: 480px;
@@ -150,14 +150,18 @@
       margin-bottom: 52px;
     }
 
-    /* ── Code gate ── */
-    .gate {
+    /* ── Steps ── */
+    /* Step 1: code entry */
+    #step-code,
+    #step-wallet {
       width: 100%;
       max-width: 420px;
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
+
+    #step-wallet { display: none; }
 
     .gate__label {
       font-size: 11px;
@@ -231,8 +235,9 @@
       letter-spacing: .02em;
     }
 
-    .gate__btn:hover  { opacity: .9; transform: translateY(-1px); }
-    .gate__btn:active { opacity: 1;  transform: translateY(0); }
+    .gate__btn:hover    { opacity: .9; transform: translateY(-1px); }
+    .gate__btn:active   { opacity: 1;  transform: translateY(0); }
+    .gate__btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 
     .gate__msg {
       font-size: 13px;
@@ -243,6 +248,117 @@
 
     .gate__msg.error   { color: var(--error); }
     .gate__msg.success { color: var(--success); }
+
+    /* ── Wallet step ── */
+    .wallet-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--faint);
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .wallet-hint {
+      font-size: 12px;
+      color: var(--faint);
+      text-align: center;
+      line-height: 1.5;
+      margin-bottom: 4px;
+    }
+
+    .wallet-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .wallet-btn {
+      height: 52px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 18px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color .2s, background .2s, transform .15s;
+      text-align: left;
+    }
+
+    .wallet-btn:hover {
+      border-color: rgba(255,138,0,0.35);
+      background: rgba(255,138,0,0.05);
+      transform: translateY(-1px);
+    }
+
+    .wallet-btn:active { transform: translateY(0); }
+
+    .wallet-btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .wallet-btn__icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .wallet-btn__icon--unisat {
+      background: #000;
+      border: 1px solid rgba(255,138,0,0.3);
+    }
+
+    .wallet-btn__icon--xverse {
+      background: #1a1a2e;
+      border: 1px solid rgba(106,90,205,0.3);
+    }
+
+    .wallet-btn__text { flex: 1; }
+    .wallet-btn__name { font-size: 14px; font-weight: 600; }
+    .wallet-btn__sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    .wallet-btn__arrow {
+      color: var(--faint);
+      font-size: 16px;
+    }
+
+    #wallet-msg {
+      font-size: 13px;
+      text-align: center;
+      min-height: 20px;
+      margin-top: 4px;
+    }
+
+    #wallet-msg.error   { color: var(--error); }
+    #wallet-msg.success { color: var(--success); }
+
+    /* ── Step back link ── */
+    .back-link {
+      font-size: 12px;
+      color: var(--faint);
+      text-align: center;
+      cursor: pointer;
+      margin-top: 4px;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color .15s;
+    }
+
+    .back-link:hover { color: var(--muted); }
 
     /* ── Divider ── */
     .divider {
@@ -261,9 +377,7 @@
       flex-wrap: wrap;
     }
 
-    .stat {
-      text-align: center;
-    }
+    .stat { text-align: center; }
 
     .stat__value {
       font-size: 1.6rem;
@@ -291,7 +405,7 @@
 
     /* ── Footer ── */
     .footer {
-      position: absolute;
+      position: fixed;
       bottom: 28px;
       left: 0;
       right: 0;
@@ -374,6 +488,20 @@
 
     .success-overlay__btn:hover { opacity: .9; transform: translateY(-1px); }
 
+    /* ── Spinner ── */
+    .spin {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     /* ── Responsive ── */
     @media (max-width: 480px) {
       .gate__row { flex-direction: column; }
@@ -389,7 +517,7 @@
 
   <!-- Logo -->
   <a class="logo" href="https://btcnative.name">
-    <div class="logo__mark">₿</div>
+    <div class="logo__mark">&#x20BF;</div>
     <span class="logo__name">BTCNative</span>
   </a>
 
@@ -406,12 +534,12 @@
 
   <!-- Subline -->
   <p class="subline">
-    A name marketplace, a subname manager, and an open protocol — all in one place.
-    Early access is limited. If you have a code, you're in.
+    A name marketplace, a subname manager, and an open protocol &mdash; all in one place.
+    Early access is limited. If you have a code, you&rsquo;re in.
   </p>
 
-  <!-- Code gate -->
-  <div class="gate">
+  <!-- Step 1: Code entry -->
+  <div id="step-code">
     <div class="gate__label">Enter your access code</div>
     <div class="gate__row">
       <input
@@ -426,7 +554,33 @@
       />
       <button class="gate__btn" id="code-btn">Enter</button>
     </div>
-    <div class="gate__msg" id="gate-msg"></div>
+    <div class="gate__msg" id="code-msg"></div>
+  </div>
+
+  <!-- Step 2: Wallet connect -->
+  <div id="step-wallet">
+    <div class="wallet-label">Connect your wallet</div>
+    <div class="wallet-hint">Your code is valid. Connect a wallet to lock in your access.</div>
+    <div class="wallet-btns">
+      <button class="wallet-btn" id="btn-unisat">
+        <div class="wallet-btn__icon wallet-btn__icon--unisat">&#x20BF;</div>
+        <div class="wallet-btn__text">
+          <div class="wallet-btn__name">UniSat</div>
+          <div class="wallet-btn__sub">Bitcoin wallet</div>
+        </div>
+        <span class="wallet-btn__arrow">&#8250;</span>
+      </button>
+      <button class="wallet-btn" id="btn-xverse">
+        <div class="wallet-btn__icon wallet-btn__icon--xverse">&#x25C6;</div>
+        <div class="wallet-btn__text">
+          <div class="wallet-btn__name">Xverse</div>
+          <div class="wallet-btn__sub">Bitcoin &amp; Ordinals wallet</div>
+        </div>
+        <span class="wallet-btn__arrow">&#8250;</span>
+      </button>
+    </div>
+    <div class="gate__msg" id="wallet-msg"></div>
+    <div class="back-link" id="back-link">Use a different code</div>
   </div>
 
   <!-- Divider -->
@@ -440,7 +594,7 @@
     </div>
     <div class="stat__sep"></div>
     <div class="stat">
-      <div class="stat__value">∞</div>
+      <div class="stat__value">&#x221E;</div>
       <div class="stat__label">Subnames per name</div>
     </div>
     <div class="stat__sep"></div>
@@ -455,90 +609,223 @@
 <!-- Footer -->
 <div class="footer">
   <a href="https://btcnative.name">btcnative.name</a>
-  &nbsp;·&nbsp;
+  &nbsp;&middot;&nbsp;
   <a href="https://bnrp.name" target="_blank" rel="noopener">bnrp.name</a>
-  &nbsp;·&nbsp;
+  &nbsp;&middot;&nbsp;
   <a href="https://x.com/btcnativename" target="_blank" rel="noopener">@btcnativename</a>
 </div>
 
 <!-- Success overlay -->
 <div class="success-overlay" id="success-overlay">
-  <div class="success-overlay__icon">₿</div>
-  <div class="success-overlay__title">You're in.</div>
+  <div class="success-overlay__icon">&#x20BF;</div>
+  <div class="success-overlay__title">You&rsquo;re in.</div>
   <p class="success-overlay__sub">
-    Code accepted. Taking you to BTCNative now.
+    Access granted. Taking you to BTCNative now.
   </p>
   <button class="success-overlay__btn" id="success-btn">Enter BTCNative</button>
 </div>
 
 <script>
-  // ── Valid codes (hashed in prod — client-side for now, sufficient for a teaser) ──
-  const VALID_CODES = new Set(["BTCN-25MK-YMUY","BTCN-267D-SWF4","BTCN-2A8V-M97B","BTCN-2BMN-EW62","BTCN-2E98-5XMG","BTCN-2NDC-SKXN","BTCN-2PVC-HQQT","BTCN-2QN7-MBNJ","BTCN-2R3N-3VR3","BTCN-2VHA-DBH7","BTCN-2W2U-FMA4","BTCN-2YUT-GZB8","BTCN-32PD-LG4F","BTCN-32SR-S3VU","BTCN-35KJ-9X7W","BTCN-3BTP-2LZ5","BTCN-3JA7-HFFR","BTCN-3LY8-HQXG","BTCN-3M7Y-YANW","BTCN-3U2M-YUMJ","BTCN-3Y9U-JTCK","BTCN-425C-Z6K4","BTCN-485B-255U","BTCN-48HM-98JV","BTCN-48R8-XPBJ","BTCN-4GMP-6X5H","BTCN-4KGG-4NTL","BTCN-4Q28-DCGV","BTCN-4RJV-4NFP","BTCN-4WJS-6WTE","BTCN-54TW-UH4Z","BTCN-5A5E-YSAV","BTCN-5AUL-4VFN","BTCN-5J4C-KYDT","BTCN-5NUL-V5XP","BTCN-5TFQ-V3XL","BTCN-5Z47-AE8Z","BTCN-6375-VWJG","BTCN-6CD9-ES96","BTCN-6E2S-6AFM","BTCN-6J3W-D2T7","BTCN-6Y22-AKW2","BTCN-6YBD-TXA8","BTCN-6ZYY-88XM","BTCN-7584-6H2Z","BTCN-76W4-87YY","BTCN-77ES-M9CY","BTCN-78EB-BMT2","BTCN-7BPJ-QRJG","BTCN-7BZU-YMVG","BTCN-7CSH-VZ6K","BTCN-7VQV-4G3D","BTCN-7WHV-M9CC","BTCN-829M-C95H","BTCN-863G-W3PS","BTCN-87XJ-CPRZ","BTCN-8AFF-F5HC","BTCN-8BPR-ZKA8","BTCN-8HMA-GXZ3","BTCN-8MVL-327R","BTCN-8VUE-JVLG","BTCN-92LU-KYF9","BTCN-99ZK-NNZV","BTCN-9DNJ-SYQW","BTCN-9HJC-LHN6","BTCN-9JC2-RCGK","BTCN-9U5E-P4U7","BTCN-A6BB-YEKL","BTCN-AB53-FYUE","BTCN-AEJX-VPED","BTCN-AJDK-VHNN","BTCN-AYA4-FQ6L","BTCN-B9NW-LUU2","BTCN-BCNT-PXDX","BTCN-BD5Z-WY2A","BTCN-BKT9-4XVA","BTCN-BV4J-7QDD","BTCN-C3GK-EBTE","BTCN-C55E-8PXD","BTCN-C6XU-KJDZ","BTCN-C8V3-35PV","BTCN-C8YA-FCG2","BTCN-CEEW-BNHG","BTCN-CMW9-9CMN","BTCN-CN32-N4QH","BTCN-CSN6-UJW7","BTCN-CSNZ-7Z6R","BTCN-D2T5-V5BJ","BTCN-D4BR-9VGD","BTCN-D59L-9GSE","BTCN-DCXQ-LNAX","BTCN-DFLF-T5T5","BTCN-DL74-TQUQ","BTCN-DT9E-69RS","BTCN-DY78-GRLX","BTCN-DZTU-3T3E","BTCN-ERV3-YT7V","BTCN-EVJA-XULB","BTCN-EZ95-2X5S","BTCN-F8VN-SARV","BTCN-F977-NNHX","BTCN-FBFP-CEJQ","BTCN-FBLS-LWX8","BTCN-FFBW-UASM","BTCN-FJ4D-L9TT","BTCN-FUKT-Z63C","BTCN-FVDJ-ZSEH","BTCN-FY9Y-GPGU","BTCN-GAFJ-5YN2","BTCN-GDQX-EXSY","BTCN-GE92-R9JA","BTCN-GHAA-29SB","BTCN-GHGD-DS8X","BTCN-GHR7-EHHH","BTCN-GLYB-7W7V","BTCN-GMH2-DFSM","BTCN-GNA6-TWCE","BTCN-GSHA-N7UQ","BTCN-GSMW-7SG3","BTCN-H52N-Q796","BTCN-HJZE-3NYE","BTCN-HKTY-PNZZ","BTCN-HZ8V-PLGA","BTCN-HZB7-L8X3","BTCN-J4RP-PQ68","BTCN-JGEJ-9ZKZ","BTCN-JJR2-J24B","BTCN-JWY7-YXRQ","BTCN-JX3M-2SM3","BTCN-JYB6-YE7M","BTCN-K3J6-Y63A","BTCN-KF84-XKGR","BTCN-KJFL-Q9A3","BTCN-KQKT-524M","BTCN-KRT4-56F9","BTCN-KURS-8D7L","BTCN-KXKC-2NKU","BTCN-KZUD-732W","BTCN-L6J3-NLBQ","BTCN-L7FR-RM9Y","BTCN-LCWQ-HZ3K","BTCN-LFNP-ZY2F","BTCN-LGZJ-35VE","BTCN-LLQL-L7C3","BTCN-LQ46-AU2L","BTCN-LRL6-YFDZ","BTCN-LUF7-N4X6","BTCN-LZ2X-BWN3","BTCN-M8DQ-FXS5","BTCN-MBUV-WQFS","BTCN-MJ67-K2C3","BTCN-MN2V-4PQG","BTCN-MPWY-RAHJ","BTCN-MQKR-2HC7","BTCN-MVBP-PE32","BTCN-MX55-WAAC","BTCN-MZLN-N4CN","BTCN-N2WU-CXTK","BTCN-N6HJ-H6UA","BTCN-N9ES-9YB8","BTCN-N9ZH-C2QF","BTCN-NCPF-9AR6","BTCN-NEBU-QN3M","BTCN-NNZD-PUNN","BTCN-NQ5Y-5VG9","BTCN-NRC8-6EGW","BTCN-NSF4-FNWK","BTCN-P2LN-WSXN","BTCN-P2QD-NFN8","BTCN-PEZB-LPXR","BTCN-PGQ5-RA78","BTCN-PNJH-Q4SC","BTCN-PX9V-EFKK","BTCN-Q76S-GA9A","BTCN-QBAJ-HKLG","BTCN-QBSP-FS8A","BTCN-QE8F-5NVB","BTCN-QQ22-E9JH","BTCN-QSQN-WQCK","BTCN-QWP6-9E87","BTCN-QZDS-YPE6","BTCN-R575-XKDU","BTCN-RC99-7KGU","BTCN-RFMS-9WBV","BTCN-RUGM-JCMZ","BTCN-SGQ2-X8NF","BTCN-SR25-T56G","BTCN-SRWK-CFSK","BTCN-SWAQ-JKLX","BTCN-T2KN-WQ5M","BTCN-T6E5-PV6V","BTCN-T823-MPMJ","BTCN-T82P-RQP5","BTCN-TAMY-ZUUS","BTCN-TBC4-KEGZ","BTCN-TES5-W85A","BTCN-TFLX-RKTV","BTCN-TJCQ-CA3K","BTCN-TNBX-WA38","BTCN-TQ8W-CADP","BTCN-TSTE-AVJQ","BTCN-U3BK-MX5J","BTCN-U3HW-95WV","BTCN-U7QL-JLYX","BTCN-UL4R-39XJ","BTCN-UN3P-ATU2","BTCN-UN9C-E7TR","BTCN-URXX-5ZF3","BTCN-UV7J-FBZS","BTCN-V5UV-RC2R","BTCN-V6U3-JPN6","BTCN-VD7L-J44E","BTCN-VEST-VLPC","BTCN-VM4G-8AUT","BTCN-VMCK-2ZYT","BTCN-VX2J-TAW8","BTCN-VX9F-MNTR","BTCN-VZVP-8S49","BTCN-W87Q-M6YU","BTCN-W98B-VXDU","BTCN-WMVY-UDVB","BTCN-WQRE-3XQL","BTCN-WZXT-99BQ","BTCN-X2CL-LV4R","BTCN-X7A9-9D54","BTCN-XD6D-9D5S","BTCN-XGK3-LQGS","BTCN-XJFD-TC8E","BTCN-XP2M-PBT7","BTCN-XPM4-E59F","BTCN-XRUX-XYL3","BTCN-XSRZ-BHDD","BTCN-XWST-32BD","BTCN-Y556-YYW2","BTCN-Y7HK-8BUE","BTCN-Y9AM-35MD","BTCN-Y9J6-XJT2","BTCN-YBPN-NJRF","BTCN-YFNN-MLYL","BTCN-YFUN-QUWX","BTCN-YMQD-G2F7","BTCN-YYTH-SL7M","BTCN-YYUB-YBMZ","BTCN-Z2ZC-EALR","BTCN-Z37Q-H3QW","BTCN-Z76E-62V5","BTCN-ZFMA-6ZDT","BTCN-ZSLD-TJSJ","BTCN-ZX92-TGPP","BTCN-ZXSE-9MED"]);
-
+  const MARKET_API  = 'https://btcnative-market.galanin.workers.dev';
   const DESTINATION = 'https://btcnative.name';
   const STORAGE_KEY = 'btcn_early_access';
+  const ADDR_KEY    = 'btcn_early_address';
 
-  const input  = document.getElementById('code-input');
-  const btn    = document.getElementById('code-btn');
-  const msg    = document.getElementById('gate-msg');
-  const overlay = document.getElementById('success-overlay');
+  // ── Elements ──────────────────────────────────────────────────────────────
+  const stepCode   = document.getElementById('step-code');
+  const stepWallet = document.getElementById('step-wallet');
+  const codeInput  = document.getElementById('code-input');
+  const codeBtn    = document.getElementById('code-btn');
+  const codeMsg    = document.getElementById('code-msg');
+  const walletMsg  = document.getElementById('wallet-msg');
+  const overlay    = document.getElementById('success-overlay');
   const successBtn = document.getElementById('success-btn');
+  const backLink   = document.getElementById('back-link');
+  const btnUnisat  = document.getElementById('btn-unisat');
+  const btnXverse  = document.getElementById('btn-xverse');
 
-  // Auto-format input as BTCN-XXXX-XXXX
-  input.addEventListener('input', () => {
-    let val = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  let pendingCode = '';
+
+  // ── Already approved this session? ────────────────────────────────────────
+  if (sessionStorage.getItem(STORAGE_KEY) === '1') {
+    window.location.href = DESTINATION;
+  }
+
+  // ── Code auto-format ──────────────────────────────────────────────────────
+  codeInput.addEventListener('input', () => {
+    let val = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (val.startsWith('BTCN')) val = val.slice(4);
     const parts = [];
     if (val.length > 0) parts.push('BTCN');
     if (val.length > 0) parts.push(val.slice(0, 4));
     if (val.length > 4) parts.push(val.slice(4, 8));
-    input.value = parts.join('-');
-    msg.textContent = '';
-    msg.className = 'gate__msg';
-    input.classList.remove('error');
+    codeInput.value = parts.join('-');
+    codeMsg.textContent = '';
+    codeMsg.className = 'gate__msg';
+    codeInput.classList.remove('error');
   });
 
-  // Submit on Enter
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') attempt();
-  });
+  codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') attemptCode(); });
+  codeBtn.addEventListener('click', attemptCode);
+  successBtn.addEventListener('click', () => { window.location.href = DESTINATION; });
+  backLink.addEventListener('click', showCodeStep);
 
-  btn.addEventListener('click', attempt);
-  successBtn.addEventListener('click', () => {
-    window.location.href = DESTINATION;
-  });
+  // ── Wallet buttons ────────────────────────────────────────────────────────
+  btnUnisat.addEventListener('click', () => connectWallet('unisat'));
+  btnXverse.addEventListener('click', () => connectWallet('xverse'));
 
-  // Check if already verified this session
-  if (sessionStorage.getItem(STORAGE_KEY) === '1') {
-    window.location.href = DESTINATION;
+  // ── Step 1: validate code format ─────────────────────────────────────────
+  function attemptCode() {
+    const raw = codeInput.value.trim().toUpperCase();
+    if (!raw) { shakeCode('Enter your access code.'); return; }
+    if (!/^BTCN-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(raw)) {
+      shakeCode('Invalid code format. Try BTCN-XXXX-XXXX.');
+      return;
+    }
+    pendingCode = raw;
+    showWalletStep();
   }
 
-  function attempt() {
-    const raw = input.value.trim().toUpperCase();
-    if (!raw) {
-      shake('Enter your access code.');
+  function showWalletStep() {
+    stepCode.style.display   = 'none';
+    stepWallet.style.display = 'flex';
+    walletMsg.textContent = '';
+    walletMsg.className   = 'gate__msg';
+  }
+
+  function showCodeStep() {
+    stepWallet.style.display = 'none';
+    stepCode.style.display   = 'flex';
+    setWalletBtnsDisabled(false);
+  }
+
+  function setWalletBtnsDisabled(val) {
+    btnUnisat.disabled = val;
+    btnXverse.disabled = val;
+  }
+
+  // ── Step 2: connect wallet + redeem ──────────────────────────────────────
+  async function connectWallet(type) {
+    setWalletBtnsDisabled(true);
+    setWalletMsg('Connecting...', '');
+
+    let address;
+    try {
+      address = type === 'unisat'
+        ? await connectUniSat()
+        : await connectXverse();
+    } catch (err) {
+      setWalletMsg(err.message || 'Wallet connection failed.', 'error');
+      setWalletBtnsDisabled(false);
       return;
     }
 
-    if (VALID_CODES.has(raw)) {
-      // Valid
-      sessionStorage.setItem(STORAGE_KEY, '1');
-      btn.disabled = true;
-      input.disabled = true;
-      msg.textContent = 'Code accepted.';
-      msg.className = 'gate__msg success';
-      setTimeout(() => { overlay.classList.add('show'); }, 300);
-    } else {
-      shake('Invalid code. Check your invite and try again.');
+    if (!address) {
+      setWalletMsg('No address returned. Try again.', 'error');
+      setWalletBtnsDisabled(false);
+      return;
+    }
+
+    setWalletMsg('Redeeming code...', '');
+
+    try {
+      const res  = await fetch(`${MARKET_API}/api/early/redeem`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ code: pendingCode, address }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.ok) {
+        sessionStorage.setItem(STORAGE_KEY, '1');
+        sessionStorage.setItem(ADDR_KEY, address);
+        setWalletMsg('Access granted.', 'success');
+        setTimeout(() => overlay.classList.add('show'), 400);
+      } else if (res.status === 409) {
+        setWalletMsg('This code has already been used.', 'error');
+        setWalletBtnsDisabled(false);
+      } else {
+        setWalletMsg(data.error || 'Redemption failed. Try again.', 'error');
+        setWalletBtnsDisabled(false);
+      }
+    } catch {
+      setWalletMsg('Network error. Check your connection.', 'error');
+      setWalletBtnsDisabled(false);
     }
   }
 
-  function shake(message) {
-    input.classList.remove('error');
-    void input.offsetWidth; // reflow
-    input.classList.add('error');
-    msg.textContent = message;
-    msg.className = 'gate__msg error';
+  function setWalletMsg(text, cls) {
+    walletMsg.textContent = text;
+    walletMsg.className   = 'gate__msg' + (cls ? ' ' + cls : '');
+  }
+
+  // ── UniSat connector ──────────────────────────────────────────────────────
+  async function connectUniSat() {
+    if (!window.unisat) {
+      throw new Error('UniSat not detected. Install the UniSat extension and reload.');
+    }
+    const accounts = await window.unisat.requestAccounts();
+    if (!accounts || !accounts.length) throw new Error('No UniSat account returned.');
+    return accounts[0];
+  }
+
+  // ── Xverse connector ─────────────────────────────────────────────────────
+  async function connectXverse() {
+    // Xverse exposes window.BitcoinProvider (SATS Connect) or window.XverseProviders
+    const provider = window.XverseProviders?.BitcoinProvider
+      || window.BitcoinProvider
+      || null;
+
+    if (!provider) {
+      // Fallback: try sats-connect library pattern via dynamic import
+      try {
+        const { request } = await importSatsConnect();
+        const resp = await request('getAccounts', {
+          purposes: ['payment', 'ordinals'],
+          message:  'BTCNative Early Access',
+        });
+        if (resp.status === 'success') {
+          const ordinals = resp.result.find(a => a.purpose === 'ordinals');
+          const payment  = resp.result.find(a => a.purpose === 'payment');
+          const addr     = (ordinals || payment)?.address;
+          if (!addr) throw new Error('No address returned by Xverse.');
+          return addr;
+        }
+        throw new Error(resp.error?.message || 'Xverse request cancelled.');
+      } catch (e) {
+        if (e.message && e.message.includes('Xverse')) throw e;
+        throw new Error('Xverse not detected. Install the Xverse extension and reload.');
+      }
+    }
+
+    // Direct BitcoinProvider path
+    return new Promise((resolve, reject) => {
+      provider.connect({ purposes: ['payment', 'ordinals'] }, (resp) => {
+        if (resp.addresses && resp.addresses.length) {
+          const ordinals = resp.addresses.find(a => a.purpose === 'ordinals');
+          const payment  = resp.addresses.find(a => a.purpose === 'payment');
+          resolve((ordinals || payment)?.address);
+        } else {
+          reject(new Error('Xverse connection cancelled or failed.'));
+        }
+      });
+    });
+  }
+
+  // Lazy-load sats-connect from CDN (Xverse's own library)
+  function importSatsConnect() {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/sats-connect@2/dist/index.js';
+      s.type = 'module';
+      s.onload  = () => resolve(window.satsConnect || {});
+      s.onerror = () => reject(new Error('Could not load Xverse library.'));
+      document.head.appendChild(s);
+      // Also attempt module import
+      import('https://unpkg.com/sats-connect@2/dist/index.js')
+        .then(m => resolve(m))
+        .catch(() => {}); // fallback already handles this
+    });
   }
 </script>
 </body>
