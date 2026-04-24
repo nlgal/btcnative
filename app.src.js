@@ -228,27 +228,40 @@ async function fetchDomainTypes() {
 }
 
 // Returns floor price (sats) for a specific TLD, or null
+// Per-key in-flight cache — deduplicates concurrent fetchTldFloor calls for the same key
+const _tldFloorCache = {};
 async function fetchTldFloor(tldKey) {
-  // Query the listing with lowest unitPrice for this domainType
-  const data = await unisatPost('/v3/market/domain/auction/list', {
-    filter: { nftType: 'domain', domainType: tldKey },
-    sort:   { unitPrice: 1 },
-    start:  0,
-    limit:  1,
-  });
-  if (!data || !data.list || data.list.length === 0) return null;
-  return data.list[0].unitPrice || data.list[0].price || null;
+  if (_tldFloorCache[tldKey]) return _tldFloorCache[tldKey];
+  _tldFloorCache[tldKey] = (async () => {
+    const data = await unisatPost('/v3/market/domain/auction/list', {
+      filter: { nftType: 'domain', domainType: tldKey },
+      sort:   { unitPrice: 1 },
+      start:  0,
+      limit:  1,
+    });
+    if (!data || !data.list || data.list.length === 0) return null;
+    return data.list[0].unitPrice || data.list[0].price || null;
+  })();
+  setTimeout(() => { delete _tldFloorCache[tldKey]; }, 5 * 60 * 1000);
+  return _tldFloorCache[tldKey];
 }
 
 // Fetch real floor prices for all known TLDs in parallel
+// Module-level promise cache — deduplicates if called twice on same page load.
+let _allTldFloorsPromise = null;
 async function fetchAllTldFloors() {
-  const tldKeys = Object.keys(TLD_META); // btc, sats, x, ord, xbt, gm, unisat, sat
-  const results = await Promise.allSettled(tldKeys.map(k => fetchTldFloor(k)));
-  const floors = {};
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled') floors[tldKeys[i]] = r.value;
-  });
-  return floors;
+  if (_allTldFloorsPromise) return _allTldFloorsPromise;
+  _allTldFloorsPromise = (async () => {
+    const tldKeys = Object.keys(TLD_META); // btc, sats, x, ord, xbt, gm, unisat, sat
+    const results = await Promise.allSettled(tldKeys.map(k => fetchTldFloor(k)));
+    const floors = {};
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') floors[tldKeys[i]] = r.value;
+    });
+    return floors;
+  })();
+  setTimeout(() => { _allTldFloorsPromise = null; }, 5 * 60 * 1000);
+  return _allTldFloorsPromise;
 }
 
 // Returns recent sales array [{ domain, domainType, price, timestamp }]
