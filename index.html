@@ -21,13 +21,18 @@
   <meta name="twitter:description" content="Buy, sell, and track .btc, .sats, .x, .ord Bitcoin names. Floor prices, BNRP identity cards." />
   <meta name="twitter:image" content="https://btcnative.name/assets/social-banner.png" />
   <!-- Beta banner styles -->
+  <script src="https://tally.so/widgets/embed.js" async></script>
   <style>
     .beta-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
       width: 100%;
       background: rgba(255,138,0,0.08);
       border-bottom: 1px solid rgba(255,138,0,0.18);
-      padding: 9px 20px;
-      text-align: center;
+      padding: 8px 20px;
       font-size: 12.5px;
       color: rgba(255,255,255,0.55);
       font-family: system-ui, sans-serif;
@@ -38,14 +43,29 @@
     .beta-banner strong {
       color: #FF8A00;
       font-weight: 700;
-      margin-right: 6px;
     }
     .beta-banner a {
       color: rgba(255,138,0,0.75);
       text-decoration: underline;
       text-underline-offset: 2px;
-      margin-left: 12px;
     }
+    .beta-feedback-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border: 1px solid rgba(255,138,0,0.35);
+      border-radius: 6px;
+      background: rgba(255,138,0,0.08);
+      color: #FF8A00 !important;
+      font-size: 11.5px;
+      font-weight: 600;
+      text-decoration: none !important;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .beta-feedback-btn:hover { background: rgba(255,138,0,0.16); }
   </style>
 
   <!-- Fonts: non-blocking load via print media swap -->
@@ -92,8 +112,13 @@
 
 <!-- Beta banner -->
 <div class="beta-banner">
-  <strong>BETA</strong> BTCNative is under active development. Features may change.
-  <a href="./tutorial.html">How it works →</a>
+  <span><strong>BETA</strong> BTCNative is under active development. Features may change.</span>
+  <a href="./tutorial.html">How it works &rarr;</a>
+  <a class="beta-feedback-btn" href="#"
+     data-tally-open="Y5oOVW"
+     data-tally-layout="modal"
+     data-tally-width="480"
+     data-tally-auto-close="3000">Send Feedback</a>
 </div>
 
 <!-- ── NAV ──────────────────────────────────────────────────────── -->
