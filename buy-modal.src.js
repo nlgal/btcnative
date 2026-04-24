@@ -175,8 +175,18 @@ async function _bmGetAddress(wallet) {
   }
   if (wallet.type === 'xverse') {
     const res = await wallet.api.request('getAccounts', { purposes: ['ordinals', 'payment'] });
-    wallet._paymentAddress = res.result.find(a => a.purpose === 'payment')?.address || res.result[0].address;
-    return res.result.find(a => a.purpose === 'payment')?.address || res.result[0].address;
+    const accounts = res.result || [];
+    // Xverse has two addresses: ordinals (bc1p taproot) for receiving inscriptions,
+    // payment (bc1q native segwit) for spending BTC. We need both.
+    const ordinalsAcc = accounts.find(a => a.purpose === 'ordinals');
+    const paymentAcc  = accounts.find(a => a.purpose === 'payment');
+    wallet._ordinalsAddress = ordinalsAcc?.address || null;
+    wallet._paymentAddress  = paymentAcc?.address  || ordinalsAcc?.address || accounts[0]?.address;
+    wallet._ordinalsPubkey  = ordinalsAcc?.publicKey || null;
+    wallet._paymentPubkey   = paymentAcc?.publicKey  || null;
+    // Return the payment address — used for UTXO fetching and change.
+    // The ordinals address is stored on wallet and used for inscription delivery.
+    return wallet._paymentAddress;
   }
   throw new Error('Unsupported wallet');
 }
@@ -189,8 +199,10 @@ async function _bmGetPubkey(wallet, address) {
     return wallet.api.getPublicKey(); // already 66-char compressed
   }
   if (wallet.type === 'xverse') {
-    const res = await wallet.api.request('getAccounts', { purposes: ['payment'] });
-    return res.result[0].publicKey;  // already 66-char compressed
+    // _bmGetAddress already fetched and cached pubkeys — use them.
+    // Payment pubkey is used for signing payment inputs (compressed secp256k1).
+    // Ordinals pubkey is used for the tapInternalKey on inscription outputs.
+    return wallet._paymentPubkey || wallet._ordinalsPubkey || null;
   }
   throw new Error('Unsupported wallet');
 }
@@ -275,17 +287,21 @@ async function _bmGetUtxos(wallet, address, excludeUtxo) {
  */
 async function _bmBuildCombinedPsbt({
   sellerPsbtHex,
-  inscriptionUtxo,   // { txid, vout, value }
+  inscriptionUtxo,      // { txid, vout, value }
   sellerAddress,
   priceSats,
-  dummyUtxos,        // exactly 2 x { txid, vout, value } — small buyer UTXOs
-  paymentUtxos,      // array of { txid, vout, value } — buyer payment UTXOs
-  buyerAddress,
-  buyerPubkey,       // full compressed pubkey hex (66 chars)
+  dummyUtxos,           // exactly 2 x { txid, vout, value } — small buyer UTXOs
+  paymentUtxos,         // array of { txid, vout, value } — buyer payment UTXOs
+  buyerAddress,         // payment address — used for UTXOs, dummies, change
+  buyerOrdinalsAddress, // taproot address — inscription delivery (bc1p). Falls back to buyerAddress.
+  buyerPubkey,          // full compressed pubkey hex (66 chars)
   feeAddress,
   feeSats,
   feeRate,
 }) {
+  // Inscription must land at a Taproot address. For Xverse: use ordinals address.
+  // For UniSat: single address is always Taproot.
+  const inscriptionDeliveryAddress = buyerOrdinalsAddress || buyerAddress;
   const { Transaction, OutScript, Address, NETWORK, SigHash } = await import('https://esm.sh/@scure/btc-signer@1.4.0');
   const { hex: scureHex, base64: scureBase64 } = await import('https://esm.sh/@scure/base@1.2.1');
 
@@ -347,9 +363,10 @@ async function _bmBuildCombinedPsbt({
 
   // ── Step 2: Determine seller output for output[2] ──────────────────────────────────────────────────
   const toScript = addr => OutScript.encode(Address(NETWORK).decode(addr));
-  const sellerScript = toScript(sellerAddress);
-  const buyerScript  = toScript(buyerAddress);
-  const feeScript    = toScript(feeAddress);
+  const sellerScript   = toScript(sellerAddress);
+  const buyerScript    = toScript(buyerAddress);           // for UTXOs, dummies, change
+  const inscriptScript = toScript(inscriptionDeliveryAddress); // for inscription output
+  const feeScript      = toScript(feeAddress);
 
   // output[2] MUST match what seller signed byte-for-byte.
   // If seller PSBT has no output (new-style listing from sell.html), fall back to declared
@@ -418,8 +435,8 @@ async function _bmBuildCombinedPsbt({
 
   // output[0]: dummy return (sats 0..dummyTotal-1, NO inscription sat)
   tx.addOutput({ script: buyerScript, amount: BigInt(dummyTotal) });
-  // output[1]: inscription delivery (inscription sat at pool pos dummyTotal lands here ✓)
-  tx.addOutput({ script: buyerScript, amount: BigInt(ORDINALS_POSTAGE) });
+  // output[1]: inscription delivery — must go to Taproot address (ordinals address for Xverse)
+  tx.addOutput({ script: inscriptScript, amount: BigInt(ORDINALS_POSTAGE) });
   // output[2]: seller payment (MUST match seller\'s signed output[0] exactly ✓)
   tx.addOutput({ script: sellerOutputScript, amount: BigInt(sellerOutputAmount) });
   // output[3]: platform fee
@@ -583,9 +600,14 @@ async function _bmSignPsbt(wallet, psbtB64, signIndexes, buyerAddress, buyerPubk
     return wallet.api.signPsbt(psbtB64, { autoFinalized: true, toSignInputs });
   }
   if (wallet.type === 'xverse') {
+    // Xverse signPsbt: signInputs maps input index → array of sighash types.
+    // Payment inputs use SIGHASH_DEFAULT (taproot key path).
+    // Dummy inputs (0, 1) also use SIGHASH_DEFAULT.
+    // We pass allowedSigHash so Xverse doesn't reject the seller's SIGHASH_SINGLE|ACP on input[2].
     const res = await wallet.api.request('signPsbt', {
       psbt: psbtB64,
       broadcast: false,
+      allowedSigHash: ['SIGHASH_DEFAULT', 'SIGHASH_SINGLE', 'SIGHASH_ANYONECANPAY', 'SIGHASH_SINGLE|SIGHASH_ANYONECANPAY'],
       signInputs: Object.fromEntries(signIndexes.map(i => [String(i), ['SIGHASH_DEFAULT']])),
     });
     return res.result.psbt;
@@ -784,11 +806,20 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
         return;
       }
 
-      // Taproot address required for Ordinals
-      if (!buyerAddress.startsWith('bc1p')) {
+      // Determine inscription delivery address.
+      // UniSat: single address, must be Taproot (bc1p).
+      // Xverse: ordinals address (bc1p) stored on wallet by _bmGetAddress.
+      const buyerOrdinalsAddress = wallet._ordinalsAddress || buyerAddress;
+
+      // For UniSat, the single address must be Taproot.
+      // For Xverse, the ordinals address is always Taproot — only warn if neither is bc1p.
+      if (!buyerOrdinalsAddress.startsWith('bc1p')) {
+        const isXverse = wallet.type === 'xverse';
         _bmSetStatus(status, 'error',
-          'Your wallet is set to a non-Taproot address type (<code>' + buyerAddress.slice(0, 10) + '...</code>).<br><br>' +
-          'To buy Ordinals, switch to <strong>Taproot</strong>: open UniSat, tap your address, select <strong>Taproot</strong>.');
+          'A Taproot address is required to receive Ordinals.<br><br>' +
+          (isXverse
+            ? 'Your Xverse ordinals address doesn’t appear to be Taproot. Update Xverse and try again.'
+            : 'Open UniSat, tap your address, and switch to <strong>Taproot</strong>.'));
         btn.disabled = false;
         btn.textContent = 'Try again';
         return;
@@ -834,9 +865,10 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
           inscriptionUtxo,
           sellerAddress,
           priceSats,
-          dummyUtxos:   utxos.dummyUtxos.slice(0, 2),
-          paymentUtxos: utxos.paymentUtxos,
+          dummyUtxos:           utxos.dummyUtxos.slice(0, 2),
+          paymentUtxos:         utxos.paymentUtxos,
           buyerAddress,
+          buyerOrdinalsAddress, // Xverse: bc1p ordinals addr; UniSat: same as buyerAddress
           buyerPubkey,
           feeAddress,
           feeSats,

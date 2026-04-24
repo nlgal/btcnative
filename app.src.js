@@ -4026,7 +4026,7 @@ async function initNavWallet() {
     return;
   }
 
-  // Try to connect UniSat
+  // Try to connect — UniSat first, then Xverse
   try {
     btn.textContent = 'Connecting...';
     if (window.unisat) {
@@ -4035,8 +4035,22 @@ async function initNavWallet() {
         setNavWalletConnected(accounts[0]);
         return;
       }
+    } else if (window.XverseProviders?.BitcoinProvider || window.btc) {
+      const api = window.XverseProviders?.BitcoinProvider || window.btc;
+      const res = await api.request('getAccounts', { purposes: ['ordinals', 'payment'] });
+      const accounts = res?.result || [];
+      // Use payment address for display and reverse-resolve; ordinals addr for inscription delivery
+      const paymentAcc  = accounts.find(a => a.purpose === 'payment');
+      const ordinalsAcc = accounts.find(a => a.purpose === 'ordinals');
+      const addr = paymentAcc?.address || ordinalsAcc?.address || accounts[0]?.address;
+      if (addr) {
+        // Store ordinals address so other pages can use it for inscription delivery
+        window._xverseOrdinalsAddress = ordinalsAcc?.address || null;
+        setNavWalletConnected(addr);
+        return;
+      }
     }
-    // No wallet
+    // No wallet found
     btn.textContent = 'No wallet';
     setTimeout(() => { btn.textContent = 'Connect'; }, 2000);
   } catch {
@@ -4166,11 +4180,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!btn) return;
     if (window.unisat || window.XverseProviders?.BitcoinProvider || window.btc) {
       btn.style.display = '';
-      // Auto-read if already connected (getAccounts is passive — no popup)
+      // Auto-read if already connected (passive — no popup)
       if (window.unisat) {
         window.unisat.getAccounts().then(accounts => {
           if (accounts && accounts[0]) setNavWalletConnected(accounts[0]);
         }).catch(() => {});
+      } else if (window.XverseProviders?.BitcoinProvider || window.btc) {
+        // Xverse has no passive getAccounts — skip auto-connect to avoid popup on page load
       }
     }
   }, 300);
