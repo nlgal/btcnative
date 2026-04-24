@@ -3966,11 +3966,23 @@ async function initProfilePageMVP() {
     `;
   }
 
-  // Namespace panel
+  // Namespace panel — render immediately, then enrich with live /namespace API data
   const nsPanelEl = qs('#namespacePanelSection');
   if (nsPanelEl) {
     const nsPanel = buildNamespacePanel(name, resolvedData || null);
     nsPanelEl.appendChild(nsPanel);
+    // Background enrich — do not await, do not block page render
+    (async () => {
+      try {
+        const [nsRes, subRes] = await Promise.allSettled([
+          fetch(`${BNRP_API}/names/${encodeURIComponent(name)}/namespace`, { signal: AbortSignal.timeout(8000) }),
+          fetch(`${BNRP_API}/names/${encodeURIComponent(name)}/subnames`, { signal: AbortSignal.timeout(8000) }),
+        ]);
+        const nsData  = nsRes.status  === 'fulfilled' && nsRes.value.ok  ? await nsRes.value.json()  : null;
+        const subData = subRes.status === 'fulfilled' && subRes.value.ok ? await subRes.value.json() : null;
+        if (nsData || subData) updateNamespacePanel(nsPanelEl, nsData, subData);
+      } catch { /* silent — panel keeps static render */ }
+    })();
   }
 
   // Similar names
@@ -4823,6 +4835,91 @@ function buildBNRPRecordTimeline(events) {
 }
 
 // ── NamespacePanel component ──────────────────────────────────────────────────
+
+/**
+ * updateNamespacePanel(container, nsData, subData)
+ * Enriches an already-rendered ns-panel with live data from the /namespace and /subnames API endpoints.
+ * Called after the initial static render — updates specific fields in place.
+ */
+function updateNamespacePanel(container, nsData, subData) {
+  try {
+    const panel = container.querySelector('.ns-panel');
+    if (!panel) return;
+
+    // Update header status badge
+    if (nsData) {
+      const badge = panel.querySelector('.ns-panel__header .resolver-status');
+      if (badge) {
+        const status = nsData.resolverStatus || 'unresolved';
+        badge.className = 'resolver-status resolver-status--' +
+          (status === 'verified' ? 'verified' : status === 'unresolved' ? 'unresolved' : 'stale');
+        badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        badge.title = nsData.latestRecord
+          ? `Nonce ${nsData.latestRecord.nonce} · Block ${nsData.latestRecord.confirmedAt}`
+          : 'No BNRP record found';
+      }
+    }
+
+    // Update rows by label
+    const rows = panel.querySelectorAll('.ns-panel__row');
+    rows.forEach(row => {
+      const label = row.querySelector('.ns-panel__label')?.textContent?.trim();
+      const val   = row.querySelector('.ns-panel__value');
+      if (!label || !val) return;
+
+      if (label === 'Policy' && nsData?.policy) {
+        const p = nsData.policy;
+        val.textContent = p.charAt(0).toUpperCase() + p.slice(1).replace(/-/g, ' ');
+        val.style.color = '';
+      }
+
+      if (label === 'Subnames' && subData !== null) {
+        if (subData && subData.count > 0) {
+          val.textContent = `${subData.count} active`;
+          val.style.color = 'var(--color-text)';
+          val.style.fontWeight = '600';
+          const roadmapSpan = val.querySelector('span');
+          if (roadmapSpan) roadmapSpan.remove();
+        } else {
+          val.textContent = 'None yet';
+          val.style.color = 'var(--color-text-faint)';
+        }
+      }
+
+      if (label === 'Record state' && nsData) {
+        if (nsData.resolverStatus === 'verified' || nsData.latestRecord) {
+          val.textContent = 'BNRP records set';
+          val.style.color = 'var(--color-success, #22c55e)';
+        } else {
+          val.textContent = 'No records';
+          val.style.color = 'var(--color-text-faint)';
+        }
+      }
+    });
+
+    // Inject delegate row if active
+    if (nsData?.delegate) {
+      const body = panel.querySelector('.ns-panel__body');
+      if (body) {
+        const existing = body.querySelector('[data-ns-delegate]');
+        if (!existing) {
+          const delegateRow = document.createElement('div');
+          delegateRow.className = 'ns-panel__row';
+          delegateRow.setAttribute('data-ns-delegate', '1');
+          const addr = nsData.delegate;
+          const short = addr.slice(0, 8) + '...' + addr.slice(-6);
+          delegateRow.innerHTML = `
+            <span class="ns-panel__label">Delegate</span>
+            <span class="ns-panel__value" style="color:var(--color-text-muted);font-size:11px;font-family:var(--font-mono);">
+              ${short}
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--color-warn,#f59e0b);margin-left:4px;vertical-align:middle;" title="Delegated manager active"></span>
+            </span>`;
+          body.appendChild(delegateRow);
+        }
+      }
+    }
+  } catch { /* defensive — never throw */ }
+}
 
 /**
  * buildNamespacePanel(name, bnrpData) → HTMLElement
