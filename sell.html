@@ -82,43 +82,29 @@
       border-color: var(--color-primary);
     }
     .sell-input-wrap {
-      position: relative;
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
     }
-    .sell-input-prefix {
-      position: absolute;
-      left: var(--space-4);
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--color-text-faint);
-      font-size: var(--text-sm);
-      font-family: var(--font-mono);
-      pointer-events: none;
-    }
-    .sell-input--has-prefix {
-      padding-left: 52px;
+    .sell-input-wrap .sell-input {
+      flex: 1;
+      min-width: 0;
     }
     .sell-input-unit {
-      position: absolute;
-      right: 56px; /* sits left of the USD hint */
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--color-text-muted);
-      font-size: var(--text-sm);
+      flex-shrink: 0;
       font-family: var(--font-mono);
+      font-size: var(--text-sm);
       font-weight: 600;
-      pointer-events: none;
-      letter-spacing: 0.02em;
+      color: var(--color-text-muted);
+      letter-spacing: 0.04em;
+      user-select: none;
     }
-    .sell-input--has-suffix { padding-right: 110px; }
     .sell-input-suffix {
-      position: absolute;
-      right: var(--space-4);
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--color-text-faint);
+      display: block;
+      margin-top: var(--space-1);
       font-size: var(--text-xs);
       font-family: var(--font-mono);
-      pointer-events: none;
+      color: var(--color-text-faint);
     }
 
     /* Fee preview rows */
@@ -582,11 +568,10 @@
         <div class="sell-label">Listing price</div>
         <div class="sell-field">
           <div class="sell-input-wrap">
-            <span class="sell-input-prefix">₿</span>
-            <input class="sell-input sell-input--has-prefix sell-input--has-suffix" id="sellPriceInput" type="number" min="0.0001" step="0.0001" placeholder="0.0010" />
+            <input class="sell-input" id="sellPriceInput" type="number" min="0.0001" step="0.0001" placeholder="0.0010" />
             <span class="sell-input-unit">BTC</span>
-            <span class="sell-input-suffix" id="priceUsdHint"></span>
           </div>
+          <span class="sell-input-suffix" id="priceUsdHint"></span>
         </div>
       </div>
       <div class="sell-card__section">
