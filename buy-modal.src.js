@@ -658,6 +658,8 @@ function _bmInjectStyles() {
     [data-theme="dark"] .bn-modal__status.success{background:#0a2016;color:#4ade80;}
     [data-theme="dark"] .bn-modal__status.error{background:#2a0a08;color:#f87171;}
     .bn-modal__wallet-note{margin-top:10px;font-size:0.78rem;color:var(--color-text-faint,#aaa);text-align:center;}
+    .bn-modal__confirm-tip{display:flex;align-items:flex-start;gap:7px;margin-top:10px;padding:9px 12px;border-radius:8px;font-size:0.78rem;line-height:1.5;background:rgba(255,138,0,0.08);border:1px solid rgba(255,138,0,0.2);color:var(--color-text-muted,#aaa);}
+    .bn-modal__confirm-tip strong{color:var(--color-text,#fff);font-weight:600;}
     .bn-modal__txid{font-family:var(--font-mono,monospace);font-size:0.75rem;word-break:break-all;margin-top:6px;}
     .bn-modal__txid a{color:#f7931a;}
     .bn-modal__step{font-size:0.72rem;color:var(--color-text-faint,#aaa);text-align:center;margin-top:8px;}
@@ -729,7 +731,10 @@ async function openBuyModal({ name, priceSats: _priceSats }) {
       <button class="bn-modal__cta" id="bnBuyBtn">Connect wallet &amp; buy</button>
       <div class="bn-modal__status" id="bnBuyStatus"></div>
       <p class="bn-modal__wallet-note">UniSat or Xverse required. Your wallet signs directly — no keys leave your device.</p>
-      <p class="bn-modal__wallet-note" style="margin-top:6px;color:var(--color-text-faint)">Your wallet will show a "Changing inscription detected" prompt. This is standard for all Ordinals purchases — type CONFIRM to proceed.</p>
+      <div class="bn-modal__confirm-tip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Your wallet will prompt <strong>&ldquo;Changing inscription detected&rdquo;</strong> &mdash; type <strong>CONFIRM</strong> to complete the purchase. This is normal for all Ordinals transfers.</span>
+      </div>
       <p class="bn-modal__step" id="bnStep"></p>
     </div>
   `;
