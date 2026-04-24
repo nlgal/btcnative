@@ -115,6 +115,7 @@
           <div class="docs-nav__label">Reference</div>
           <a href="#errors" class="docs-nav__link">Error responses</a>
           <a href="#rate-limits" class="docs-nav__link">Rate limits</a>
+          <a href="#namespace-api" class="docs-nav__link">Namespace API</a>
           <a href="#contact" class="docs-nav__link">Contact</a>
         </div>
         <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border);">
@@ -353,6 +354,132 @@ Resolution chain:
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             Cache hits (KV-served responses) do not count toward your rate limit quota. Most name lookups are cache-warm within 5 minutes of first resolution.
           </div>
+        </section>
+
+        <!-- ── Namespace API ── -->
+        <section class="docs-section" id="namespace-api">
+          <div class="docs-section__title">Namespace API</div>
+          <p class="docs-section__desc">Namespace endpoints return the full ownership tree, subname records, inscription history, and current record state for a name. These endpoints are part of the BNRP resolver and require no API key.</p>
+
+          <!-- GET /names/:name/namespace -->
+          <div class="docs-endpoint" style="margin-top:20px;">
+            <div class="docs-endpoint__header">
+              <span class="docs-method">GET</span>
+              <code style="font-family:var(--font-mono);font-size:13px;">/v1/names/:name/namespace</code>
+            </div>
+            <div class="docs-endpoint__body">
+              <p class="docs-endpoint__desc">Returns the namespace metadata for a root name — policy, resolver status, subname count, and latest valid record summary.</p>
+              <pre class="docs-code" style="margin-top:16px;">GET https://api.bnrp.name/v1/names/satoshi.btc/namespace
+
+// Response
+{
+  "name": "satoshi.btc",
+  "policy": "parent-controlled",
+  "resolverStatus": "verified",
+  "subnameCount": 0,
+  "latestRecord": {
+    "inscriptionId": "abc123...i0",
+    "op": "profile",
+    "nonce": 1,
+    "confirmedAt": 840000
+  }
+}</pre>
+            </div>
+          </div>
+
+          <!-- GET /names/:name/subnames -->
+          <div class="docs-endpoint" style="margin-top:16px;">
+            <div class="docs-endpoint__header">
+              <span class="docs-method">GET</span>
+              <code style="font-family:var(--font-mono);font-size:13px;">/v1/names/:name/subnames</code>
+            </div>
+            <div class="docs-endpoint__body">
+              <p class="docs-endpoint__desc">Returns all active subname records issued under a root name. Revoked, superseded, and unauthorized subnames are excluded by default. Pass <code style="font-family:var(--font-mono);font-size:11px;">?includeInvalid=true</code> to include them.</p>
+              <pre class="docs-code" style="margin-top:16px;">GET https://api.bnrp.name/v1/names/satoshi.btc/subnames
+
+// Subname record schema
+{
+  "name": "vault.satoshi.btc",
+  "parent": "satoshi.btc",
+  "owner": "bc1p...",
+  "op": "subname_register",
+  "records": {},
+  "provenance": {
+    "inscriptionId": "def456...i0",
+    "confirmedAt": 841500,
+    "nonce": 1
+  },
+  "status": "active"
+}</pre>
+            </div>
+          </div>
+
+          <!-- GET /names/:name/history -->
+          <div class="docs-endpoint" style="margin-top:16px;">
+            <div class="docs-endpoint__header">
+              <span class="docs-method">GET</span>
+              <code style="font-family:var(--font-mono);font-size:13px;">/v1/names/:name/history</code>
+            </div>
+            <div class="docs-endpoint__body">
+              <p class="docs-endpoint__desc">Returns the full BNRP inscription history for a name in reverse chronological order. Every inscription ever associated with the name is included, valid or not. Validity state is annotated per record.</p>
+              <pre class="docs-code" style="margin-top:16px;">GET https://api.bnrp.name/v1/names/satoshi.btc/history
+
+// Response
+{
+  "name": "satoshi.btc",
+  "history": [
+    {
+      "inscriptionId": "abc123...i0",
+      "op": "profile",
+      "nonce": 2,
+      "confirmedAt": 842000,
+      "valid": true,
+      "validityState": "active"
+    },
+    {
+      "inscriptionId": "old789...i0",
+      "op": "profile",
+      "nonce": 1,
+      "confirmedAt": 840000,
+      "valid": false,
+      "validityState": "superseded"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+
+          <!-- GET /names/:name/current-record -->
+          <div class="docs-endpoint" style="margin-top:16px;">
+            <div class="docs-endpoint__header">
+              <span class="docs-method">GET</span>
+              <code style="font-family:var(--font-mono);font-size:13px;">/v1/names/:name/current-record</code>
+            </div>
+            <div class="docs-endpoint__body">
+              <p class="docs-endpoint__desc">Returns only the latest valid BNRP inscription for a name. This is the authoritative current state. Re-inscriptions with an equal or lower nonce, unauthorized signers, or revoked records are never returned here.</p>
+              <pre class="docs-code" style="margin-top:16px;">GET https://api.bnrp.name/v1/names/satoshi.btc/current-record
+
+// Response
+{
+  "name": "satoshi.btc",
+  "inscriptionId": "abc123...i0",
+  "op": "profile",
+  "nonce": 2,
+  "owner": "bc1p...",
+  "records": {
+    "btc": "bc1p...",
+    "com.twitter": "satoshi"
+  },
+  "confirmedAt": 842000,
+  "validityState": "active"
+}</pre>
+              <div class="docs-note" style="margin-top:12px;padding:10px 14px;background:var(--color-surface-offset);border-left:3px solid var(--color-brand-orange);border-radius:0 6px 6px 0;font-size:var(--text-sm);color:var(--color-text-muted);">
+                <strong style="color:var(--color-text);">Latest valid inscription wins.</strong> A valid update must be authorized by the current owner or delegated manager, match the namespace policy, use a newer nonce, be confirmed on-chain, and not be revoked or superseded.
+              </div>
+            </div>
+          </div>
+
+          <p style="margin-top:16px;font-size:var(--text-xs);color:var(--color-text-faint);">Namespace endpoints are Phase 2 roadmap. The resolver stub is live — subname issuance is not yet active. <a href="./namespace.html" style="color:var(--color-brand-orange);text-decoration:none;">Learn about namespaces →</a></p>
         </section>
 
         <!-- ── Contact ── -->

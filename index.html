@@ -149,8 +149,10 @@
         <div class="hero__brand-sub">&#8212; NAMES MARKETPLACE &#8212;</div>
       </div>
     </div>
-    <h1 class="hero__title">Bitcoin culture<br><span>has names.</span></h1>
-    <p class="hero__subtitle">Search, verify, collect, and trade BTC-native names.</p>
+    <p class="hero__eyebrow">Bitcoin culture has names.</p>
+    <h1 class="hero__title">A name is no longer<br><span>a handle. It is a namespace.</span></h1>
+    <p class="hero__subtitle">Search, verify, collect, and trade BTC-native names — from identity roots to future subname spaces.</p>
+    <p class="hero__thesis-line">Permanent history. Current state. Powered by BNRP open resolution.</p>
     <div class="hero__search-wrap">
       <div class="search-wrap" id="heroSearchWrap">
         <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -169,6 +171,7 @@
       <button class="hero__hint" onclick="setSearch('punk.btc')">punk.btc</button>
       <button class="hero__hint" onclick="setSearch('rare.sats')">rare.sats</button>
       <button class="hero__hint" onclick="setSearch('1.btc')">1.btc</button>
+      <button class="hero__hint" onclick="location.href='./namespace.html'">Namespaces →</button>
     </div>
     <div class="bnrp-pill-wrap">
       <button class="bnrp-pill" id="bnrpPillBtn" aria-label="Learn what Powered by BNRP means" aria-expanded="false" aria-controls="bnrpTooltip">
@@ -201,9 +204,12 @@
             <li>name &rarr; marketplace listing status</li>
             <li>address &rarr; primary name (reverse lookup)</li>
             <li>namespace &rarr; supported resolver / indexer</li>
+            <li>subname &rarr; parent namespace + authorization</li>
+            <li>record &rarr; history / current state</li>
           </ul>
         </div>
         <p>BNRP does not own the names. It is the resolver layer that helps BTCNative read and organize name data in a consistent way.</p>
+        <p style="font-size:11px;color:var(--color-text-faint);margin-top:8px;"><strong style="color:var(--color-brand-orange);">Permanent history. Current state.</strong> Bitcoin inscriptions are permanent. BNRP reads the latest valid inscription — not just the newest. A valid update must be authorized by the current owner or delegate, match namespace policy, and not be revoked.</p>
       </div>
       <div class="bnrp-tooltip__footer">
         <a href="./bnrp.html" class="bnrp-tooltip__learn">
@@ -477,6 +483,135 @@
           <a href="./sell.html" class="how-it-works__learn">List a name →</a>
         </div>
       </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Own the Root — Namespace thesis section -->
+    <section class="section ns-root-section" id="ownTheRootSection">
+      <div class="section__header">
+        <h2 class="section__title">Own the root. Build the namespace.</h2>
+      </div>
+      <p class="ns-root-desc">A BTC-native name can become more than a single identity. It can become a verified space for payments, collections, archives, shops, vaults, memberships, and provenance — anchored to Bitcoin and resolved through BNRP.</p>
+
+      <div class="ns-root-layout">
+        <!-- Tree visual -->
+        <div class="ns-tree" aria-label="Example namespace tree for artist.btc">
+          <div class="ns-tree__root">
+            <span class="ns-tree__root-dot"></span>
+            <code class="ns-tree__name ns-tree__name--root">artist.btc</code>
+            <span class="ns-tree__badge">parent name</span>
+          </div>
+          <div class="ns-tree__branches">
+            <div class="ns-tree__branch">
+              <span class="ns-tree__line" aria-hidden="true"></span>
+              <code class="ns-tree__name">shop.artist.btc</code>
+              <span class="ns-tree__branch-desc">storefront</span>
+            </div>
+            <div class="ns-tree__branch">
+              <span class="ns-tree__line" aria-hidden="true"></span>
+              <code class="ns-tree__name">vault.artist.btc</code>
+              <span class="ns-tree__branch-desc">cold storage</span>
+            </div>
+            <div class="ns-tree__branch">
+              <span class="ns-tree__line" aria-hidden="true"></span>
+              <code class="ns-tree__name">prints.artist.btc</code>
+              <span class="ns-tree__branch-desc">edition drops</span>
+            </div>
+            <div class="ns-tree__branch">
+              <span class="ns-tree__line" aria-hidden="true"></span>
+              <code class="ns-tree__name">music.artist.btc</code>
+              <span class="ns-tree__branch-desc">releases</span>
+            </div>
+            <div class="ns-tree__branch ns-tree__branch--last">
+              <span class="ns-tree__line ns-tree__line--last" aria-hidden="true"></span>
+              <code class="ns-tree__name">archive.artist.btc</code>
+              <span class="ns-tree__branch-desc">provenance</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Concept cards -->
+        <div class="ns-root-cards">
+          <div class="ns-root-card">
+            <div class="ns-root-card__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+            </div>
+            <div class="ns-root-card__title">Identity root</div>
+            <p class="ns-root-card__body">Your BTC-native name becomes the root of your public identity. One name. Every record beneath it.</p>
+          </div>
+          <div class="ns-root-card">
+            <div class="ns-root-card__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h6l3 18 3-8h6"/></svg>
+            </div>
+            <div class="ns-root-card__title">Provenance tree</div>
+            <p class="ns-root-card__body">Subnames can carry records, ownership history, inscription links, and verification data — all traceable to the Bitcoin root.</p>
+          </div>
+          <div class="ns-root-card">
+            <div class="ns-root-card__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1h5l7 7-5 5L1 6V1z"/><circle cx="3.5" cy="3.5" r="0.75" fill="currentColor"/></svg>
+            </div>
+            <div class="ns-root-card__title">Marketplace layer</div>
+            <p class="ns-root-card__body">Names and future subnames can be searched, verified, collected, listed, and traded on BTCNative.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="ns-root-cta-row">
+        <a href="./namespace.html" class="btn btn--primary">Explore namespaces</a>
+        <a href="./bnrp.html" class="btn btn--outline">Learn about BNRP</a>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Permanent History section -->
+    <section class="section permanent-history-section" id="permanentHistorySection">
+      <div class="section__header">
+        <h2 class="section__title">Permanent history.<br><span style="color:var(--color-brand-orange);">Current state.</span></h2>
+      </div>
+      <p class="permanent-history__lead">Bitcoin inscriptions are permanent. BNRP does not edit old inscriptions. Instead, each update creates a new Bitcoin-native record. The resolver reads the latest valid record, while the full history remains visible.</p>
+
+      <div class="permanent-history__rule">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Latest valid inscription wins.
+      </div>
+
+      <p class="permanent-history__explain">A newer inscription only becomes the active record if it is valid. BNRP checks whether the update was authorized by the current owner or delegated manager, whether it follows the namespace policy, whether it uses a newer nonce or version, and whether it has not been revoked or superseded.</p>
+
+      <div class="permanent-history__examples">
+        <div class="ph-example">
+          <span class="ph-example__op ph-example__op--update">update</span>
+          <span class="ph-example__label">Update a BTC address</span>
+        </div>
+        <div class="ph-example">
+          <span class="ph-example__op ph-example__op--update">update</span>
+          <span class="ph-example__label">Add an avatar inscription</span>
+        </div>
+        <div class="ph-example">
+          <span class="ph-example__op ph-example__op--update">update</span>
+          <span class="ph-example__label">Change a website record</span>
+        </div>
+        <div class="ph-example">
+          <span class="ph-example__op ph-example__op--register">register</span>
+          <span class="ph-example__label">Create a subname</span>
+        </div>
+        <div class="ph-example">
+          <span class="ph-example__op ph-example__op--revoke">revoke</span>
+          <span class="ph-example__label">Revoke a subname</span>
+        </div>
+        <div class="ph-example">
+          <span class="ph-example__op ph-example__op--delegate">delegate</span>
+          <span class="ph-example__label">Add a delegated manager</span>
+        </div>
+      </div>
+
+      <p class="permanent-history__trust">Because history remains visible, users can inspect how a name or subname changed over time before buying, trusting, or resolving it.</p>
+
+      <a href="./bnrp.html#permanent-history" class="permanent-history__learn">
+        How record resolution works
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
     </section>
 
     <div class="divider"></div>

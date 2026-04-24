@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Namespaces — BTC Native</title>
+  <meta name="description" content="A BTC-native name can become a namespace root. Search, verify, and explore namespace-enabled names." />
+  <link rel="canonical" href="https://btcnative.name/namespace" />
+
+  <!-- OG / Twitter -->
+  <meta property="og:title" content="Namespaces — BTC Native" />
+  <meta property="og:description" content="A BTC-native name can become a namespace root. Search, verify, and explore namespace-enabled names." />
+  <meta property="og:url" content="https://btcnative.name/namespace" />
+  <meta property="og:image" content="https://btcnative.name/social-banner.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@btcnativename" />
+  <meta name="twitter:title" content="Namespaces — BTC Native" />
+  <meta name="twitter:description" content="A BTC-native name can become a namespace root. Search, verify, and explore namespace-enabled names." />
+  <meta name="twitter:image" content="https://btcnative.name/social-banner.png" />
+
+  <!-- Icons / PWA -->
+  <link rel="icon" type="image/png" href="./logo-48.png" />
+  <link rel="manifest" href="./manifest.json" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="./base.css" />
+  <link rel="stylesheet" href="./style.css" />
+
+  <style>
+    /* ── Namespace page styles ── */
+
+    /* Hero */
+    .ns-page-hero {
+      padding: 88px 0 64px;
+      text-align: center;
+    }
+    .ns-page-hero__title {
+      font-family: var(--font-display, 'Space Grotesk', sans-serif);
+      font-size: clamp(2rem, 5vw, 3.25rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--color-text, #f0ece4);
+      margin: 0 0 18px;
+    }
+    .ns-page-hero__sub {
+      font-size: var(--text-base, 1rem);
+      color: var(--color-text-muted, #a09880);
+      max-width: 560px;
+      margin: 0 auto 16px;
+      line-height: 1.65;
+    }
+    .ns-page-hero__thesis {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-muted, #a09880);
+      margin-bottom: 4px;
+    }
+    .ns-thesis-dot {
+      color: var(--color-brand-orange, #FF8A00);
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    /* Shared section styles */
+    .ns-section-title {
+      font-family: var(--font-display, 'Space Grotesk', sans-serif);
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--color-text, #f0ece4);
+      margin: 0 0 14px;
+    }
+    .ns-section-body {
+      color: var(--color-text-muted, #a09880);
+      line-height: 1.7;
+      font-size: 15px;
+      margin: 0 0 16px;
+      max-width: 680px;
+    }
+
+    /* Explainer section */
+    .ns-explainer-section {
+      padding: 64px 0;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-concept-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+    }
+    .ns-concept-card {
+      background: var(--color-surface, rgba(255,255,255,0.04));
+      border: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .ns-concept-card__icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 138, 0, 0.1);
+      color: var(--color-brand-orange, #FF8A00);
+      border-radius: 10px;
+      margin-bottom: 14px;
+    }
+    .ns-concept-card__title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--color-text, #f0ece4);
+      margin-bottom: 8px;
+    }
+    .ns-concept-card__body {
+      font-size: 13px;
+      color: var(--color-text-muted, #a09880);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* Tree section */
+    .ns-tree-section {
+      padding: 64px 0;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-tree-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    @media (max-width: 720px) {
+      .ns-tree-layout { grid-template-columns: 1fr; }
+    }
+    .ns-sub-examples {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .ns-sub-example {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .ns-sub-name {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 13px;
+      color: var(--color-brand-orange, #FF8A00);
+      background: rgba(255, 138, 0, 0.08);
+      border: 1px solid rgba(255, 138, 0, 0.18);
+      border-radius: 6px;
+      padding: 4px 10px;
+    }
+    .ns-sub-use {
+      font-size: 12px;
+      color: var(--color-text-faint, #6a6050);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* Tree visual */
+    .ns-tree-vis {
+      background: var(--color-surface, rgba(255,255,255,0.04));
+      border: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      border-radius: 16px;
+      padding: 32px 28px;
+    }
+    .ns-tree {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .ns-tree__root {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      margin-bottom: 16px;
+    }
+    .ns-tree__root-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color-brand-orange, #FF8A00);
+      flex-shrink: 0;
+    }
+    .ns-tree__name {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 13px;
+      color: var(--color-text-muted, #a09880);
+    }
+    .ns-tree__name--root {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-brand-orange, #FF8A00);
+    }
+    .ns-tree__badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-brand-orange, #FF8A00);
+      background: rgba(255, 138, 0, 0.1);
+      border: 1px solid rgba(255, 138, 0, 0.2);
+      border-radius: 20px;
+      padding: 2px 8px;
+      margin-left: auto;
+    }
+    .ns-tree__branches {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-left: 18px;
+    }
+    .ns-tree__branch {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+    .ns-tree__line {
+      display: block;
+      width: 16px;
+      height: 1px;
+      background: var(--color-border, rgba(255,255,255,0.1));
+      flex-shrink: 0;
+      position: relative;
+    }
+    .ns-tree__line::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: -12px;
+      width: 1px;
+      height: 24px;
+      background: var(--color-border, rgba(255,255,255,0.1));
+    }
+    .ns-tree__line--last::before {
+      height: 12px;
+    }
+
+    /* Policy section */
+    .ns-policy-section {
+      padding: 64px 0;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-policy-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 28px;
+    }
+    .ns-policy-card {
+      background: var(--color-surface, rgba(255,255,255,0.04));
+      border: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      border-radius: 12px;
+      padding: 22px;
+    }
+    .ns-policy-card--recommended {
+      border-color: rgba(255, 138, 0, 0.25);
+      background: rgba(255, 138, 0, 0.04);
+    }
+    .ns-policy-card__header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .ns-policy-card__name {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--color-text, #f0ece4);
+    }
+    .ns-policy-card__desc {
+      font-size: 13px;
+      color: var(--color-text-muted, #a09880);
+      line-height: 1.6;
+      margin: 0;
+    }
+    .ns-policy-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.06);
+      color: var(--color-text-muted, #a09880);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .ns-policy-badge--recommended {
+      background: rgba(255, 138, 0, 0.12);
+      color: var(--color-brand-orange, #FF8A00);
+      border-color: rgba(255, 138, 0, 0.25);
+    }
+    .ns-policy-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 24px;
+      padding: 14px 16px;
+      background: rgba(255, 170, 0, 0.06);
+      border: 1px solid rgba(255, 170, 0, 0.18);
+      border-radius: 10px;
+      font-size: 13px;
+      color: #d4a040;
+      line-height: 1.55;
+    }
+    .ns-policy-warning svg {
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Dashboard section */
+    .ns-dashboard-section {
+      padding: 64px 0;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-dashboard-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .ns-phase-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.05);
+      color: var(--color-text-muted, #a09880);
+    }
+    .ns-phase-badge--prototype {
+      background: rgba(255, 138, 0, 0.08);
+      color: var(--color-brand-orange, #FF8A00);
+      border-color: rgba(255, 138, 0, 0.2);
+    }
+    .ns-dashboard-search {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .ns-dash-input {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      background: var(--color-surface, rgba(255,255,255,0.04));
+      border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+      border-radius: 8px;
+      color: var(--color-text, #f0ece4);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .ns-dash-input:focus {
+      border-color: var(--color-brand-orange, #FF8A00);
+    }
+    .ns-dash-input::placeholder {
+      color: var(--color-text-faint, #6a6050);
+    }
+    .ns-dash-card {
+      background: var(--color-surface, rgba(255,255,255,0.04));
+      border: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      border-radius: 14px;
+      padding: 24px;
+    }
+    .ns-dash-card__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .ns-dash-name {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--color-text, #f0ece4);
+    }
+    .ns-dash-meta {
+      font-size: 12px;
+      color: var(--color-text-faint, #6a6050);
+      margin-top: 4px;
+    }
+    .ns-dash-badges {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .ns-dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .ns-dash-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .ns-dash-field__label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--color-text-faint, #6a6050);
+    }
+    .ns-dash-field__value {
+      font-size: 13px;
+      color: var(--color-text, #f0ece4);
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    }
+    .ns-dash-records {
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      padding-top: 16px;
+      margin-bottom: 20px;
+    }
+    .ns-dash-records__title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-text-faint, #6a6050);
+      margin-bottom: 12px;
+    }
+    .ns-dash-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      padding-top: 16px;
+    }
+    .ns-coming-soon {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-left: 4px;
+      color: var(--color-text-faint, #6a6050);
+    }
+    .ns-dash-disclaimer {
+      font-size: 11px;
+      color: var(--color-text-faint, #6a6050);
+      line-height: 1.6;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      padding-top: 12px;
+    }
+    .ns-dash-loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--color-text-muted, #a09880);
+      padding: 16px 0;
+    }
+    @keyframes ns-spin {
+      to { transform: rotate(360deg); }
+    }
+    .ns-spin {
+      animation: ns-spin 1.2s linear infinite;
+    }
+
+    /* Event section */
+    .ns-event-section {
+      padding: 64px 0;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-event-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .ns-event-form {
+      margin-top: 24px;
+      max-width: 580px;
+    }
+    .ns-form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .ns-form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-muted, #a09880);
+      letter-spacing: 0.03em;
+    }
+    .ns-form-required {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-brand-orange, #FF8A00);
+      margin-left: 4px;
+    }
+    .ns-form-optional {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-faint, #6a6050);
+      margin-left: 4px;
+    }
+    .ns-form-input {
+      padding: 10px 14px;
+      font-size: 13px;
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      background: var(--color-surface, rgba(255,255,255,0.04));
+      border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+      border-radius: 8px;
+      color: var(--color-text, #f0ece4);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .ns-form-input:focus {
+      border-color: var(--color-brand-orange, #FF8A00);
+    }
+    .ns-form-input::placeholder {
+      color: var(--color-text-faint, #6a6050);
+    }
+    .ns-form-preview-name {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 12px;
+      color: var(--color-brand-orange, #FF8A00);
+      margin-top: 4px;
+    }
+    .ns-event-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .ns-event-preview-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-text-faint, #6a6050);
+    }
+    .ns-event-json {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 12px;
+      color: var(--color-text-muted, #a09880);
+      background: var(--color-surface, rgba(0,0,0,0.25));
+      border: 1px solid var(--color-border, rgba(255,255,255,0.06));
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+      line-height: 1.6;
+      white-space: pre;
+    }
+    .ns-event-note {
+      font-size: 12px;
+      color: var(--color-text-faint, #6a6050);
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+    .ns-event-note a {
+      color: var(--color-brand-orange, #FF8A00);
+      text-decoration: none;
+    }
+    .ns-event-note a:hover {
+      text-decoration: underline;
+    }
+    .ns-event-note code {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 11px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+
+    /* Trust section */
+    .ns-trust-section {
+      padding: 64px 0;
+      border-top: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    }
+    .ns-trust-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+      margin-top: 28px;
+    }
+    .ns-trust-item {
+      border-radius: 10px;
+      padding: 18px 20px;
+      border: 1px solid transparent;
+    }
+    .ns-trust-item--warn {
+      background: rgba(220, 60, 60, 0.06);
+      border-color: rgba(220, 60, 60, 0.18);
+    }
+    .ns-trust-item--caution {
+      background: rgba(255, 170, 0, 0.05);
+      border-color: rgba(255, 170, 0, 0.16);
+    }
+    .ns-trust-item__title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text, #f0ece4);
+      margin-bottom: 6px;
+    }
+    .ns-trust-item--warn .ns-trust-item__title { color: #e06060; }
+    .ns-trust-item--caution .ns-trust-item__title { color: #c89030; }
+    .ns-trust-item__desc {
+      font-size: 12px;
+      color: var(--color-text-muted, #a09880);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* Resolver status badges (reused from style.css pattern) */
+    .resolver-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+    .resolver-status--verified {
+      background: rgba(30, 200, 100, 0.1);
+      color: #3ecf6e;
+      border: 1px solid rgba(30, 200, 100, 0.2);
+    }
+    .resolver-status--unresolved {
+      background: rgba(255, 170, 0, 0.1);
+      color: #d4a040;
+      border: 1px solid rgba(255, 170, 0, 0.2);
+    }
+    .resolver-status--unavailable {
+      background: rgba(255,255,255,0.05);
+      color: var(--color-text-faint, #6a6050);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* Trust warning (matches style.css) */
+    .trust-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .trust-warning--warn {
+      background: rgba(220, 60, 60, 0.07);
+      border: 1px solid rgba(220, 60, 60, 0.2);
+      color: #d06060;
+    }
+    .trust-warning--caution {
+      background: rgba(255, 170, 0, 0.07);
+      border: 1px solid rgba(255, 170, 0, 0.2);
+      color: #c89030;
+    }
+    .trust-warning svg { flex-shrink: 0; margin-top: 1px; }
+
+    /* Button sizes */
+    .btn--sm {
+      padding: 7px 14px;
+      font-size: 13px;
+    }
+    .btn--ghost {
+      background: transparent;
+      border: 1px solid var(--color-border, rgba(255,255,255,0.1));
+      color: var(--color-text-muted, #a09880);
+      cursor: pointer;
+    }
+    .btn--ghost:hover:not(:disabled) {
+      border-color: rgba(255,255,255,0.2);
+      color: var(--color-text, #f0ece4);
+    }
+    .btn--ghost:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav__inner container">
+    <a href="./index.html" class="nav__logo" aria-label="BTC Native home">
+      <picture><source srcset="./logo-36.webp" type="image/webp"><img class="nav__logo-mark" src="./logo-36.png" alt="" aria-hidden="true" width="36" height="36" style="display:block;width:36px;height:36px;" fetchpriority="high"></picture>
+      <div class="nav__logo-text">
+        <span class="nav__logo-btc">BTC</span>
+        <span class="nav__logo-native">NATIVE</span>
+      </div>
+    </a>
+    <ul class="nav__links" role="list">
+      <li><a href="./index.html" class="nav__link">Names</a></li>
+      <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
+      <li><a href="./sell.html" class="nav__link">Sell</a></li>
+      <li><a href="./portfolio.html" class="nav__link">My Names</a></li>
+    </ul>
+    <div class="nav__actions">
+      <button class="nav__theme-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button class="nav__wallet-btn" id="navWalletBtn" aria-label="Connect wallet">Connect</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── SECTION 1: HERO ── -->
+<section class="ns-page-hero">
+  <div class="container container--narrow">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,138,0,0.08);border:1px solid rgba(255,138,0,0.2);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:var(--color-brand-orange);margin-bottom:20px;letter-spacing:0.04em;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+      Namespace Protocol
+    </div>
+    <h1 class="ns-page-hero__title">A name is no longer a handle.<br><span style="color:var(--color-brand-orange);">It is a namespace.</span></h1>
+    <p class="ns-page-hero__sub">Own artist.btc. Create shop.artist.btc, vault.artist.btc, and archive.artist.btc. Bitcoin L1 anchors the record. BNRP resolves the current state.</p>
+    <div class="ns-page-hero__thesis">
+      <span>Permanent history. Current state.</span>
+      <span class="ns-thesis-dot" aria-hidden="true">·</span>
+      <span>Latest valid inscription wins.</span>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:28px;justify-content:center;">
+      <a href="./index.html#ownTheRootSection" class="btn btn--primary">Explore names</a>
+      <a href="./bnrp.html" class="btn btn--outline">BNRP protocol</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 2: What is a namespace? ── -->
+<section class="ns-explainer-section">
+  <div class="container">
+    <h2 class="ns-section-title">What is a namespace?</h2>
+    <p class="ns-section-body">A namespace is a name that can organize other names beneath it. If you own artist.btc, you could create records like shop.artist.btc, vault.artist.btc, or prints.artist.btc. Each subname can point to its own address, avatar, inscription, website, or identity record.</p>
+    <p class="ns-section-body">On Bitcoin, these records are Bitcoin-native — not smart-contract subdomains. Each record is anchored to Bitcoin L1 through an inscription or Bitcoin-native record event, and resolved through BNRP.</p>
+
+    <div class="ns-concept-cards">
+      <div class="ns-concept-card">
+        <div class="ns-concept-card__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+        </div>
+        <div class="ns-concept-card__title">Identity root</div>
+        <p class="ns-concept-card__body">Your BTC-native name becomes the root of your public identity. One name. Every record beneath it.</p>
+      </div>
+      <div class="ns-concept-card">
+        <div class="ns-concept-card__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h6l3 18 3-8h6"/></svg>
+        </div>
+        <div class="ns-concept-card__title">Provenance tree</div>
+        <p class="ns-concept-card__body">Subnames can carry records, ownership history, inscription links, and verification data — all traceable to the Bitcoin root.</p>
+      </div>
+      <div class="ns-concept-card">
+        <div class="ns-concept-card__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1h5l7 7-5 5L1 6V1z"/><circle cx="3.5" cy="3.5" r="0.75" fill="currentColor"/></svg>
+        </div>
+        <div class="ns-concept-card__title">Marketplace layer</div>
+        <p class="ns-concept-card__body">Names and future subnames can be searched, verified, collected, listed, and traded on BTCNative.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 3: Namespace tree visual ── -->
+<section class="ns-tree-section">
+  <div class="container">
+    <div class="ns-tree-layout">
+      <div class="ns-tree-explain">
+        <h2 class="ns-section-title">One root. Many branches.</h2>
+        <p class="ns-section-body">A parent name can become the root of an entire identity system. Each subname is independently resolvable, can carry its own records, and traces its provenance back to the parent on Bitcoin.</p>
+
+        <div class="ns-sub-examples">
+          <div class="ns-sub-example">
+            <code class="ns-sub-name">shop.artist.btc</code>
+            <span class="ns-sub-use">storefront</span>
+          </div>
+          <div class="ns-sub-example">
+            <code class="ns-sub-name">vault.artist.btc</code>
+            <span class="ns-sub-use">cold storage</span>
+          </div>
+          <div class="ns-sub-example">
+            <code class="ns-sub-name">prints.artist.btc</code>
+            <span class="ns-sub-use">edition drops</span>
+          </div>
+          <div class="ns-sub-example">
+            <code class="ns-sub-name">001.artist.btc</code>
+            <span class="ns-sub-use">token #001</span>
+          </div>
+          <div class="ns-sub-example">
+            <code class="ns-sub-name">archive.artist.btc</code>
+            <span class="ns-sub-use">provenance record</span>
+          </div>
+        </div>
+        <p style="font-size:var(--text-xs, 11px);color:var(--color-text-faint);margin-top:16px;">Subname issuance is a roadmap feature. Records shown are examples.</p>
+      </div>
+
+      <div class="ns-tree-vis" aria-label="Namespace tree visual">
+        <div class="ns-tree">
+          <div class="ns-tree__root">
+            <span class="ns-tree__root-dot"></span>
+            <code class="ns-tree__name ns-tree__name--root">artist.btc</code>
+            <span class="ns-tree__badge">namespace root</span>
+          </div>
+          <div class="ns-tree__branches">
+            <div class="ns-tree__branch">
+              <span class="ns-tree__line" aria-hidden="true"></span>
+              <code class="ns-tree__name">shop.artist.btc</code>
+            </div>
+            <div class="ns-tree__branch">
+              <span class="ns-tree__line" aria-hidden="true"></span>
+              <code class="ns-tree__name">vault.artist.btc</code>
+            </div>
+            <div class="ns-tree__branch">
+              <span class="ns-tree__line" aria-hidden="true"></span>
+              <code class="ns-tree__name">prints.artist.btc</code>
+            </div>
+            <div class="ns-tree__branch">
+              <span class="ns-tree__line" aria-hidden="true"></span>
+              <code class="ns-tree__name">music.artist.btc</code>
+            </div>
+            <div class="ns-tree__branch ns-tree__branch--last">
+              <span class="ns-tree__line ns-tree__line--last" aria-hidden="true"></span>
+              <code class="ns-tree__name">archive.artist.btc</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 4: Namespace policy ── -->
+<section class="ns-policy-section">
+  <div class="container">
+    <h2 class="ns-section-title">Namespace policy</h2>
+    <p class="ns-section-body">Namespace policy controls how subnames are authorized, updated, and revoked. Policy is set by the parent name owner.</p>
+
+    <div class="ns-policy-cards">
+      <div class="ns-policy-card ns-policy-card--recommended">
+        <div class="ns-policy-card__header">
+          <span class="ns-policy-badge ns-policy-badge--recommended">Recommended</span>
+          <div class="ns-policy-card__name">Parent-controlled</div>
+        </div>
+        <p class="ns-policy-card__desc">The current parent owner controls active subname resolution. Subnames can be updated or revoked if the parent owner changes. Recommended for launch.</p>
+      </div>
+      <div class="ns-policy-card">
+        <div class="ns-policy-card__header">
+          <span class="ns-policy-badge">Locked</span>
+          <div class="ns-policy-card__name">Locked subnames</div>
+        </div>
+        <p class="ns-policy-card__desc">Subnames remain active even if the parent changes ownership, unless the subname owner updates or revokes them. For long-term identity records and communities.</p>
+      </div>
+      <div class="ns-policy-card">
+        <div class="ns-policy-card__header">
+          <span class="ns-policy-badge">Expiring</span>
+          <div class="ns-policy-card__name">Expiring</div>
+        </div>
+        <p class="ns-policy-card__desc">Subnames require periodic renewal or reauthorization after parent transfer. For time-bounded namespace grants.</p>
+      </div>
+    </div>
+
+    <div class="ns-policy-warning">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Subname policy affects user trust. Do not enable transferable or locked subnames without clear rules and user education. Always verify policy before relying on a subname.
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 5: Namespace dashboard ── -->
+<section class="ns-dashboard-section">
+  <div class="container">
+    <div class="ns-dashboard-header">
+      <h2 class="ns-section-title">Namespace dashboard</h2>
+      <span class="ns-phase-badge ns-phase-badge--prototype">Phase 1 · Read-only prototype</span>
+    </div>
+    <p class="ns-section-body">Enter a name to see its namespace status, resolver health, and record state. Subname management is a roadmap feature.</p>
+
+    <div class="ns-dashboard-search">
+      <input type="text" id="nsDashInput" class="ns-dash-input" placeholder="artist.btc" autocomplete="off" spellcheck="false" maxlength="64" />
+      <button class="btn btn--primary" id="nsDashBtn" onclick="loadNamespaceDashboard()">Check namespace</button>
+    </div>
+
+    <div id="nsDashResult" style="display:none;margin-top:24px;">
+      <div class="ns-dash-card">
+        <div class="ns-dash-card__header">
+          <div>
+            <div class="ns-dash-name" id="nsDashName">—</div>
+            <div class="ns-dash-meta" id="nsDashMeta"></div>
+          </div>
+          <div class="ns-dash-badges" id="nsDashBadges"></div>
+        </div>
+
+        <div class="ns-dash-grid">
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Owner</span>
+            <span class="ns-dash-field__value" id="nsDashOwner">—</span>
+          </div>
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Resolver status</span>
+            <span class="ns-dash-field__value" id="nsDashResolverStatus">—</span>
+          </div>
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Namespace</span>
+            <span class="ns-dash-field__value" id="nsDashNsStatus">—</span>
+          </div>
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Policy</span>
+            <span class="ns-dash-field__value" id="nsDashPolicy">—</span>
+          </div>
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Provenance source</span>
+            <span class="ns-dash-field__value" id="nsDashProvenance">—</span>
+          </div>
+          <div class="ns-dash-field">
+            <span class="ns-dash-field__label">Last verified</span>
+            <span class="ns-dash-field__value" id="nsDashVerified">—</span>
+          </div>
+        </div>
+
+        <div class="ns-dash-records" id="nsDashRecords" style="display:none;">
+          <div class="ns-dash-records__title">BNRP records</div>
+          <div id="nsDashRecordsList"></div>
+        </div>
+
+        <div class="ns-dash-actions">
+          <a href="#" id="nsDashViewProfile" class="btn btn--outline btn--sm">View profile</a>
+          <button class="btn btn--ghost btn--sm" disabled title="Subname creation is a roadmap feature">Create subname <span class="ns-coming-soon">roadmap</span></button>
+          <button class="btn btn--ghost btn--sm" disabled title="Record history indexing is a roadmap feature">Record history <span class="ns-coming-soon">roadmap</span></button>
+        </div>
+
+        <div class="ns-dash-disclaimer">
+          BTCNative namespace and record features may depend on BNRP indexing, Bitcoin-native records, and supported resolver sources. Always verify ownership, resolver status, record history, and policy before relying on a name or subname.
+        </div>
+      </div>
+    </div>
+
+    <div id="nsDashLoading" style="display:none;" class="ns-dash-loading">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ns-spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      Resolving via BNRP...
+    </div>
+
+    <div id="nsDashError" style="display:none;" class="trust-warning trust-warning--warn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="nsDashErrorMsg">Resolver unavailable. Could not reach BNRP. Try again.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 6: BNRP event preview ── -->
+<section class="ns-event-section">
+  <div class="container">
+    <div class="ns-event-header">
+      <h2 class="ns-section-title">BNRP event preview</h2>
+      <span class="ns-phase-badge ns-phase-badge--prototype">Phase 1 · Prototype</span>
+    </div>
+    <p class="ns-section-body">Generate a BNRP subname registration event. This tool creates the JSON payload for a subname record. On-chain inscription is not yet implemented — use "Generate BNRP event" to produce the JSON for review.</p>
+
+    <div class="ns-event-form">
+      <div class="ns-form-row">
+        <label class="ns-form-label">Parent name <span class="ns-form-required">required</span></label>
+        <input type="text" id="nsParent" class="ns-form-input" placeholder="artist.btc" oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="ns-form-row">
+        <label class="ns-form-label">Subname label <span class="ns-form-required">required</span></label>
+        <input type="text" id="nsLabel" class="ns-form-input" placeholder="shop" oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" maxlength="32" />
+        <div class="ns-form-preview-name" id="nsFullNamePreview" style="display:none;"></div>
+      </div>
+      <div class="ns-form-row">
+        <label class="ns-form-label">Owner address <span class="ns-form-optional">optional</span></label>
+        <input type="text" id="nsOwner" class="ns-form-input" placeholder="bc1p..." oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="ns-form-row">
+        <label class="ns-form-label">BTC address <span class="ns-form-optional">optional</span></label>
+        <input type="text" id="nsBtc" class="ns-form-input" placeholder="bc1p..." oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="ns-form-row">
+        <label class="ns-form-label">Website <span class="ns-form-optional">optional</span></label>
+        <input type="url" id="nsWebsite" class="ns-form-input" placeholder="https://example.com" oninput="nsUpdatePreview()" />
+      </div>
+      <div class="ns-form-row">
+        <label class="ns-form-label">Avatar inscription ID <span class="ns-form-optional">optional</span></label>
+        <input type="text" id="nsAvatar" class="ns-form-input" placeholder="abc123...i0" oninput="nsUpdatePreview()" autocomplete="off" spellcheck="false" maxlength="90" />
+      </div>
+      <div class="ns-form-row">
+        <label class="ns-form-label">Description <span class="ns-form-optional">optional</span></label>
+        <input type="text" id="nsDesc" class="ns-form-input" placeholder="Description..." oninput="nsUpdatePreview()" maxlength="160" />
+      </div>
+
+      <div id="nsFormWarnings" style="display:none;margin-top:12px;"></div>
+
+      <button class="btn btn--primary" style="margin-top:16px;" onclick="nsGenerateEvent()">Generate BNRP event</button>
+    </div>
+
+    <div id="nsEventPreview" style="display:none;margin-top:20px;">
+      <div class="ns-event-preview-header">
+        <span class="ns-event-preview-label">BNRP event JSON</span>
+        <button class="btn btn--ghost btn--sm" onclick="nsCopyEvent()">Copy</button>
+      </div>
+      <pre class="ns-event-json" id="nsEventJson"></pre>
+      <p class="ns-event-note">This JSON is the BNRP event payload. To inscribe on Bitcoin, use <a href="https://unisat.io/inscribe" target="_blank" rel="noopener">UniSat</a> or <a href="https://ordinals.com" target="_blank" rel="noopener">ord</a> with content-type <code>application/json</code>. On-chain inscription from BTCNative is a future feature.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION 7: Trust warnings ── -->
+<section class="ns-trust-section">
+  <div class="container">
+    <h2 class="ns-section-title">Trust and verification</h2>
+    <p class="ns-section-body">When interacting with namespaces and subnames, be aware of these trust states.</p>
+
+    <div class="ns-trust-grid">
+      <div class="ns-trust-item ns-trust-item--warn">
+        <div class="ns-trust-item__title">Unauthorized subname</div>
+        <p class="ns-trust-item__desc">This subname is not authorized by the current parent owner. Do not trust records from unauthorized subnames.</p>
+      </div>
+      <div class="ns-trust-item ns-trust-item--warn">
+        <div class="ns-trust-item__title">Revoked subname</div>
+        <p class="ns-trust-item__desc">This subname has been revoked by the parent owner or subname holder. It no longer resolves as active.</p>
+      </div>
+      <div class="ns-trust-item ns-trust-item--caution">
+        <div class="ns-trust-item__title">Parent transferred</div>
+        <p class="ns-trust-item__desc">This subname was created before the parent name changed ownership. Verify the namespace policy before trusting this record.</p>
+      </div>
+      <div class="ns-trust-item ns-trust-item--caution">
+        <div class="ns-trust-item__title">Stale resolver data</div>
+        <p class="ns-trust-item__desc">Resolver data is stale. Reverify before purchase or interaction. Stale data may not reflect the current owner or record.</p>
+      </div>
+      <div class="ns-trust-item ns-trust-item--caution">
+        <div class="ns-trust-item__title">Delegated manager active</div>
+        <p class="ns-trust-item__desc">This namespace uses a delegated manager. Review delegate permissions before interacting.</p>
+      </div>
+      <div class="ns-trust-item ns-trust-item--warn">
+        <div class="ns-trust-item__title">Newer inscription unauthorized</div>
+        <p class="ns-trust-item__desc">A newer inscription exists, but it is not authorized by the current owner or delegate. The previous valid record remains active.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer__inner">
+      <div>
+        <a href="./index.html" class="footer__logo">
+          <picture><source srcset="./logo-36.webp" type="image/webp"><img class="footer__logo-mark" src="./logo-36.png" alt="" aria-hidden="true" width="32" height="32" style="display:block;width:32px;height:32px;" loading="lazy"></picture>
+          <div>
+            <div class="footer__logo-btc">BTC</div>
+            <div class="footer__logo-native">NATIVE</div>
+          </div>
+        </a>
+        <p class="footer__tagline">Powered by BNRP open resolution<br>for BTC-native names.</p>
+      </div>
+      <div>
+        <div class="footer__col-title">Explore</div>
+        <div class="footer__links">
+          <a href="./explore.html" class="footer__link">Categories</a>
+          <a href="./explore.html?tab=listings" class="footer__link">Listings</a>
+          <a href="./explore.html?tab=market" class="footer__link">Market Data</a>
+          <a href="./bulk.html" class="footer__link">Bulk Search</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Account</div>
+        <div class="footer__links">
+          <a href="./sell.html" class="footer__link">List a Name</a>
+          <a href="./portfolio.html" class="footer__link">My Names</a>
+          <a href="./points.html" class="footer__link">My Points</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Protocol</div>
+        <div class="footer__links">
+          <a href="./bnrp.html" class="footer__link">Powered by BNRP</a>
+          <a href="./namespace.html" class="footer__link">Namespaces</a>
+          <a href="./docs.html" class="footer__link">Docs</a>
+          <a href="./about.html" class="footer__link">About</a>
+          <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
+          <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Support</div>
+        <div class="footer__links">
+          <a href="https://x.com/btcnativename" target="_blank" rel="noopener" class="footer__link">@btcnativename</a>
+          <a href="mailto:hello@btcnative.name" class="footer__link">hello@btcnative.name</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span class="footer__copy">&copy; 2026 BTC Native. Trustless by design.</span>
+      <div class="footer__trust">
+        <span class="footer__trust-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Verifiable on Bitcoin
+        </span>
+        <span class="footer__trust-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Open Protocol
+        </span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script defer src="./app.js"></script>
+
+<script>
+// ── Theme init ───────────────────────────────────────────────────────────
+(function() {
+  const saved = localStorage.getItem('btcn-theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  else if (window.matchMedia('(prefers-color-scheme: light)').matches) document.documentElement.setAttribute('data-theme', 'light');
+})();
+const themeBtn = document.getElementById('themeToggle');
+if (themeBtn) themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('btcn-theme', next);
+});
+</script>
+
+<script>
+// ── Namespace dashboard ──────────────────────────────────────────────────
+const BNRP_API = 'https://api.bnrp.name/v1';
+
+async function loadNamespaceDashboard() {
+  const input = document.getElementById('nsDashInput');
+  const name = (input && input.value.trim()) || '';
+  if (!name) return;
+
+  const result = document.getElementById('nsDashResult');
+  const loading = document.getElementById('nsDashLoading');
+  const error = document.getElementById('nsDashError');
+  const errorMsg = document.getElementById('nsDashErrorMsg');
+
+  if (result) result.style.display = 'none';
+  if (error) error.style.display = 'none';
+  if (loading) loading.style.display = 'flex';
+
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    let data = null;
+    try {
+      const res = await fetch(`${BNRP_API}/resolve?name=${encodeURIComponent(name)}`, {
+        headers: { Accept: 'application/json' },
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (res.ok) data = await res.json();
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (loading) loading.style.display = 'none';
+
+    // Populate dashboard
+    const profile = (data && data.profile) || {};
+    const records = {};
+    if (profile.avatar) records.avatar = profile.avatar;
+    if (profile.display) records.display = profile.display;
+    if (profile.description) records.description = profile.description;
+    if (profile['com.twitter']) records['com.twitter'] = profile['com.twitter'];
+    if (profile.url) records.url = profile.url;
+
+    const hasRecords = Object.keys(records).length > 0;
+    const owner = (data && (data.owner || data.address)) || null;
+    const via = (data && data.via) || null;
+    const resolvedAt = (data && data.resolved_at) || null;
+    const VIA_LABELS = { unisat: 'UniSat', btcname: 'BTCName', sns: 'SNS' };
+
+    document.getElementById('nsDashName').textContent = name;
+    document.getElementById('nsDashOwner').textContent = owner ? owner.slice(0,10) + '...' + owner.slice(-6) : 'Unknown';
+    document.getElementById('nsDashResolverStatus').textContent = data ? (hasRecords ? 'Verified' : 'Resolved (no records)') : 'Unresolved';
+    document.getElementById('nsDashNsStatus').textContent = 'Experimental — subname issuance coming';
+    document.getElementById('nsDashPolicy').textContent = 'Parent-controlled (default)';
+    document.getElementById('nsDashProvenance').textContent = via ? (VIA_LABELS[via] || via) : '—';
+    document.getElementById('nsDashVerified').textContent = resolvedAt ? new Date(resolvedAt).toLocaleString() : (data ? 'Just now' : '—');
+
+    const profileLink = document.getElementById('nsDashViewProfile');
+    if (profileLink) profileLink.href = `./name.html?name=${encodeURIComponent(name)}`;
+
+    const metaEl = document.getElementById('nsDashMeta');
+    if (metaEl) metaEl.textContent = data ? 'BNRP resolved' : 'Not found in BNRP';
+
+    const badgesEl = document.getElementById('nsDashBadges');
+    if (badgesEl) {
+      badgesEl.innerHTML = '';
+      if (hasRecords) badgesEl.innerHTML += '<span class="resolver-status resolver-status--verified">Verified</span>';
+      else if (data) badgesEl.innerHTML += '<span class="resolver-status resolver-status--unresolved">Unresolved</span>';
+      else badgesEl.innerHTML += '<span class="resolver-status resolver-status--unavailable">Not found</span>';
+    }
+
+    if (hasRecords) {
+      const recordsEl = document.getElementById('nsDashRecordsList');
+      const recordsWrap = document.getElementById('nsDashRecords');
+      if (recordsEl && recordsWrap) {
+        recordsEl.innerHTML = Object.entries(records).map(([k, v]) =>
+          `<div class="ns-dash-field"><span class="ns-dash-field__label">${k}</span><span class="ns-dash-field__value" style="word-break:break-all;font-size:11px;">${v}</span></div>`
+        ).join('');
+        recordsWrap.style.display = 'block';
+      }
+    }
+
+    if (result) result.style.display = 'block';
+  } catch (err) {
+    if (loading) loading.style.display = 'none';
+    if (errorMsg) errorMsg.textContent = err.name === 'AbortError' ? 'Resolver timed out. Try again.' : 'Resolver unavailable. Could not reach BNRP.';
+    if (error) error.style.display = 'flex';
+  }
+}
+
+// Enter key support
+const nsDashInput = document.getElementById('nsDashInput');
+if (nsDashInput) nsDashInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadNamespaceDashboard(); });
+
+// ── Subname event form ───────────────────────────────────────────────────
+function nsUpdatePreview() {
+  const parent = (document.getElementById('nsParent')?.value || '').trim().toLowerCase();
+  const label  = (document.getElementById('nsLabel')?.value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const preview = document.getElementById('nsFullNamePreview');
+  if (preview) {
+    if (parent && label) {
+      preview.textContent = `→ ${label}.${parent}`;
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+  // Warnings
+  const warnsEl = document.getElementById('nsFormWarnings');
+  if (!warnsEl) return;
+  const warns = [];
+  const fullName = label && parent ? `${label}.${parent}` : '';
+  // Confusable check
+  if (label && /[\u0400-\u04FF\u0370-\u03FF]/.test(label)) {
+    warns.push({ msg: 'Subname label contains non-Latin characters. This may be a confusable or spoof attempt.', level: 'warn' });
+  }
+  if (fullName) {
+    const FAMOUS = new Set(['satoshi','bitcoin','trump','musk','apple','google','coinbase','binance','ordinals']);
+    if (FAMOUS.has(label)) warns.push({ msg: 'This label references a well-known person or brand. It is not affiliated with or endorsed by that entity.', level: 'caution' });
+  }
+  if (warns.length) {
+    warnsEl.innerHTML = warns.map(w =>
+      `<div class="trust-warning trust-warning--${w.level}" style="margin-bottom:6px;">
+         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+         ${w.msg}
+       </div>`
+    ).join('');
+    warnsEl.style.display = 'block';
+  } else {
+    warnsEl.style.display = 'none';
+  }
+}
+
+function nsGenerateEvent() {
+  const parent = (document.getElementById('nsParent')?.value || '').trim().toLowerCase();
+  const label  = (document.getElementById('nsLabel')?.value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  if (!parent || !label) {
+    alert('Parent name and subname label are required.');
+    return;
+  }
+  const owner   = document.getElementById('nsOwner')?.value.trim() || '';
+  const btc     = document.getElementById('nsBtc')?.value.trim() || '';
+  const website = document.getElementById('nsWebsite')?.value.trim() || '';
+  const avatar  = document.getElementById('nsAvatar')?.value.trim() || '';
+  const desc    = document.getElementById('nsDesc')?.value.trim() || '';
+
+  const records = {};
+  if (btc)     records.btc     = btc;
+  if (website) records.website = website;
+  if (avatar)  records.avatar  = avatar;
+  if (desc)    records.description = desc;
+
+  const event = {
+    p:      'bnrp',
+    op:     'subname_register',
+    parent: parent,
+    name:   `${label}.${parent}`,
+    label:  label,
+    ...(owner ? { owner } : {}),
+    records,
+    nonce:     1,
+    timestamp: new Date().toISOString(),
+  };
+
+  const previewEl = document.getElementById('nsEventJson');
+  const previewWrap = document.getElementById('nsEventPreview');
+  if (previewEl) previewEl.textContent = JSON.stringify(event, null, 2);
+  if (previewWrap) previewWrap.style.display = 'block';
+}
+
+function nsCopyEvent() {
+  const json = document.getElementById('nsEventJson')?.textContent || '';
+  if (json && navigator.clipboard) {
+    navigator.clipboard.writeText(json).then(() => {
+      const btn = document.querySelector('[onclick="nsCopyEvent()"]');
+      if (btn) { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
+    }).catch(() => {});
+  }
+}
+</script>
+
+</body>
+</html>

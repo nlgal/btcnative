@@ -3966,6 +3966,13 @@ async function initProfilePageMVP() {
     `;
   }
 
+  // Namespace panel
+  const nsPanelEl = qs('#namespacePanelSection');
+  if (nsPanelEl) {
+    const nsPanel = buildNamespacePanel(name, resolvedData || null);
+    nsPanelEl.appendChild(nsPanel);
+  }
+
   // Similar names
   const simEl = qs('#similarNames');
   if (simEl) {
@@ -4544,4 +4551,376 @@ function saveBnrpRecords() {
 
   const btn = document.getElementById('bnrpSaveBtn');
   if (btn) btn.textContent = 'Copied to clipboard';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// BNRP NAMESPACE MODULE — Phase 1 schemas, resolver logic, UI components
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Typed schema constants ────────────────────────────────────────────────────
+
+/**
+ * BNRP_RECORD_OPS — All supported BNRP record operation types.
+ * Not all ops are live. Status documented per op.
+ */
+const BNRP_RECORD_OPS = Object.freeze({
+  RECORD_REGISTER:    'record_register',    // live
+  RECORD_UPDATE:      'record_update',       // live
+  RECORD_REVOKE:      'record_revoke',       // roadmap
+  SUBNAME_REGISTER:   'subname_register',    // roadmap
+  SUBNAME_UPDATE:     'subname_update',      // roadmap
+  SUBNAME_REVOKE:     'subname_revoke',      // roadmap
+  DELEGATE_ADD:       'delegate_add',        // roadmap
+  DELEGATE_REMOVE:    'delegate_remove',     // roadmap
+  POLICY_UPDATE:      'policy_update',       // roadmap
+  SUBNAME_TRANSFER:   'subname_transfer',    // roadmap
+  SUBNAME_FREEZE:     'subname_freeze',      // roadmap
+});
+
+/**
+ * BNRP_NS_POLICIES — Namespace policy types.
+ */
+const BNRP_NS_POLICIES = Object.freeze({
+  PARENT_CONTROLLED: 'parent-controlled',
+  LOCKED:            'locked',
+  EXPIRING:          'expiring',
+});
+
+/**
+ * BNRP_VALIDITY_STATES — Record/subname validity states.
+ */
+const BNRP_VALIDITY_STATES = Object.freeze({
+  VALID:       'valid',
+  SUPERSEDED:  'superseded',
+  REVOKED:     'revoked',
+  INVALID:     'invalid',
+  UNAUTHORIZED:'unauthorized',
+  STALE:       'stale',
+  CONFLICT:    'conflict',
+  PENDING:     'pending',
+  CURRENT:     'current',
+});
+
+/**
+ * BNRP_RESOLVER_STATES — Resolver health/status for a namespace.
+ */
+const BNRP_RESOLVER_STATES = Object.freeze({
+  OK:          'ok',
+  STALE:       'stale',
+  UNAVAILABLE: 'unavailable',
+  UNRESOLVED:  'unresolved',
+  CONFLICT:    'conflict',
+  PENDING:     'pending',
+});
+
+// ── Schema constructors ───────────────────────────────────────────────────────
+
+/**
+ * makeParentNamespace(fields) → ParentNamespace object
+ * Represents a BNRP namespace root name.
+ */
+function makeParentNamespace(fields = {}) {
+  return {
+    name:             fields.name             || '',
+    owner:            fields.owner            || null,
+    resolverStatus:   fields.resolverStatus   || BNRP_RESOLVER_STATES.UNRESOLVED,
+    namespaceEnabled: fields.namespaceEnabled ?? false,
+    subnamePolicy:    fields.subnamePolicy    || BNRP_NS_POLICIES.PARENT_CONTROLLED,
+    delegates:        fields.delegates        || [],
+    verifiedAt:       fields.verifiedAt       || null,
+    provenanceSource: fields.provenanceSource || null,
+    currentRecord:    fields.currentRecord    || null,
+    recordHistory:    fields.recordHistory    || [],
+  };
+}
+
+/**
+ * makeSubnameRecord(fields) → SubnameRecord object
+ */
+function makeSubnameRecord(fields = {}) {
+  return {
+    name:      fields.name      || '',
+    parent:    fields.parent    || '',
+    label:     fields.label     || '',
+    owner:     fields.owner     || null,
+    records: {
+      btc:         fields.records?.btc         || '',
+      lightning:   fields.records?.lightning   || '',
+      ordinals:    fields.records?.ordinals    || '',
+      website:     fields.records?.website     || '',
+      avatar:      fields.records?.avatar      || '',
+      description: fields.records?.description || '',
+    },
+    status:        fields.status    || BNRP_VALIDITY_STATES.PENDING,
+    nonce:         fields.nonce     ?? 1,
+    createdBy:     fields.createdBy || null,
+    createdAt:     fields.createdAt || null,
+    updatedAt:     fields.updatedAt || null,
+    currentRecord: fields.currentRecord || null,
+    provenance: {
+      source:        fields.provenance?.source        || null,
+      inscriptionId: fields.provenance?.inscriptionId || null,
+      verifiedAt:    fields.provenance?.verifiedAt    || null,
+    },
+  };
+}
+
+/**
+ * makeBNRPEvent(fields) → BNRPRecordEvent object
+ * Represents a BNRP record or subname event for inscription or indexing.
+ */
+function makeBNRPEvent(fields = {}) {
+  return {
+    p:         'bnrp',
+    op:        fields.op        || BNRP_RECORD_OPS.RECORD_REGISTER,
+    name:      fields.name      || '',
+    ...(fields.parent ? { parent: fields.parent } : {}),
+    ...(fields.label  ? { label:  fields.label  } : {}),
+    ...(fields.owner  ? { owner:  fields.owner  } : {}),
+    records:   fields.records   || {},
+    nonce:     fields.nonce     ?? 1,
+    ...(fields.replaces   ? { replaces:   fields.replaces   } : {}),
+    timestamp: fields.timestamp || new Date().toISOString(),
+    ...(fields.signer ? {
+      signer: fields.signer,
+      authorization: {
+        authorized: fields.authorization?.authorized ?? false,
+        method:     fields.authorization?.method     || 'owner',
+      },
+      validity: {
+        status:   fields.validity?.status   || BNRP_VALIDITY_STATES.PENDING,
+        isCurrent:fields.validity?.isCurrent ?? false,
+        reason:   fields.validity?.reason   || '',
+      },
+    } : {}),
+  };
+}
+
+// ── Record validity resolver ──────────────────────────────────────────────────
+
+/**
+ * isValidBNRPRecord(event, context) → boolean
+ *
+ * Validates a BNRP record event against the validity rules:
+ * 1. Must have a recognized op
+ * 2. Must have a name
+ * 3. Must have a valid nonce (> 0)
+ * 4. Authorization must be present and authorized (if signer field is set)
+ * 5. Not marked as revoked, superseded, or invalid
+ *
+ * NOTE: This is a client-side check only. Full on-chain validation
+ * requires the BNRP resolver/indexer to verify ownership against
+ * Bitcoin inscription data.
+ */
+function isValidBNRPRecord(event, context = {}) {
+  if (!event || !event.op || !event.name) return false;
+  if (!Object.values(BNRP_RECORD_OPS).includes(event.op)) return false;
+  if (!event.nonce || event.nonce < 1) return false;
+  if (event.signer && event.authorization && !event.authorization.authorized) return false;
+  if (context.status && [
+    BNRP_VALIDITY_STATES.REVOKED,
+    BNRP_VALIDITY_STATES.SUPERSEDED,
+    BNRP_VALIDITY_STATES.INVALID,
+    BNRP_VALIDITY_STATES.UNAUTHORIZED,
+  ].includes(context.status)) return false;
+  return true;
+}
+
+/**
+ * getNamespaceStatus(bnrpData) → NamespaceStatus
+ * Derives namespace status from resolved BNRP data.
+ */
+function getNamespaceStatus(bnrpData) {
+  if (!bnrpData) {
+    return { enabled: false, label: 'Not found', color: 'muted', hint: 'Name not resolved by BNRP.' };
+  }
+  const records = bnrpData.records || {};
+  const hasRecords = Object.keys(records).length > 0;
+  if (!hasRecords && !bnrpData.inscriptionId) {
+    return { enabled: false, label: 'Unresolved', color: 'muted', hint: 'No BNRP records. Name exists but has no identity records.' };
+  }
+  // Namespace is "experimental" for all names until live subname issuance exists
+  return {
+    enabled: false,
+    label:   'Experimental',
+    color:   'caution',
+    hint:    'This name can become a namespace. Subname issuance is a roadmap feature.',
+    phase:   'roadmap',
+  };
+}
+
+// ── BNRPRecordTimeline component ──────────────────────────────────────────────
+
+/**
+ * buildBNRPRecordTimeline(events) → HTMLElement
+ *
+ * Renders a visual timeline of BNRP record events.
+ * Each event shows: op, inscription ID (truncated), nonce, validity, current flag.
+ *
+ * @param {Array} events - Array of record history events
+ * @returns {HTMLElement}
+ */
+function buildBNRPRecordTimeline(events) {
+  const wrap = document.createElement('div');
+  wrap.className = 'bnrp-timeline';
+
+  if (!events || events.length === 0) {
+    wrap.innerHTML = `<div class="bnrp-timeline__empty">No record history available. This is a roadmap feature — history will be indexed from Bitcoin inscriptions.</div>`;
+    return wrap;
+  }
+
+  const STATUS_LABELS = {
+    current:     { label: 'Current record', color: 'green'  },
+    superseded:  { label: 'Superseded',     color: 'muted'  },
+    revoked:     { label: 'Revoked',        color: 'warn'   },
+    invalid:     { label: 'Invalid',        color: 'warn'   },
+    unauthorized:{ label: 'Unauthorized',   color: 'warn'   },
+    stale:       { label: 'Stale',          color: 'caution'},
+    pending:     { label: 'Pending',        color: 'caution'},
+    conflict:    { label: 'Conflict',       color: 'warn'   },
+    valid:       { label: 'Valid',          color: 'green'  },
+  };
+
+  const OP_COLORS = {
+    record_register:  'register',
+    record_update:    'update',
+    record_revoke:    'revoke',
+    subname_register: 'register',
+    subname_update:   'update',
+    subname_revoke:   'revoke',
+    delegate_add:     'delegate',
+    delegate_remove:  'delegate',
+    policy_update:    'update',
+  };
+
+  events.forEach((ev, i) => {
+    const isCurrent = ev.status === 'current' || ev.isCurrent;
+    const statusInfo = STATUS_LABELS[ev.status || 'pending'] || { label: ev.status || 'Unknown', color: 'muted' };
+    const opColor = OP_COLORS[ev.op] || 'update';
+    const inscId = ev.inscriptionId || '';
+    const inscShort = inscId ? inscId.slice(0, 12) + '...' + inscId.slice(-6) : '—';
+
+    const item = document.createElement('div');
+    item.className = `bnrp-timeline__item${isCurrent ? ' bnrp-timeline__item--current' : ''}`;
+    item.innerHTML = `
+      <div class="bnrp-timeline__dot bnrp-timeline__dot--${statusInfo.color}" aria-hidden="true"></div>
+      <div class="bnrp-timeline__body">
+        <div class="bnrp-timeline__row">
+          <span class="bnrp-op__tag bnrp-op__tag--${opColor}">${ev.op || 'unknown'}</span>
+          <span class="bnrp-timeline__nonce">nonce ${ev.nonce ?? i + 1}</span>
+          <span class="bnrp-timeline__status bnrp-timeline__status--${statusInfo.color}">${statusInfo.label}</span>
+        </div>
+        <div class="bnrp-timeline__inscription" title="${inscId}">
+          ${inscId ? `<a href="https://ordinals.com/inscription/${inscId}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:2px;">${inscShort}</a>` : '—'}
+        </div>
+        ${ev.timestamp ? `<div class="bnrp-timeline__time">${new Date(ev.timestamp).toLocaleDateString()}</div>` : ''}
+      </div>
+    `;
+    wrap.appendChild(item);
+  });
+
+  return wrap;
+}
+
+// ── NamespacePanel component ──────────────────────────────────────────────────
+
+/**
+ * buildNamespacePanel(name, bnrpData) → HTMLElement
+ *
+ * Renders a compact namespace panel for name detail pages.
+ * Shows namespace status, policy, record state, and CTAs.
+ */
+function buildNamespacePanel(name, bnrpData) {
+  const nsStatus = getNamespaceStatus(bnrpData);
+  const base = getBase(name || '');
+  const tld  = getTld(name || '');
+
+  const panel = document.createElement('div');
+  panel.className = 'ns-panel';
+
+  const POLICY_LABEL = {
+    [BNRP_NS_POLICIES.PARENT_CONTROLLED]: 'Parent-controlled',
+    [BNRP_NS_POLICIES.LOCKED]:            'Locked',
+    [BNRP_NS_POLICIES.EXPIRING]:          'Expiring',
+  };
+
+  const hasRecords = bnrpData && bnrpData.records && Object.keys(bnrpData.records).length > 0;
+
+  panel.innerHTML = `
+    <div class="ns-panel__header">
+      <div class="ns-panel__title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+        Namespace
+      </div>
+      <span class="resolver-status resolver-status--${nsStatus.color === 'caution' ? 'stale' : nsStatus.color === 'green' ? 'verified' : 'unresolved'}" title="${nsStatus.hint}">${nsStatus.label}</span>
+    </div>
+    <div class="ns-panel__body">
+      <div class="ns-panel__row">
+        <span class="ns-panel__label">Policy</span>
+        <span class="ns-panel__value">${POLICY_LABEL[BNRP_NS_POLICIES.PARENT_CONTROLLED]} (default)</span>
+      </div>
+      <div class="ns-panel__row">
+        <span class="ns-panel__label">Subnames</span>
+        <span class="ns-panel__value" style="color:var(--color-text-faint);">—  <span style="font-size:10px;">(roadmap)</span></span>
+      </div>
+      <div class="ns-panel__row">
+        <span class="ns-panel__label">Record state</span>
+        <span class="ns-panel__value">${hasRecords ? 'BNRP records set' : 'No records'}</span>
+      </div>
+    </div>
+    <div class="ns-panel__concept">
+      <div class="ns-panel__concept-name">${base}${tld}</div>
+      <div class="ns-panel__concept-branches">
+        <div class="ns-panel__branch"><span class="ns-panel__branch-prefix">├─</span><code>shop.${base}${tld}</code></div>
+        <div class="ns-panel__branch"><span class="ns-panel__branch-prefix">├─</span><code>vault.${base}${tld}</code></div>
+        <div class="ns-panel__branch"><span class="ns-panel__branch-prefix">└─</span><code>archive.${base}${tld}</code></div>
+      </div>
+    </div>
+    <div class="ns-panel__actions">
+      <a href="./namespace.html" class="btn btn--outline btn--sm">Explore namespaces</a>
+      <a href="./bnrp.html#subnames" class="btn btn--ghost btn--sm">What are subnames?</a>
+    </div>
+    <div class="ns-panel__disclaimer">
+      Subname issuance is a planned feature. Names shown are examples only.
+    </div>
+  `;
+
+  return panel;
+}
+
+// ── SubnameCard component ─────────────────────────────────────────────────────
+
+/**
+ * buildSubnameCard(subnameRecord) → HTMLElement
+ * Renders a subname record card.
+ */
+function buildSubnameCard(subnameRecord) {
+  const card = document.createElement('div');
+  card.className = 'subname-card';
+
+  const STATUS_COLORS = {
+    active:      'green',
+    revoked:     'warn',
+    pending:     'caution',
+    unauthorized:'warn',
+    superseded:  'muted',
+  };
+  const color = STATUS_COLORS[subnameRecord.status] || 'muted';
+
+  card.innerHTML = `
+    <div class="subname-card__header">
+      <code class="subname-card__name">${subnameRecord.name}</code>
+      <span class="resolver-status resolver-status--${color === 'green' ? 'verified' : color === 'warn' ? 'unavailable' : color === 'caution' ? 'stale' : 'unresolved'}">${subnameRecord.status || 'unknown'}</span>
+    </div>
+    <div class="subname-card__parent">
+      <span class="subname-card__parent-label">parent</span>
+      <span>${subnameRecord.parent}</span>
+    </div>
+    ${subnameRecord.provenance?.inscriptionId ? `
+    <div class="subname-card__inscription">
+      <a href="https://ordinals.com/inscription/${subnameRecord.provenance.inscriptionId}" target="_blank" rel="noopener" style="font-family:var(--font-mono);font-size:10px;color:var(--color-text-faint);text-decoration:underline;text-underline-offset:2px;">${subnameRecord.provenance.inscriptionId.slice(0,16)}...</a>
+    </div>` : ''}
+  `;
+
+  return card;
 }

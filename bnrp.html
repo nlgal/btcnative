@@ -65,6 +65,7 @@
     </div>
     <h1 class="bnrp-hero__title">BNRP: Bitcoin Name<br>Resolution Protocol</h1>
     <p class="bnrp-hero__sub">An open resolution layer for BTC-native names. BTCNative uses BNRP to read name records, verify ownership, resolve avatars, and display provenance — without claiming to own the names.</p>
+    <p class="bnrp-hero__sub" style="margin-top:8px;font-size:0.85em;opacity:0.7;letter-spacing:0.03em;">Permanent history. Current state. Latest valid inscription wins.</p>
     <div class="bnrp-hero__actions">
       <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener noreferrer" class="bnrp-btn bnrp-btn--primary">
         API Reference
@@ -522,6 +523,173 @@
           </div>
         </div>
         <p class="bnrp-section__note" style="margin-top:20px;">This is a protocol roadmap item. Subname issuance is not yet live. Follow <a href="https://x.com/btcnativename" target="_blank" rel="noopener" class="bnrp-link">@btcnativename</a> for updates.</p>
+      </section>
+
+      <!-- ── SECTION: Permanent history. Current state. ── -->
+      <section class="bnrp-section" id="permanent-history">
+        <div class="bnrp-section__label">Resolution model</div>
+        <h2 class="bnrp-section__title">Permanent history. Current state.</h2>
+        <p class="bnrp-section__body">Bitcoin inscriptions are permanent. BNRP does not edit old inscriptions. Instead, each update creates a new Bitcoin-native record. The resolver reads the latest valid record, while the full history remains visible.</p>
+
+        <div class="bnrp-rule-block" style="margin:24px 0;">
+          <div class="bnrp-rule-block__rule">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Latest valid inscription wins.
+          </div>
+          <p class="bnrp-rule-block__desc">A newer inscription is not automatically valid. BNRP validates each update against these requirements:</p>
+          <ul class="bnrp-rule-block__list">
+            <li>Authorized by the current owner or delegated manager</li>
+            <li>Matches the namespace policy</li>
+            <li>Uses a newer nonce or version number</li>
+            <li>Is confirmed or safely indexed (not unconfirmed or chain-reorged)</li>
+            <li>Has not been revoked or superseded by a later valid record</li>
+          </ul>
+        </div>
+
+        <div class="bnrp-warning-note" style="margin-bottom:24px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          A newer inscription is not valid unless it is authorized by the correct owner, delegate, or namespace policy. Do not assume the newest inscription is the current record.
+        </div>
+
+        <div class="bnrp-section__label" style="margin-bottom:12px;">Supported record operations</div>
+        <div class="bnrp-ops-grid">
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--register">register</span><span class="bnrp-op__label">record_register</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--update">update</span><span class="bnrp-op__label">record_update</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--revoke">revoke</span><span class="bnrp-op__label">record_revoke</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--register">register</span><span class="bnrp-op__label">subname_register</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--update">update</span><span class="bnrp-op__label">subname_update</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--revoke">revoke</span><span class="bnrp-op__label">subname_revoke</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--delegate">delegate</span><span class="bnrp-op__label">delegate_add</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--delegate">delegate</span><span class="bnrp-op__label">delegate_remove</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--update">update</span><span class="bnrp-op__label">policy_update</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--register">register</span><span class="bnrp-op__label">subname_transfer</span></div>
+          <div class="bnrp-op"><span class="bnrp-op__tag bnrp-op__tag--revoke">revoke</span><span class="bnrp-op__label">subname_freeze</span></div>
+        </div>
+
+        <p class="bnrp-section__note" style="margin-top:20px;">Not all operations are live on BNRP indexing today. This is the full planned operation set. Current support: record_register, record_update. Subname ops are roadmap.</p>
+      </section>
+
+      <!-- ── SECTION: What BNRP does NOT mean ── -->
+      <section class="bnrp-section" id="bnrp-disclaimer">
+        <div class="bnrp-section__label">Scope</div>
+        <h2 class="bnrp-section__title">What BNRP does not mean</h2>
+        <div class="bnrp-disclaimer-grid">
+          <div class="bnrp-disclaimer-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            BNRP does not custody names.
+          </div>
+          <div class="bnrp-disclaimer-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            BNRP does not own names.
+          </div>
+          <div class="bnrp-disclaimer-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            BNRP does not replace Bitcoin.
+          </div>
+          <div class="bnrp-disclaimer-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            BNRP does not guarantee market value.
+          </div>
+          <div class="bnrp-disclaimer-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            BNRP is not a claim of partnership with any collection, marketplace, wallet, or protocol unless explicitly stated.
+          </div>
+          <div class="bnrp-disclaimer-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            BNRP does not use Ethereum-style smart contracts. Subnames are Bitcoin-native records interpreted through BNRP resolver rules.
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION: Full resolver model ── -->
+      <section class="bnrp-section" id="resolver-model">
+        <div class="bnrp-section__label">Developer model</div>
+        <h2 class="bnrp-section__title">Full resolver record schema</h2>
+        <p class="bnrp-section__body">This is the extended BNRP record model including resolver state, namespace data, record history, and provenance.</p>
+
+        <div class="bnrp-code-block" aria-label="Full BNRP resolver record model">
+          <div class="bnrp-code-block__label">Extended record model</div>
+          <pre class="bnrp-pre"><code>{
+  "name": "example.btc",
+  "owner": "bc1...",
+  "primaryAddress": "bc1...",
+  "avatar": "inscriptionId or URL",
+  "records": {
+    "twitter": "",
+    "website": "",
+    "description": ""
+  },
+  "listing": {
+    "status": "listed",
+    "price": "",
+    "marketplace": "BTCNative"
+  },
+  "provenance": {
+    "source": "unisat | btcname | sns",
+    "verifiedAt": ""
+  },
+  "resolver": {
+    "protocol": "BNRP",
+    "rule": "latest-valid-inscription-wins",
+    "currentRecord": "",
+    "recordHistory": []
+  },
+  "namespace": {
+    "enabled": false,
+    "policy": "parent-controlled",
+    "subnameCount": 0,
+    "delegates": []
+  }
+}</code></pre>
+        </div>
+
+        <div class="bnrp-code-block" style="margin-top:16px;" aria-label="Subname record schema">
+          <div class="bnrp-code-block__label">Subname record (roadmap)</div>
+          <pre class="bnrp-pre"><code>{
+  "name": "shop.artist.btc",
+  "type": "subname",
+  "parent": "artist.btc",
+  "label": "shop",
+  "status": "active",
+  "authorization": {
+    "authorized": true,
+    "method": "parent-owner",
+    "verifiedAt": ""
+  },
+  "owner": "bc1...",
+  "records": {
+    "btc": "bc1...",
+    "website": "https://example.com",
+    "avatar": "inscription-id"
+  },
+  "policy": { "type": "parent-controlled" },
+  "currentRecord": {
+    "rule": "latest-valid-inscription-wins",
+    "inscriptionId": "",
+    "nonce": 3,
+    "op": "subname_update",
+    "verifiedAt": ""
+  },
+  "recordHistory": [
+    { "inscriptionId": "", "op": "subname_register", "nonce": 1, "status": "superseded" },
+    { "inscriptionId": "", "op": "subname_update",   "nonce": 2, "status": "superseded" },
+    { "inscriptionId": "", "op": "subname_update",   "nonce": 3, "status": "current" }
+  ],
+  "provenance": { "source": "bnrp", "createdAt": "", "updatedAt": "" },
+  "resolver": { "health": "ok", "verifiedAt": "" }
+}</code></pre>
+        </div>
+
+        <div class="bnrp-dev-links" style="margin-top:24px;">
+          <a href="./docs.html" class="bnrp-btn bnrp-btn--ghost bnrp-btn--sm">
+            Full API reference
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </a>
+          <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer" class="bnrp-btn bnrp-btn--ghost bnrp-btn--sm">
+            Source on GitHub
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </a>
+        </div>
       </section>
 
     </div><!-- /bnrp-grid -->
