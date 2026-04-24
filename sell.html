@@ -99,7 +99,7 @@
     }
     .sell-input-unit {
       position: absolute;
-      left: 28px;
+      right: 56px; /* sits left of the USD hint */
       top: 50%;
       transform: translateY(-50%);
       color: var(--color-text-muted);
@@ -109,7 +109,7 @@
       pointer-events: none;
       letter-spacing: 0.02em;
     }
-    .sell-input--has-suffix { padding-right: 80px; }
+    .sell-input--has-suffix { padding-right: 110px; }
     .sell-input-suffix {
       position: absolute;
       right: var(--space-4);
@@ -702,8 +702,8 @@
 <script src="./nav-search.js"></script>
 <script>
 // ── Sell page logic ────────────────────────────────────────────────────────────
-// MARKET_API and UNISAT_API_KEY are defined in app.js
-const UNISAT_BASE = 'https://open-api.unisat.io';
+// MARKET_API is defined in app.js
+const UNISAT_BASE = 'https://open-api.unisat.io'; // kept for reference; direct calls use worker proxy
 
 // BTC/USD
 let _sellBtcUsd = null;
@@ -802,16 +802,10 @@ async function fetchUtxos(address) {
  * We match that to the address's UTXOs.
  */
 async function fetchInscriptionUtxo(inscriptionId, sellerAddress) {
-  // 1. Get inscription info from UniSat — returns outpoint
+  // 1. Get inscription info via worker proxy (no API key in client)
   const infoRes = await fetch(
-    `https://open-api.unisat.io/v1/indexer/inscription/info/${encodeURIComponent(inscriptionId)}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${UNISAT_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      signal: AbortSignal.timeout(8000),
-    }
+    `${MARKET_API}/api/proxy/inscription-info/${encodeURIComponent(inscriptionId)}`,
+    { signal: AbortSignal.timeout(8000) }
   );
   const infoData = await infoRes.json();
   if (infoData.code !== 0) throw new Error(infoData.msg || 'Could not fetch inscription info');
