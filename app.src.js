@@ -610,6 +610,7 @@ function buildNameCard(data) {
   card.dataset.name = name;
   card.innerHTML = `
     <div class="name-card__header">
+      <div class="name-card__avatar" style="${gradStyle}" aria-hidden="true"></div>
       <div>
         <div class="name-card__name">${base}<span style="color:var(--color-primary);">${tld}</span></div>
         ${displayName ? `<div style="font-size:10px;color:var(--color-text-faint);">${displayName}</div>` : ''}
@@ -623,6 +624,8 @@ function buildNameCard(data) {
     ${price ? `<div class="name-card__price">${formatSats(price)}<span class="name-card__usd"></span></div>` : '<div class="name-card__price name-card__price--unlisted" id="ncprice-' + encodeURIComponent(name) + '">—</div>'}
     ${price ? `<button class="name-card__buy-btn" data-name="${name}" data-auction="${data.auctionId || ''}" data-price="${price}" onclick="event.preventDefault();event.stopPropagation();_openCardBuy(this);">Buy</button>` : ''}
   `;
+
+  if (avatarField) initAvatar(card.querySelector('.name-card__avatar'), avatarField, '');
 
   // async USD price
   if (price) {
