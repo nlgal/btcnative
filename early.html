@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTCNative — Early Access</title>
+  <meta name="description" content="Something is coming. Bitcoin names are about to change." />
+  <meta name="robots" content="noindex, nofollow" />
+
+  <!-- OG -->
+  <meta property="og:title" content="BTCNative — Early Access" />
+  <meta property="og:description" content="Something is coming. Bitcoin names are about to change." />
+  <meta property="og:type" content="website" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --color-brand-orange: #FF8A00;
+      --color-brand-gold:   #FFB100;
+      --bg:                 #0D0D0D;
+      --text:               #FFFFFF;
+      --muted:              rgba(255,255,255,0.45);
+      --faint:              rgba(255,255,255,0.18);
+      --border:             rgba(255,255,255,0.08);
+      --card-bg:            rgba(255,255,255,0.04);
+      --error:              #FF4444;
+      --success:            #4CAF50;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Noise + glow ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% -10%, rgba(255,138,0,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 80% 110%, rgba(255,177,0,0.07) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ── */
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      gap: 0;
+    }
+
+    /* ── Logo ── */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 56px;
+      text-decoration: none;
+    }
+
+    .logo__mark {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--color-brand-orange), var(--color-brand-gold));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 800;
+      color: #000;
+      flex-shrink: 0;
+    }
+
+    .logo__name {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    /* ── Eyebrow ── */
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border: 1px solid rgba(255,138,0,0.3);
+      border-radius: 20px;
+      background: rgba(255,138,0,0.06);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--color-brand-orange);
+      margin-bottom: 28px;
+    }
+
+    .eyebrow__dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--color-brand-orange);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* ── Headline ── */
+    .headline {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+      text-align: center;
+      max-width: 700px;
+      margin-bottom: 20px;
+    }
+
+    .headline em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--color-brand-orange), var(--color-brand-gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── Subline ── */
+    .subline {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--muted);
+      text-align: center;
+      max-width: 480px;
+      line-height: 1.6;
+      margin-bottom: 52px;
+    }
+
+    /* ── Code gate ── */
+    .gate {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .gate__label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--faint);
+      text-align: center;
+    }
+
+    .gate__row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .gate__input {
+      flex: 1;
+      height: 52px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 18px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      color: var(--text);
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      text-transform: uppercase;
+    }
+
+    .gate__input::placeholder {
+      color: var(--faint);
+      font-weight: 400;
+      letter-spacing: .04em;
+      text-transform: none;
+    }
+
+    .gate__input:focus {
+      border-color: rgba(255,138,0,0.4);
+      box-shadow: 0 0 0 3px rgba(255,138,0,0.08);
+    }
+
+    .gate__input.error {
+      border-color: rgba(255,68,68,0.5);
+      box-shadow: 0 0 0 3px rgba(255,68,68,0.08);
+      animation: shake .35s ease;
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(4px); }
+    }
+
+    .gate__btn {
+      height: 52px;
+      padding: 0 24px;
+      background: linear-gradient(135deg, var(--color-brand-orange), var(--color-brand-gold));
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #000;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity .15s, transform .15s;
+      letter-spacing: .02em;
+    }
+
+    .gate__btn:hover  { opacity: .9; transform: translateY(-1px); }
+    .gate__btn:active { opacity: 1;  transform: translateY(0); }
+
+    .gate__msg {
+      font-size: 13px;
+      text-align: center;
+      min-height: 20px;
+      transition: opacity .2s;
+    }
+
+    .gate__msg.error   { color: var(--error); }
+    .gate__msg.success { color: var(--success); }
+
+    /* ── Divider ── */
+    .divider {
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, transparent, var(--border), transparent);
+      margin: 48px auto;
+    }
+
+    /* ── Stats row ── */
+    .stats {
+      display: flex;
+      gap: 40px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat__value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(90deg, var(--color-brand-orange), var(--color-brand-gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat__label {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .stat__sep {
+      width: 1px;
+      height: 36px;
+      background: var(--border);
+    }
+
+    /* ── Footer ── */
+    .footer {
+      position: absolute;
+      bottom: 28px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--faint);
+    }
+
+    .footer a {
+      color: var(--faint);
+      text-decoration: none;
+      transition: color .15s;
+    }
+
+    .footer a:hover { color: var(--muted); }
+
+    /* ── Success overlay ── */
+    .success-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: var(--bg);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 20px;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .success-overlay.show { display: flex; animation: fadeIn .4s ease; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .success-overlay__icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-brand-orange), var(--color-brand-gold));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin-bottom: 8px;
+      animation: popIn .5s cubic-bezier(.34,1.56,.64,1);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .success-overlay__title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .success-overlay__sub {
+      color: var(--muted);
+      font-size: 1rem;
+      max-width: 340px;
+      line-height: 1.6;
+    }
+
+    .success-overlay__btn {
+      margin-top: 8px;
+      height: 52px;
+      padding: 0 32px;
+      background: linear-gradient(135deg, var(--color-brand-orange), var(--color-brand-gold));
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #000;
+      cursor: pointer;
+      transition: opacity .15s, transform .15s;
+    }
+
+    .success-overlay__btn:hover { opacity: .9; transform: translateY(-1px); }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .gate__row { flex-direction: column; }
+      .gate__btn { width: 100%; }
+      .stats { gap: 24px; }
+      .stat__sep { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Logo -->
+  <a class="logo" href="https://btcnative.name">
+    <div class="logo__mark">₿</div>
+    <span class="logo__name">BTCNative</span>
+  </a>
+
+  <!-- Eyebrow -->
+  <div class="eyebrow">
+    <span class="eyebrow__dot"></span>
+    Something is coming
+  </div>
+
+  <!-- Headline -->
+  <h1 class="headline">
+    Bitcoin names just got<br><em>a lot more powerful.</em>
+  </h1>
+
+  <!-- Subline -->
+  <p class="subline">
+    A new version of BTCNative is almost here. Early access is limited.
+    If you have a code, you're in.
+  </p>
+
+  <!-- Code gate -->
+  <div class="gate">
+    <div class="gate__label">Enter your access code</div>
+    <div class="gate__row">
+      <input
+        class="gate__input"
+        id="code-input"
+        type="text"
+        placeholder="BTCN-XXXX-XXXX"
+        maxlength="14"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      />
+      <button class="gate__btn" id="code-btn">Enter</button>
+    </div>
+    <div class="gate__msg" id="gate-msg"></div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider"></div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat__value">8</div>
+      <div class="stat__label">TLDs supported</div>
+    </div>
+    <div class="stat__sep"></div>
+    <div class="stat">
+      <div class="stat__value">∞</div>
+      <div class="stat__label">Subnames per name</div>
+    </div>
+    <div class="stat__sep"></div>
+    <div class="stat">
+      <div class="stat__value">1</div>
+      <div class="stat__label">Protocol. Open.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <a href="https://btcnative.name">btcnative.name</a>
+  &nbsp;·&nbsp;
+  <a href="https://bnrp.name" target="_blank" rel="noopener">bnrp.name</a>
+  &nbsp;·&nbsp;
+  <a href="https://x.com/btcnativename" target="_blank" rel="noopener">@btcnativename</a>
+</div>
+
+<!-- Success overlay -->
+<div class="success-overlay" id="success-overlay">
+  <div class="success-overlay__icon">₿</div>
+  <div class="success-overlay__title">You're in.</div>
+  <p class="success-overlay__sub">
+    Code accepted. Taking you to BTCNative now.
+  </p>
+  <button class="success-overlay__btn" id="success-btn">Enter BTCNative</button>
+</div>
+
+<script>
+  // ── Valid codes (hashed in prod — client-side for now, sufficient for a teaser) ──
+  const VALID_CODES = new Set(["BTCN-25MK-YMUY","BTCN-267D-SWF4","BTCN-2A8V-M97B","BTCN-2BMN-EW62","BTCN-2E98-5XMG","BTCN-2NDC-SKXN","BTCN-2PVC-HQQT","BTCN-2QN7-MBNJ","BTCN-2R3N-3VR3","BTCN-2VHA-DBH7","BTCN-2W2U-FMA4","BTCN-2YUT-GZB8","BTCN-32PD-LG4F","BTCN-32SR-S3VU","BTCN-35KJ-9X7W","BTCN-3BTP-2LZ5","BTCN-3JA7-HFFR","BTCN-3LY8-HQXG","BTCN-3M7Y-YANW","BTCN-3U2M-YUMJ","BTCN-3Y9U-JTCK","BTCN-425C-Z6K4","BTCN-485B-255U","BTCN-48HM-98JV","BTCN-48R8-XPBJ","BTCN-4GMP-6X5H","BTCN-4KGG-4NTL","BTCN-4Q28-DCGV","BTCN-4RJV-4NFP","BTCN-4WJS-6WTE","BTCN-54TW-UH4Z","BTCN-5A5E-YSAV","BTCN-5AUL-4VFN","BTCN-5J4C-KYDT","BTCN-5NUL-V5XP","BTCN-5TFQ-V3XL","BTCN-5Z47-AE8Z","BTCN-6375-VWJG","BTCN-6CD9-ES96","BTCN-6E2S-6AFM","BTCN-6J3W-D2T7","BTCN-6Y22-AKW2","BTCN-6YBD-TXA8","BTCN-6ZYY-88XM","BTCN-7584-6H2Z","BTCN-76W4-87YY","BTCN-77ES-M9CY","BTCN-78EB-BMT2","BTCN-7BPJ-QRJG","BTCN-7BZU-YMVG","BTCN-7CSH-VZ6K","BTCN-7VQV-4G3D","BTCN-7WHV-M9CC","BTCN-829M-C95H","BTCN-863G-W3PS","BTCN-87XJ-CPRZ","BTCN-8AFF-F5HC","BTCN-8BPR-ZKA8","BTCN-8HMA-GXZ3","BTCN-8MVL-327R","BTCN-8VUE-JVLG","BTCN-92LU-KYF9","BTCN-99ZK-NNZV","BTCN-9DNJ-SYQW","BTCN-9HJC-LHN6","BTCN-9JC2-RCGK","BTCN-9U5E-P4U7","BTCN-A6BB-YEKL","BTCN-AB53-FYUE","BTCN-AEJX-VPED","BTCN-AJDK-VHNN","BTCN-AYA4-FQ6L","BTCN-B9NW-LUU2","BTCN-BCNT-PXDX","BTCN-BD5Z-WY2A","BTCN-BKT9-4XVA","BTCN-BV4J-7QDD","BTCN-C3GK-EBTE","BTCN-C55E-8PXD","BTCN-C6XU-KJDZ","BTCN-C8V3-35PV","BTCN-C8YA-FCG2","BTCN-CEEW-BNHG","BTCN-CMW9-9CMN","BTCN-CN32-N4QH","BTCN-CSN6-UJW7","BTCN-CSNZ-7Z6R","BTCN-D2T5-V5BJ","BTCN-D4BR-9VGD","BTCN-D59L-9GSE","BTCN-DCXQ-LNAX","BTCN-DFLF-T5T5","BTCN-DL74-TQUQ","BTCN-DT9E-69RS","BTCN-DY78-GRLX","BTCN-DZTU-3T3E","BTCN-ERV3-YT7V","BTCN-EVJA-XULB","BTCN-EZ95-2X5S","BTCN-F8VN-SARV","BTCN-F977-NNHX","BTCN-FBFP-CEJQ","BTCN-FBLS-LWX8","BTCN-FFBW-UASM","BTCN-FJ4D-L9TT","BTCN-FUKT-Z63C","BTCN-FVDJ-ZSEH","BTCN-FY9Y-GPGU","BTCN-GAFJ-5YN2","BTCN-GDQX-EXSY","BTCN-GE92-R9JA","BTCN-GHAA-29SB","BTCN-GHGD-DS8X","BTCN-GHR7-EHHH","BTCN-GLYB-7W7V","BTCN-GMH2-DFSM","BTCN-GNA6-TWCE","BTCN-GSHA-N7UQ","BTCN-GSMW-7SG3","BTCN-H52N-Q796","BTCN-HJZE-3NYE","BTCN-HKTY-PNZZ","BTCN-HZ8V-PLGA","BTCN-HZB7-L8X3","BTCN-J4RP-PQ68","BTCN-JGEJ-9ZKZ","BTCN-JJR2-J24B","BTCN-JWY7-YXRQ","BTCN-JX3M-2SM3","BTCN-JYB6-YE7M","BTCN-K3J6-Y63A","BTCN-KF84-XKGR","BTCN-KJFL-Q9A3","BTCN-KQKT-524M","BTCN-KRT4-56F9","BTCN-KURS-8D7L","BTCN-KXKC-2NKU","BTCN-KZUD-732W","BTCN-L6J3-NLBQ","BTCN-L7FR-RM9Y","BTCN-LCWQ-HZ3K","BTCN-LFNP-ZY2F","BTCN-LGZJ-35VE","BTCN-LLQL-L7C3","BTCN-LQ46-AU2L","BTCN-LRL6-YFDZ","BTCN-LUF7-N4X6","BTCN-LZ2X-BWN3","BTCN-M8DQ-FXS5","BTCN-MBUV-WQFS","BTCN-MJ67-K2C3","BTCN-MN2V-4PQG","BTCN-MPWY-RAHJ","BTCN-MQKR-2HC7","BTCN-MVBP-PE32","BTCN-MX55-WAAC","BTCN-MZLN-N4CN","BTCN-N2WU-CXTK","BTCN-N6HJ-H6UA","BTCN-N9ES-9YB8","BTCN-N9ZH-C2QF","BTCN-NCPF-9AR6","BTCN-NEBU-QN3M","BTCN-NNZD-PUNN","BTCN-NQ5Y-5VG9","BTCN-NRC8-6EGW","BTCN-NSF4-FNWK","BTCN-P2LN-WSXN","BTCN-P2QD-NFN8","BTCN-PEZB-LPXR","BTCN-PGQ5-RA78","BTCN-PNJH-Q4SC","BTCN-PX9V-EFKK","BTCN-Q76S-GA9A","BTCN-QBAJ-HKLG","BTCN-QBSP-FS8A","BTCN-QE8F-5NVB","BTCN-QQ22-E9JH","BTCN-QSQN-WQCK","BTCN-QWP6-9E87","BTCN-QZDS-YPE6","BTCN-R575-XKDU","BTCN-RC99-7KGU","BTCN-RFMS-9WBV","BTCN-RUGM-JCMZ","BTCN-SGQ2-X8NF","BTCN-SR25-T56G","BTCN-SRWK-CFSK","BTCN-SWAQ-JKLX","BTCN-T2KN-WQ5M","BTCN-T6E5-PV6V","BTCN-T823-MPMJ","BTCN-T82P-RQP5","BTCN-TAMY-ZUUS","BTCN-TBC4-KEGZ","BTCN-TES5-W85A","BTCN-TFLX-RKTV","BTCN-TJCQ-CA3K","BTCN-TNBX-WA38","BTCN-TQ8W-CADP","BTCN-TSTE-AVJQ","BTCN-U3BK-MX5J","BTCN-U3HW-95WV","BTCN-U7QL-JLYX","BTCN-UL4R-39XJ","BTCN-UN3P-ATU2","BTCN-UN9C-E7TR","BTCN-URXX-5ZF3","BTCN-UV7J-FBZS","BTCN-V5UV-RC2R","BTCN-V6U3-JPN6","BTCN-VD7L-J44E","BTCN-VEST-VLPC","BTCN-VM4G-8AUT","BTCN-VMCK-2ZYT","BTCN-VX2J-TAW8","BTCN-VX9F-MNTR","BTCN-VZVP-8S49","BTCN-W87Q-M6YU","BTCN-W98B-VXDU","BTCN-WMVY-UDVB","BTCN-WQRE-3XQL","BTCN-WZXT-99BQ","BTCN-X2CL-LV4R","BTCN-X7A9-9D54","BTCN-XD6D-9D5S","BTCN-XGK3-LQGS","BTCN-XJFD-TC8E","BTCN-XP2M-PBT7","BTCN-XPM4-E59F","BTCN-XRUX-XYL3","BTCN-XSRZ-BHDD","BTCN-XWST-32BD","BTCN-Y556-YYW2","BTCN-Y7HK-8BUE","BTCN-Y9AM-35MD","BTCN-Y9J6-XJT2","BTCN-YBPN-NJRF","BTCN-YFNN-MLYL","BTCN-YFUN-QUWX","BTCN-YMQD-G2F7","BTCN-YYTH-SL7M","BTCN-YYUB-YBMZ","BTCN-Z2ZC-EALR","BTCN-Z37Q-H3QW","BTCN-Z76E-62V5","BTCN-ZFMA-6ZDT","BTCN-ZSLD-TJSJ","BTCN-ZX92-TGPP","BTCN-ZXSE-9MED"]);
+
+  const DESTINATION = 'https://btcnative.name';
+  const STORAGE_KEY = 'btcn_early_access';
+
+  const input  = document.getElementById('code-input');
+  const btn    = document.getElementById('code-btn');
+  const msg    = document.getElementById('gate-msg');
+  const overlay = document.getElementById('success-overlay');
+  const successBtn = document.getElementById('success-btn');
+
+  // Auto-format input as BTCN-XXXX-XXXX
+  input.addEventListener('input', () => {
+    let val = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (val.startsWith('BTCN')) val = val.slice(4);
+    const parts = [];
+    if (val.length > 0) parts.push('BTCN');
+    if (val.length > 0) parts.push(val.slice(0, 4));
+    if (val.length > 4) parts.push(val.slice(4, 8));
+    input.value = parts.join('-');
+    msg.textContent = '';
+    msg.className = 'gate__msg';
+    input.classList.remove('error');
+  });
+
+  // Submit on Enter
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') attempt();
+  });
+
+  btn.addEventListener('click', attempt);
+  successBtn.addEventListener('click', () => {
+    window.location.href = DESTINATION;
+  });
+
+  // Check if already verified this session
+  if (sessionStorage.getItem(STORAGE_KEY) === '1') {
+    window.location.href = DESTINATION;
+  }
+
+  function attempt() {
+    const raw = input.value.trim().toUpperCase();
+    if (!raw) {
+      shake('Enter your access code.');
+      return;
+    }
+
+    if (VALID_CODES.has(raw)) {
+      // Valid
+      sessionStorage.setItem(STORAGE_KEY, '1');
+      btn.disabled = true;
+      input.disabled = true;
+      msg.textContent = 'Code accepted.';
+      msg.className = 'gate__msg success';
+      setTimeout(() => { overlay.classList.add('show'); }, 300);
+    } else {
+      shake('Invalid code. Check your invite and try again.');
+    }
+  }
+
+  function shake(message) {
+    input.classList.remove('error');
+    void input.offsetWidth; // reflow
+    input.classList.add('error');
+    msg.textContent = message;
+    msg.className = 'gate__msg error';
+  }
+</script>
+</body>
+</html>
