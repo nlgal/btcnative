@@ -595,10 +595,6 @@ function buildNameCard(data) {
   const avatarField = bnrp && bnrp.records && bnrp.records.avatar;
   const displayName = bnrp && bnrp.records && bnrp.records.display;
 
-  // Deterministic gradient for avatar fallback
-  const grad = nameGradient(name);
-  const gradStyle = `background:linear-gradient(135deg,${grad.from},${grad.to});color:${grad.text};`;
-
   const card = document.createElement('a');
   card.className = 'name-card';
   // Pass listing context through URL so profile page can show correct buy state
@@ -608,9 +604,13 @@ function buildNameCard(data) {
   if (data.source)    _cardParams.set('src', data.source);
   card.href = `./name.html?${_cardParams.toString()}`;
   card.dataset.name = name;
+  // Only render avatar element when a BNRP avatar is set — no color dots for names without one
+  const avatarHtml = avatarField
+    ? (() => { const grad = nameGradient(name); return `<div class="name-card__avatar" style="background:linear-gradient(135deg,${grad.from},${grad.to});" aria-hidden="true"></div>`; })()
+    : '';
   card.innerHTML = `
     <div class="name-card__header">
-      <div class="name-card__avatar" style="${gradStyle}" aria-hidden="true"></div>
+      ${avatarHtml}
       <div>
         <div class="name-card__name">${base}<span style="color:var(--color-primary);">${tld}</span></div>
         ${displayName ? `<div style="font-size:10px;color:var(--color-text-faint);">${displayName}</div>` : ''}
