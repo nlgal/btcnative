@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BNRP Tutorial — BTCNative</title>
+  <meta name="description" content="How Bitcoin Name Resolution Protocol works: names, subnames, records, authority, and the BTCNative tool suite." />
+  <style>
+    /* ─── Design tokens ─────────────────────────────────────────── */
+    :root {
+      --color-brand-orange: #FF8A00;
+      --color-brand-gold:   #FFB100;
+      --color-bg:           #0D0D0D;
+      --color-surface:      #141414;
+      --color-surface-2:    #1A1A1A;
+      --color-border:       #252525;
+      --color-divider:      #1E1E1E;
+      --color-text:         #E8E8E6;
+      --color-text-muted:   #7A7876;
+      --color-text-faint:   #3D3C3A;
+
+      --text-xs:   clamp(0.75rem,  0.7rem  + 0.25vw, 0.875rem);
+      --text-sm:   clamp(0.875rem, 0.8rem  + 0.35vw, 1rem);
+      --text-base: clamp(1rem,     0.95rem + 0.25vw, 1.125rem);
+      --text-lg:   clamp(1.125rem, 1rem    + 0.75vw, 1.5rem);
+      --text-xl:   clamp(1.5rem,   1.2rem  + 1.25vw, 2.25rem);
+      --text-2xl:  clamp(2rem,     1.2rem  + 2.5vw,  3.5rem);
+
+      --space-1:  0.25rem;
+      --space-2:  0.5rem;
+      --space-3:  0.75rem;
+      --space-4:  1rem;
+      --space-5:  1.25rem;
+      --space-6:  1.5rem;
+      --space-8:  2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+      --space-20: 5rem;
+
+      --radius-sm: 0.25rem;
+      --radius-md: 0.375rem;
+      --radius-lg: 0.5rem;
+
+      --transition: 160ms cubic-bezier(0.16, 1, 0.3, 1);
+
+      --nav-width: 220px;
+      --content-max: 720px;
+    }
+
+    /* ─── Base reset ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: var(--space-20);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: var(--text-base);
+      line-height: 1.7;
+      color: var(--color-text);
+      background-color: var(--color-bg);
+      min-height: 100dvh;
+    }
+
+    h1, h2, h3, h4 {
+      line-height: 1.15;
+      text-wrap: balance;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    p, li { text-wrap: pretty; max-width: 72ch; }
+    a { color: var(--color-brand-orange); text-decoration: none; transition: color var(--transition); }
+    a:hover { color: var(--color-brand-gold); }
+    a:focus-visible { outline: 2px solid var(--color-brand-orange); outline-offset: 3px; border-radius: var(--radius-sm); }
+
+    img, svg { display: block; max-width: 100%; }
+    ul[role="list"], ol[role="list"] { list-style: none; }
+
+    ::selection { background: color-mix(in srgb, var(--color-brand-orange) 25%, transparent); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    /* ─── Top nav bar ─────────────────────────────────────────────── */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      padding: 0 var(--space-8);
+      height: 56px;
+      background: color-mix(in srgb, var(--color-bg) 90%, transparent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .topnav-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text);
+      text-decoration: none;
+      letter-spacing: -0.01em;
+    }
+
+    .topnav-brand svg { flex-shrink: 0; }
+
+    .topnav-brand:hover { color: var(--color-brand-orange); }
+
+    .topnav-links {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+    }
+
+    .topnav-links a {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      text-decoration: none;
+      transition: color var(--transition);
+    }
+
+    .topnav-links a:hover { color: var(--color-text); }
+
+    .topnav-cta {
+      font-size: var(--text-sm);
+      font-weight: 500;
+      padding: var(--space-2) var(--space-4);
+      background: var(--color-brand-orange);
+      color: #0D0D0D;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      transition: background var(--transition);
+      flex-shrink: 0;
+    }
+
+    .topnav-cta:hover { background: var(--color-brand-gold); color: #0D0D0D; }
+
+    /* ─── Page layout ─────────────────────────────────────────────── */
+    .page-wrapper {
+      display: grid;
+      grid-template-columns: var(--nav-width) 1fr;
+      grid-template-areas: "sidebar main";
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 var(--space-8);
+      gap: var(--space-16);
+    }
+
+    /* ─── Sidebar nav ─────────────────────────────────────────────── */
+    .sidebar {
+      grid-area: sidebar;
+      padding-top: var(--space-12);
+    }
+
+    .sidebar-nav {
+      position: sticky;
+      top: calc(56px + var(--space-8));
+    }
+
+    .sidebar-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--color-text-faint);
+      margin-bottom: var(--space-4);
+    }
+
+    .sidebar-nav ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .sidebar-nav a {
+      display: block;
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      text-decoration: none;
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      transition: color var(--transition), background var(--transition);
+      border-left: 2px solid transparent;
+    }
+
+    .sidebar-nav a:hover {
+      color: var(--color-text);
+      background: var(--color-surface);
+    }
+
+    .sidebar-nav a.active {
+      color: var(--color-brand-orange);
+      border-left-color: var(--color-brand-orange);
+      background: color-mix(in srgb, var(--color-brand-orange) 8%, transparent);
+    }
+
+    /* ─── Main content ────────────────────────────────────────────── */
+    .main-content {
+      grid-area: main;
+      padding-top: var(--space-12);
+      padding-bottom: var(--space-32, 8rem);
+      min-width: 0;
+    }
+
+    /* ─── Hero ────────────────────────────────────────────────────── */
+    .hero {
+      margin-bottom: var(--space-16);
+      padding-bottom: var(--space-12);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-brand-orange);
+      margin-bottom: var(--space-5);
+    }
+
+    .hero-eyebrow span {
+      display: inline-block;
+      width: 20px;
+      height: 1px;
+      background: var(--color-brand-orange);
+    }
+
+    .hero h1 {
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #FFFFFF;
+      margin-bottom: var(--space-5);
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--color-brand-orange), var(--color-brand-gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-desc {
+      font-size: var(--text-lg);
+      color: var(--color-text-muted);
+      max-width: 58ch;
+      line-height: 1.6;
+    }
+
+    /* ─── Sections ────────────────────────────────────────────────── */
+    .doc-section {
+      margin-bottom: var(--space-16);
+      padding-bottom: var(--space-16);
+      border-bottom: 1px solid var(--color-divider);
+    }
+
+    .doc-section:last-child {
+      border-bottom: none;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+
+    .section-num {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--color-brand-orange);
+      font-variant-numeric: tabular-nums;
+      min-width: 1.8em;
+    }
+
+    .doc-section h2 {
+      font-size: var(--text-lg);
+      font-weight: 600;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+    }
+
+    .doc-section p {
+      color: var(--color-text);
+      margin-bottom: var(--space-4);
+    }
+
+    .doc-section p:last-of-type { margin-bottom: 0; }
+
+    /* ─── Sub-headings ────────────────────────────────────────────── */
+    .doc-section h3 {
+      font-size: var(--text-base);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-top: var(--space-8);
+      margin-bottom: var(--space-3);
+      letter-spacing: -0.01em;
+    }
+
+    /* ─── Prose gap utility ───────────────────────────────────────── */
+    .prose-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    /* ─── Code blocks ─────────────────────────────────────────────── */
+    pre {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      overflow-x: auto;
+      margin-top: var(--space-6);
+      position: relative;
+    }
+
+    pre code {
+      font-family: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+      font-size: var(--text-xs);
+      line-height: 1.75;
+      color: #D4D4D0;
+      tab-size: 2;
+    }
+
+    code {
+      font-family: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+      font-size: 0.875em;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      padding: 0.1em 0.35em;
+      border-radius: var(--radius-sm);
+      color: var(--color-brand-gold);
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+      font-size: var(--text-xs);
+    }
+
+    /* JSON syntax hints */
+    .tok-key   { color: #79C0FF; }
+    .tok-str   { color: #A5D6FF; }
+    .tok-num   { color: #FFB100; }
+    .tok-op    { color: #FF8A00; }
+    .tok-punc  { color: #7A7876; }
+
+    /* Code label */
+    .code-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--color-surface-2, #1A1A1A);
+      border: 1px solid var(--color-border);
+      border-bottom: none;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: var(--space-2) var(--space-4);
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      font-family: "SF Mono", "Cascadia Code", monospace;
+      margin-top: var(--space-6);
+    }
+
+    .code-label + pre {
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      margin-top: 0;
+      border-top: none;
+    }
+
+    /* ─── Info callout ────────────────────────────────────────────── */
+    .callout {
+      display: flex;
+      gap: var(--space-4);
+      padding: var(--space-5);
+      background: color-mix(in srgb, var(--color-brand-orange) 7%, transparent);
+      border: 1px solid color-mix(in srgb, var(--color-brand-orange) 20%, transparent);
+      border-radius: var(--radius-lg);
+      margin-top: var(--space-6);
+    }
+
+    .callout-icon {
+      flex-shrink: 0;
+      font-size: var(--text-base);
+      color: var(--color-brand-orange);
+      font-weight: 700;
+      line-height: 1.7;
+    }
+
+    .callout p {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin-bottom: 0;
+    }
+
+    .callout p strong { color: var(--color-text); }
+
+    /* ─── Definition list ─────────────────────────────────────────── */
+    .def-list {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: var(--space-2) var(--space-6);
+      margin-top: var(--space-4);
+    }
+
+    .def-list dt {
+      font-family: "SF Mono", "Cascadia Code", monospace;
+      font-size: var(--text-xs);
+      color: var(--color-brand-gold);
+      padding-top: 0.2em;
+      font-weight: 600;
+    }
+
+    .def-list dd {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      padding-left: 0;
+    }
+
+    /* ─── State pills ─────────────────────────────────────────────── */
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: var(--space-3);
+      margin-top: var(--space-5);
+    }
+
+    .state-card {
+      padding: var(--space-4);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+    }
+
+    .state-name {
+      display: inline-block;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-sm);
+      margin-bottom: var(--space-3);
+    }
+
+    .state-active   { background: color-mix(in srgb, #22c55e 15%, transparent); color: #4ade80; }
+    .state-revoked  { background: color-mix(in srgb, #ef4444 15%, transparent); color: #f87171; }
+    .state-unverified { background: color-mix(in srgb, var(--color-brand-gold) 15%, transparent); color: var(--color-brand-gold); }
+    .state-superseded { background: color-mix(in srgb, #7A7876 15%, transparent); color: #a1a09e; }
+    .state-unauthorized { background: color-mix(in srgb, #ef4444 12%, transparent); color: #f87171; }
+
+    .state-card p {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-bottom: 0;
+      max-width: none;
+    }
+
+    /* ─── TLD pills ───────────────────────────────────────────────── */
+    .tld-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+
+    .tld-pill {
+      font-family: "SF Mono", "Cascadia Code", monospace;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      padding: var(--space-1) var(--space-3);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      color: var(--color-brand-orange);
+    }
+
+    /* ─── Authority table ─────────────────────────────────────────── */
+    .authority-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--space-5);
+      font-size: var(--text-sm);
+    }
+
+    .authority-table th {
+      text-align: left;
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .authority-table td {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--color-divider);
+      color: var(--color-text);
+      vertical-align: top;
+    }
+
+    .authority-table tr:last-child td { border-bottom: none; }
+
+    .authority-table td:first-child {
+      font-family: "SF Mono", "Cascadia Code", monospace;
+      font-size: var(--text-xs);
+      color: var(--color-brand-gold);
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    /* ─── API endpoint list ───────────────────────────────────────── */
+    .endpoint-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      margin-top: var(--space-5);
+    }
+
+    .endpoint {
+      display: grid;
+      grid-template-columns: 50px 1fr;
+      gap: var(--space-3);
+      align-items: start;
+      padding: var(--space-4);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+    }
+
+    .method {
+      font-family: "SF Mono", "Cascadia Code", monospace;
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: #4ade80;
+      padding-top: 0.15em;
+    }
+
+    .endpoint-path {
+      font-family: "SF Mono", "Cascadia Code", monospace;
+      font-size: var(--text-xs);
+      color: var(--color-brand-orange);
+      margin-bottom: var(--space-1);
+    }
+
+    .endpoint-desc {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+
+    /* ─── Op tags ─────────────────────────────────────────────────── */
+    .op-tag {
+      display: inline-block;
+      font-family: "SF Mono", "Cascadia Code", monospace;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      padding: 0.1em 0.4em;
+      background: color-mix(in srgb, var(--color-brand-orange) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--color-brand-orange) 25%, transparent);
+      color: var(--color-brand-orange);
+      border-radius: var(--radius-sm);
+    }
+
+    /* ─── Mobile hamburger ────────────────────────────────────────── */
+    .mobile-nav-toggle {
+      display: none;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      padding: var(--space-2) 0;
+      background: none;
+      border: none;
+    }
+
+    .mobile-nav-toggle svg { flex-shrink: 0; }
+
+    .mobile-sidebar {
+      display: none;
+    }
+
+    /* ─── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .page-wrapper {
+        grid-template-columns: 1fr;
+        grid-template-areas: "main";
+        padding: 0 var(--space-5);
+        gap: 0;
+      }
+
+      .sidebar { display: none; }
+
+      .topnav {
+        padding: 0 var(--space-5);
+      }
+
+      .topnav-links { display: none; }
+
+      .mobile-nav-toggle { display: flex; }
+
+      .mobile-sidebar {
+        display: block;
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border);
+        padding: var(--space-4) var(--space-5);
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 0.3s ease, padding 0.2s ease;
+      }
+
+      .mobile-sidebar.open {
+        max-height: 600px;
+        padding: var(--space-4) var(--space-5);
+      }
+
+      .mobile-sidebar ul {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-1);
+      }
+
+      .mobile-sidebar a {
+        display: block;
+        font-size: var(--text-sm);
+        color: var(--color-text-muted);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+      }
+
+      .mobile-sidebar a:hover { color: var(--color-text); }
+
+      .main-content {
+        padding-top: var(--space-10);
+        padding-bottom: var(--space-16);
+      }
+
+      .def-list {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+      }
+
+      .def-list dt { color: var(--color-brand-gold); }
+      .def-list dd { padding-left: var(--space-3); border-left: 2px solid var(--color-border); }
+    }
+
+    @media (max-width: 540px) {
+      .hero h1 { font-size: clamp(1.75rem, 5vw, 2.5rem); }
+      .topnav-cta { display: none; }
+      .endpoint { grid-template-columns: 40px 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Top navigation ───────────────────────────────────────── -->
+  <nav class="topnav" aria-label="Site navigation">
+    <a class="topnav-brand" href="https://btcnative.name" aria-label="BTCNative home">
+      <!-- Inline SVG logo mark -->
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+        <rect width="28" height="28" rx="6" fill="#FF8A00"/>
+        <path d="M8 7h7.5c2.485 0 4 1.4 4 3.4 0 1.4-.8 2.6-2 3.1 1.6.5 2.6 1.8 2.6 3.4 0 2.3-1.7 3.7-4.4 3.7H8V7zm3 5.3h3.8c1.1 0 1.7-.55 1.7-1.45S15.9 9.4 14.8 9.4H11v2.9zm0 5.6h4.1c1.2 0 1.85-.6 1.85-1.6s-.65-1.6-1.85-1.6H11v3.2z" fill="#0D0D0D"/>
+      </svg>
+      BTCNative
+    </a>
+
+    <div class="topnav-links">
+      <a href="#bnrp">BNRP</a>
+      <a href="#names">Names</a>
+      <a href="#subnames">Subnames</a>
+      <a href="#records">Records</a>
+      <a href="#authority">Authority</a>
+      <a href="#namespace">Namespace</a>
+      <a href="#tools">Tools</a>
+      <a href="#api">API</a>
+    </div>
+
+    <button class="mobile-nav-toggle" aria-expanded="false" aria-controls="mobile-sidebar" onclick="toggleMobileNav(this)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+      Contents
+    </button>
+
+    <a class="topnav-cta" href="https://btcnative.name">Open App</a>
+  </nav>
+
+  <!-- ─── Mobile nav drawer ────────────────────────────────────── -->
+  <div class="mobile-sidebar" id="mobile-sidebar" aria-hidden="true">
+    <ul>
+      <li><a href="#bnrp" onclick="closeMobileNav()">1. What is BNRP</a></li>
+      <li><a href="#names" onclick="closeMobileNav()">2. Names</a></li>
+      <li><a href="#subnames" onclick="closeMobileNav()">3. Subnames</a></li>
+      <li><a href="#records" onclick="closeMobileNav()">4. Records</a></li>
+      <li><a href="#authority" onclick="closeMobileNav()">5. Authority</a></li>
+      <li><a href="#namespace" onclick="closeMobileNav()">6. Namespace Policy</a></li>
+      <li><a href="#tools" onclick="closeMobileNav()">7. BTCNative Tools</a></li>
+      <li><a href="#api" onclick="closeMobileNav()">8. API Reference</a></li>
+    </ul>
+  </div>
+
+  <!-- ─── Page wrapper ─────────────────────────────────────────── -->
+  <div class="page-wrapper">
+
+    <!-- ─── Sticky sidebar ────────────────────────────────────── -->
+    <aside class="sidebar" aria-label="Tutorial contents">
+      <nav class="sidebar-nav">
+        <p class="sidebar-label">Contents</p>
+        <ul>
+          <li><a href="#bnrp" class="nav-link">What is BNRP</a></li>
+          <li><a href="#names" class="nav-link">Names</a></li>
+          <li><a href="#subnames" class="nav-link">Subnames</a></li>
+          <li><a href="#records" class="nav-link">Records</a></li>
+          <li><a href="#authority" class="nav-link">Authority</a></li>
+          <li><a href="#namespace" class="nav-link">Namespace Policy</a></li>
+          <li><a href="#tools" class="nav-link">BTCNative Tools</a></li>
+          <li><a href="#api" class="nav-link">API Reference</a></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- ─── Main content ──────────────────────────────────────── -->
+    <main class="main-content" id="main">
+
+      <!-- Hero -->
+      <header class="hero">
+        <p class="hero-eyebrow"><span></span> BNRP Tutorial</p>
+        <h1>How <em>BNRP</em> works</h1>
+        <p class="hero-desc">Bitcoin Name Resolution Protocol: an open naming layer built on Ordinals. No smart contracts, no off-chain state. Just inscriptions and the wallets that hold them.</p>
+      </header>
+
+      <!-- ── Section 1: What is BNRP ──────────────────────────── -->
+      <section class="doc-section" id="bnrp" aria-labelledby="bnrp-heading">
+        <div class="section-header">
+          <span class="section-num">01</span>
+          <h2 id="bnrp-heading">What is BNRP</h2>
+        </div>
+
+        <div class="prose-stack">
+          <p>
+            BNRP stands for Bitcoin Name Resolution Protocol. It is an open protocol for human-readable names on Bitcoin,
+            built entirely on top of <a href="https://docs.ordinals.com/" rel="noopener">Bitcoin Ordinals</a>.
+            There are no smart contracts, no DNS, and no off-chain registry. Every record lives on Bitcoin L1.
+          </p>
+          <p>
+            A name like <code>trump.btc</code> is an Ordinals inscription. Ownership is determined purely by who holds
+            the inscription UTXO — the same way you own a satoshi. Transfer the UTXO, transfer the name.
+            Nothing else needs to happen.
+          </p>
+          <p>
+            The protocol is specified as a JSON schema written into inscription content.
+            Any indexer that speaks Ordinals and understands BNRP's operation types can resolve names
+            without trusting any third party.
+          </p>
+        </div>
+
+        <h3>Supported TLDs</h3>
+        <p>BNRP currently recognizes the following top-level domains:</p>
+        <div class="tld-row">
+          <span class="tld-pill">.btc</span>
+          <span class="tld-pill">.sats</span>
+          <span class="tld-pill">.x</span>
+          <span class="tld-pill">.ord</span>
+          <span class="tld-pill">.gm</span>
+          <span class="tld-pill">.xbt</span>
+          <span class="tld-pill">.sat</span>
+          <span class="tld-pill">.unisat</span>
+        </div>
+
+        <div class="callout">
+          <div class="callout-icon">!</div>
+          <p>
+            <strong>No central authority.</strong> BNRP does not have a registry contract or a governing DNS zone.
+            Validity is determined by inscription provenance and the nonce ordering rules described in this document.
+          </p>
+        </div>
+      </section>
+
+      <!-- ── Section 2: Names ──────────────────────────────────── -->
+      <section class="doc-section" id="names" aria-labelledby="names-heading">
+        <div class="section-header">
+          <span class="section-num">02</span>
+          <h2 id="names-heading">Names</h2>
+        </div>
+
+        <div class="prose-stack">
+          <p>
+            A BNRP name is an Ordinals inscription whose content is a JSON object with <code>"p":"bnrp"</code>
+            and a label matching one of the supported TLDs. The inscription UTXO is the authoritative
+            proof of ownership — no registration confirmation, no separate ownership record.
+          </p>
+          <p>
+            Names can be bought and sold on the BTCNative marketplace. Selling a name is just
+            transferring the inscription to a new wallet. No contract call, no registry update.
+            The new UTXO holder is the new owner, and any indexer reading BNRP state will
+            reflect that immediately.
+          </p>
+          <p>
+            When a root name changes hands, all subnames under it become <strong>invalid automatically</strong>.
+            The new owner starts with a clean slate and can re-authorize subnames individually.
+            This prevents squatting on subname real estate across a sale boundary.
+          </p>
+        </div>
+
+        <div class="code-label">Example: name inscription</div>
+        <pre><code><span class="tok-punc">{</span>
+  <span class="tok-key">"p"</span><span class="tok-punc">:</span>    <span class="tok-str">"bnrp"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"op"</span><span class="tok-punc">:</span>   <span class="tok-str">"name_register"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"name"</span><span class="tok-punc">:</span> <span class="tok-str">"trump.btc"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"records"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"btc"</span><span class="tok-punc">:</span>     <span class="tok-str">"bc1pexampletaprootaddress..."</span><span class="tok-punc">,</span>
+    <span class="tok-key">"x"</span><span class="tok-punc">:</span>      <span class="tok-str">"realDonaldTrump"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"url"</span><span class="tok-punc">:</span>    <span class="tok-str">"https://trump.com"</span>
+  <span class="tok-punc">},</span>
+  <span class="tok-key">"nonce"</span><span class="tok-punc">:</span> <span class="tok-num">1</span><span class="tok-punc">,</span>
+  <span class="tok-key">"v"</span><span class="tok-punc">:</span>     <span class="tok-num">1</span>
+<span class="tok-punc">}</span></code></pre>
+      </section>
+
+      <!-- ── Section 3: Subnames ───────────────────────────────── -->
+      <section class="doc-section" id="subnames" aria-labelledby="subnames-heading">
+        <div class="section-header">
+          <span class="section-num">03</span>
+          <h2 id="subnames-heading">Subnames</h2>
+        </div>
+
+        <div class="prose-stack">
+          <p>
+            A subname (e.g. <code>donald.trump.btc</code>) is a separate Ordinals inscription.
+            It is created by the name owner inscribing a <span class="op-tag">subname_register</span> operation.
+            The <code>"to"</code> field in that inscription is the initial owner address.
+            The subname can then be managed independently — its owner controls their own records.
+          </p>
+          <p>
+            The subname owner can update their records with <span class="op-tag">subname_update</span>,
+            and transfer the subname to another wallet with <span class="op-tag">subname_transfer</span>.
+            The name owner retains the right to revoke any subname at any time with <span class="op-tag">subname_revoke</span>.
+          </p>
+          <p>
+            For avatar records, the subname can either point to its own Ordinals inscription ID
+            (prefixed <code>ord:...</code>) or use the value <code>"inherit"</code> to resolve
+            to the parent name's avatar automatically.
+          </p>
+        </div>
+
+        <h3>Subname lifecycle operations</h3>
+        <div class="def-list" role="list">
+          <dt role="listitem">subname_register</dt>
+          <dd>Name owner creates a subname and assigns it to an address.</dd>
+          <dt>subname_update</dt>
+          <dd>Subname owner updates their own records (btc address, handles, URL, etc).</dd>
+          <dt>subname_transfer</dt>
+          <dd>Subname owner transfers the subname to a new wallet.</dd>
+          <dt>subname_revoke</dt>
+          <dd>Name owner revokes a subname, invalidating it immediately.</dd>
+        </div>
+
+        <div class="code-label">subname_register inscription</div>
+        <pre><code><span class="tok-punc">{</span>
+  <span class="tok-key">"p"</span><span class="tok-punc">:</span>    <span class="tok-str">"bnrp"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"op"</span><span class="tok-punc">:</span>   <span class="tok-str">"subname_register"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"name"</span><span class="tok-punc">:</span> <span class="tok-str">"trump.btc"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"sub"</span><span class="tok-punc">:</span>  <span class="tok-str">"donald.trump.btc"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"to"</span><span class="tok-punc">:</span>   <span class="tok-str">"bc1pdonaldwalletaddress..."</span><span class="tok-punc">,</span>
+  <span class="tok-key">"records"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"btc"</span><span class="tok-punc">:</span>    <span class="tok-str">"bc1pdonaldwalletaddress..."</span><span class="tok-punc">,</span>
+    <span class="tok-key">"x"</span><span class="tok-punc">:</span>     <span class="tok-str">"donaldtrump"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"avatar"</span><span class="tok-punc">:</span> <span class="tok-str">"inherit"</span>
+  <span class="tok-punc">},</span>
+  <span class="tok-key">"nonce"</span><span class="tok-punc">:</span> <span class="tok-num">1</span><span class="tok-punc">,</span>
+  <span class="tok-key">"v"</span><span class="tok-punc">:</span>     <span class="tok-num">1</span>
+<span class="tok-punc">}</span></code></pre>
+
+        <div class="code-label">subname_update inscription</div>
+        <pre><code><span class="tok-punc">{</span>
+  <span class="tok-key">"p"</span><span class="tok-punc">:</span>    <span class="tok-str">"bnrp"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"op"</span><span class="tok-punc">:</span>   <span class="tok-str">"subname_update"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"sub"</span><span class="tok-punc">:</span>  <span class="tok-str">"donald.trump.btc"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"records"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"btc"</span><span class="tok-punc">:</span>       <span class="tok-str">"bc1pnewaddress..."</span><span class="tok-punc">,</span>
+    <span class="tok-key">"lightning"</span><span class="tok-punc">:</span> <span class="tok-str">"donald@getalby.com"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"url"</span><span class="tok-punc">:</span>       <span class="tok-str">"https://donald.trump.btc"</span>
+  <span class="tok-punc">},</span>
+  <span class="tok-key">"nonce"</span><span class="tok-punc">:</span> <span class="tok-num">2</span><span class="tok-punc">,</span>
+  <span class="tok-key">"v"</span><span class="tok-punc">:</span>     <span class="tok-num">1</span>
+<span class="tok-punc">}</span></code></pre>
+
+        <div class="callout">
+          <div class="callout-icon">!</div>
+          <p>
+            <strong>Sale invalidates all subnames.</strong> When the root name inscription moves to a new wallet,
+            every subname under it becomes <code>unverified</code>. The new owner decides which subnames,
+            if any, to re-authorize. Prior subname holders cannot force reinstatement.
+          </p>
+        </div>
+      </section>
+
+      <!-- ── Section 4: Records ────────────────────────────────── -->
+      <section class="doc-section" id="records" aria-labelledby="records-heading">
+        <div class="section-header">
+          <span class="section-num">04</span>
+          <h2 id="records-heading">Records</h2>
+        </div>
+
+        <div class="prose-stack">
+          <p>
+            Records are stored inside the inscription JSON under a <code>"records"</code> object.
+            Standard keys are defined by the protocol; any additional key is also accepted —
+            BNRP does not restrict custom fields.
+          </p>
+          <p>
+            Resolvers read the highest-nonce valid inscription for a given name or subname and
+            return whatever records it contains. There is no separate record-update mechanism —
+            updating a record means inscribing a new operation with a higher nonce.
+          </p>
+        </div>
+
+        <h3>Standard record keys</h3>
+        <div class="def-list">
+          <dt>btc</dt>
+          <dd>Bitcoin taproot address. The canonical payment destination for this name.</dd>
+          <dt>lightning</dt>
+          <dd>Lightning address (<code>user@domain.com</code> format).</dd>
+          <dt>x</dt>
+          <dd>Twitter/X handle, without the @ symbol.</dd>
+          <dt>url</dt>
+          <dd>Primary website URL.</dd>
+          <dt>avatar</dt>
+          <dd>Ordinals inscription ID prefixed with <code>ord:</code>, or the string <code>"inherit"</code> to use the parent name's avatar.</dd>
+          <dt>nostr</dt>
+          <dd>Nostr public key (npub or hex).</dd>
+          <dt>email</dt>
+          <dd>Contact email address.</dd>
+          <dt>github</dt>
+          <dd>GitHub username.</dd>
+        </div>
+
+        <div class="code-label">Full records example</div>
+        <pre><code><span class="tok-punc">{</span>
+  <span class="tok-key">"p"</span><span class="tok-punc">:</span>    <span class="tok-str">"bnrp"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"op"</span><span class="tok-punc">:</span>   <span class="tok-str">"subname_update"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"sub"</span><span class="tok-punc">:</span>  <span class="tok-str">"donald.trump.btc"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"records"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"btc"</span><span class="tok-punc">:</span>       <span class="tok-str">"bc1p..."</span><span class="tok-punc">,</span>
+    <span class="tok-key">"lightning"</span><span class="tok-punc">:</span> <span class="tok-str">"donald@getalby.com"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"x"</span><span class="tok-punc">:</span>         <span class="tok-str">"donaldtrump"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"url"</span><span class="tok-punc">:</span>       <span class="tok-str">"https://trump.com"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"avatar"</span><span class="tok-punc">:</span>    <span class="tok-str">"ord:a1b2c3d4...i0"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"nostr"</span><span class="tok-punc">:</span>     <span class="tok-str">"npub1..."</span><span class="tok-punc">,</span>
+    <span class="tok-key">"github"</span><span class="tok-punc">:</span>    <span class="tok-str">"donaldtrump"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"custom_key"</span><span class="tok-punc">:</span> <span class="tok-str">"any value accepted"</span>
+  <span class="tok-punc">},</span>
+  <span class="tok-key">"nonce"</span><span class="tok-punc">:</span> <span class="tok-num">5</span><span class="tok-punc">,</span>
+  <span class="tok-key">"v"</span><span class="tok-punc">:</span>     <span class="tok-num">1</span>
+<span class="tok-punc">}</span></code></pre>
+      </section>
+
+      <!-- ── Section 5: Authority ──────────────────────────────── -->
+      <section class="doc-section" id="authority" aria-labelledby="authority-heading">
+        <div class="section-header">
+          <span class="section-num">05</span>
+          <h2 id="authority-heading">Authority</h2>
+        </div>
+
+        <div class="prose-stack">
+          <p>
+            Authority in BNRP is derived entirely from inscription provenance — the wallet that signs the
+            inscription transaction must match the expected owner for that operation. An indexer
+            marks any inscription coming from the wrong wallet as <code>unauthorized</code> and ignores it.
+          </p>
+          <p>
+            There are two authority levels: name owner and subname owner. They have non-overlapping
+            control, with the name owner holding final say over which subnames exist.
+          </p>
+        </div>
+
+        <table class="authority-table" aria-label="Authority rules by role">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Permitted operations</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Name owner</td>
+              <td>Register subnames, revoke subnames, set namespace policy, update root name records</td>
+            </tr>
+            <tr>
+              <td>Subname owner</td>
+              <td>Update their own records (<span class="op-tag">subname_update</span>), transfer their subname (<span class="op-tag">subname_transfer</span>)</td>
+            </tr>
+            <tr>
+              <td>Anyone else</td>
+              <td>No write access. Any inscription from an unauthorized source is ignored.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Nonce system</h3>
+        <p>
+          Every BNRP inscription carries a <code>"nonce"</code> integer. The indexer tracks the highest
+          valid nonce seen for a given name or subname. Only that inscription is canonical — any
+          earlier inscription with a lower nonce is marked <code>superseded</code> and no longer resolves.
+        </p>
+        <p>
+          This prevents replay attacks. If an old inscription is re-broadcast, its nonce will be lower
+          than the current canonical state, so it is rejected. Nonces must be strictly increasing.
+        </p>
+
+        <div class="code-label">Nonce increment example</div>
+        <pre><code><span class="tok-punc">{</span> <span class="tok-key">"p"</span><span class="tok-punc">:</span> <span class="tok-str">"bnrp"</span><span class="tok-punc">,</span> <span class="tok-key">"op"</span><span class="tok-punc">:</span> <span class="tok-str">"subname_update"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"sub"</span><span class="tok-punc">:</span> <span class="tok-str">"donald.trump.btc"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"records"</span><span class="tok-punc">: {</span> <span class="tok-key">"btc"</span><span class="tok-punc">:</span> <span class="tok-str">"bc1pupdatedaddress..."</span> <span class="tok-punc">},</span>
+  <span class="tok-key">"nonce"</span><span class="tok-punc">:</span> <span class="tok-num">3</span><span class="tok-punc">,</span>  <span class="tok-punc">// was 2 — must be higher</span>
+  <span class="tok-key">"v"</span><span class="tok-punc">:</span>     <span class="tok-num">1</span>
+<span class="tok-punc">}</span></code></pre>
+
+        <h3>Validity states</h3>
+        <div class="state-grid">
+          <div class="state-card">
+            <span class="state-name state-active">active</span>
+            <p>Resolving normally. Highest-nonce valid inscription from the correct wallet.</p>
+          </div>
+          <div class="state-card">
+            <span class="state-name state-revoked">revoked</span>
+            <p>Name owner explicitly revoked this subname. Stops resolving immediately.</p>
+          </div>
+          <div class="state-card">
+            <span class="state-name state-unverified">unverified</span>
+            <p>Root name was sold. Subname existed before the sale and has not been re-authorized by the new owner.</p>
+          </div>
+          <div class="state-card">
+            <span class="state-name state-superseded">superseded</span>
+            <p>A later inscription with a higher nonce exists. This one is no longer canonical.</p>
+          </div>
+          <div class="state-card">
+            <span class="state-name state-unauthorized">unauthorized</span>
+            <p>Inscription came from the wrong wallet. Ignored by all conforming indexers.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Section 6: Namespace Policy ──────────────────────── -->
+      <section class="doc-section" id="namespace" aria-labelledby="namespace-heading">
+        <div class="section-header">
+          <span class="section-num">06</span>
+          <h2 id="namespace-heading">Namespace Policy</h2>
+        </div>
+
+        <div class="prose-stack">
+          <p>
+            Name owners can publish a namespace policy inscription that controls who is permitted
+            to register subnames under their name. The policy is inscribed as a separate BNRP operation
+            and takes effect for all subsequent <span class="op-tag">subname_register</span> requests.
+          </p>
+          <p>
+            If no policy is set, the name owner retains full gatekeeping by default — only they
+            can authorize new subnames.
+          </p>
+        </div>
+
+        <h3>Policy modes</h3>
+        <div class="def-list">
+          <dt>open</dt>
+          <dd>Anyone can register a subname under this name without prior approval.</dd>
+          <dt>closed</dt>
+          <dd>Only the name owner can create subnames. This is the default behavior.</dd>
+          <dt>allowlist</dt>
+          <dd>Only wallets explicitly listed in the policy may register subnames.</dd>
+          <dt>denylist</dt>
+          <dd>All wallets may register subnames except those explicitly listed.</dd>
+        </div>
+
+        <div class="code-label">Namespace policy inscription</div>
+        <pre><code><span class="tok-punc">{</span>
+  <span class="tok-key">"p"</span><span class="tok-punc">:</span>      <span class="tok-str">"bnrp"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"op"</span><span class="tok-punc">:</span>     <span class="tok-str">"namespace_set"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"name"</span><span class="tok-punc">:</span>   <span class="tok-str">"trump.btc"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"policy"</span><span class="tok-punc">:</span> <span class="tok-str">"allowlist"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"list"</span><span class="tok-punc">:</span> [
+    <span class="tok-str">"bc1palicewallet..."</span><span class="tok-punc">,</span>
+    <span class="tok-str">"bc1pbobwallet..."</span>
+  <span class="tok-punc">],</span>
+  <span class="tok-key">"nonce"</span><span class="tok-punc">:</span>  <span class="tok-num">2</span><span class="tok-punc">,</span>
+  <span class="tok-key">"v"</span><span class="tok-punc">:</span>      <span class="tok-num">1</span>
+<span class="tok-punc">}</span></code></pre>
+      </section>
+
+      <!-- ── Section 7: BTCNative Tools ────────────────────────── -->
+      <section class="doc-section" id="tools" aria-labelledby="tools-heading">
+        <div class="section-header">
+          <span class="section-num">07</span>
+          <h2 id="tools-heading">BTCNative Tools</h2>
+        </div>
+
+        <div class="prose-stack">
+          <p>
+            <a href="https://btcnative.name" rel="noopener">BTCNative</a> (<code>btcnative.name</code>)
+            is the first marketplace and tool suite built on BNRP. It provides three focused tools,
+            each corresponding to a different BNRP workflow.
+          </p>
+        </div>
+
+        <h3>Marketplace</h3>
+        <p>
+          Buy and sell BNRP names. Listings are backed by the underlying Ordinals inscription,
+          so purchasing a name transfers the inscription UTXO directly to the buyer's wallet.
+          No wrapping, no custodial step.
+        </p>
+
+        <h3>Subname Manager</h3>
+        <p>
+          Create, update, transfer, and revoke subnames under names you own.
+          The manager handles nonce tracking and builds the correct inscription JSON for each operation,
+          so you do not need to compose it by hand.
+        </p>
+
+        <h3>Namespace Tool</h3>
+        <p>
+          Generate the BNRP inscription JSON for any operation — name registration, namespace policy,
+          subname operations — ready to paste into your preferred inscription service.
+          Useful for power users who want to manage inscriptions outside the Subname Manager.
+        </p>
+
+        <div class="callout">
+          <div class="callout-icon">!</div>
+          <p>
+            <strong>API:</strong> All three tools are backed by the BNRP API at
+            <code><a href="https://api.bnrp.name/v1/" rel="noopener">api.bnrp.name/v1/</a></code>.
+            You can integrate the same resolution and lookup endpoints into your own application.
+            See the API Reference section below.
+          </p>
+        </div>
+      </section>
+
+      <!-- ── Section 8: API Reference ──────────────────────────── -->
+      <section class="doc-section" id="api" aria-labelledby="api-heading">
+        <div class="section-header">
+          <span class="section-num">08</span>
+          <h2 id="api-heading">API Reference</h2>
+        </div>
+
+        <div class="prose-stack">
+          <p>
+            The BNRP API provides read access to resolved names, records, and subname indexes.
+            The base URL for all endpoints is:
+          </p>
+        </div>
+
+        <div class="code-label">Base URL</div>
+        <pre><code><span class="tok-str">https://api.bnrp.name/v1/</span></code></pre>
+
+        <h3>Endpoints</h3>
+
+        <div class="endpoint-list">
+          <div class="endpoint">
+            <div class="method">GET</div>
+            <div>
+              <div class="endpoint-path">/resolve?name=trump.btc</div>
+              <div class="endpoint-desc">Resolve a name to its current records. Returns the active inscription state including all record fields.</div>
+            </div>
+          </div>
+
+          <div class="endpoint">
+            <div class="method">GET</div>
+            <div>
+              <div class="endpoint-path">/reverse?address=bc1p...</div>
+              <div class="endpoint-desc">Reverse lookup: given a Bitcoin taproot address, return all BNRP names whose <code>btc</code> record points to it.</div>
+            </div>
+          </div>
+
+          <div class="endpoint">
+            <div class="method">GET</div>
+            <div>
+              <div class="endpoint-path">/names/trump.btc/subnames</div>
+              <div class="endpoint-desc">List all active subnames registered under a given root name, with their current validity state and records.</div>
+            </div>
+          </div>
+
+          <div class="endpoint">
+            <div class="method">GET</div>
+            <div>
+              <div class="endpoint-path">/resolve?name=donald.trump.btc</div>
+              <div class="endpoint-desc">Resolve a subname directly. Returns the subname's own records, applying <code>"inherit"</code> rules for fields that defer to the parent.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="code-label">Example: resolve response</div>
+        <pre><code><span class="tok-punc">{</span>
+  <span class="tok-key">"name"</span><span class="tok-punc">:</span>    <span class="tok-str">"trump.btc"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"status"</span><span class="tok-punc">:</span>  <span class="tok-str">"active"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"owner"</span><span class="tok-punc">:</span>   <span class="tok-str">"bc1pexampletaprootaddress..."</span><span class="tok-punc">,</span>
+  <span class="tok-key">"nonce"</span><span class="tok-punc">:</span>   <span class="tok-num">3</span><span class="tok-punc">,</span>
+  <span class="tok-key">"records"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"btc"</span><span class="tok-punc">:</span>     <span class="tok-str">"bc1pexampletaprootaddress..."</span><span class="tok-punc">,</span>
+    <span class="tok-key">"x"</span><span class="tok-punc">:</span>      <span class="tok-str">"realDonaldTrump"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"url"</span><span class="tok-punc">:</span>    <span class="tok-str">"https://trump.com"</span>
+  <span class="tok-punc">},</span>
+  <span class="tok-key">"inscription_id"</span><span class="tok-punc">:</span> <span class="tok-str">"a1b2c3d4...i0"</span>
+<span class="tok-punc">}</span></code></pre>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ─── Footer ───────────────────────────────────────────────── -->
+  <footer style="
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-10) var(--space-8);
+    max-width: 1160px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  ">
+    <a href="https://btcnative.name" style="
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-decoration: none;
+    ">btcnative.name</a>
+    <span style="font-size: var(--text-xs); color: var(--color-text-faint);">
+      Built on Bitcoin Ordinals. Open protocol.
+    </span>
+  </footer>
+
+  <script>
+    /* ─── Mobile nav toggle ─── */
+    function toggleMobileNav(btn) {
+      const sidebar = document.getElementById('mobile-sidebar');
+      const isOpen = sidebar.classList.toggle('open');
+      btn.setAttribute('aria-expanded', isOpen);
+      sidebar.setAttribute('aria-hidden', !isOpen);
+    }
+
+    function closeMobileNav() {
+      const sidebar = document.getElementById('mobile-sidebar');
+      const btn = document.querySelector('.mobile-nav-toggle');
+      sidebar.classList.remove('open');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+      sidebar.setAttribute('aria-hidden', 'true');
+    }
+
+    /* ─── Active section highlighting ─── */
+    (function () {
+      const links = document.querySelectorAll('.sidebar-nav .nav-link');
+      const sections = Array.from(links).map(l => document.querySelector(l.getAttribute('href')));
+
+      function onScroll() {
+        let current = null;
+        sections.forEach((sec, i) => {
+          if (!sec) return;
+          const rect = sec.getBoundingClientRect();
+          if (rect.top <= 120) current = i;
+        });
+        links.forEach((l, i) => {
+          l.classList.toggle('active', i === current);
+        });
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</body>
+</html>
