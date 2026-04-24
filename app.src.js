@@ -2227,17 +2227,21 @@ function populateSalesRows() {}
 
 
 async function renderMarketIndexes() {
-  // Show skeletons immediately
+  // Show skeletons immediately — tag them so we can detect them in the fallback
   renderMarketSkeletons();
+  const lb = qs('#tldLeaderboard');
+  const sf = qs('#salesFeed');
+  if (lb) lb.dataset.skeleton = '1';
+  if (sf) sf.dataset.skeleton = '1';
 
-  // Fallback: if data never arrives after 8s, clear skeletons with an error state
+  // Fallback: if Promise.all never resolves (network hang) clear after 10s
   const fallbackTimer = setTimeout(() => {
-    const lb = qs('#tldLeaderboard');
-    const sf = qs('#salesFeed');
     const msg = '<div style="color:var(--color-text-faint);font-size:var(--text-sm);padding:var(--space-8) 0;text-align:center;">Market data unavailable — try again shortly</div>';
-    if (lb && lb.querySelector('[style*="shimmer"]')) lb.innerHTML = msg;
-    if (sf && sf.querySelector('[style*="shimmer"]')) sf.innerHTML = msg;
-  }, 8000);
+    const lb2 = qs('#tldLeaderboard');
+    const sf2 = qs('#salesFeed');
+    if (lb2 && lb2.dataset.skeleton) lb2.innerHTML = msg;
+    if (sf2 && sf2.dataset.skeleton) sf2.innerHTML = msg;
+  }, 10000);
 
   const [domainTypes, liveSales, btcRate, tldFloors] = await Promise.all([
     fetchDomainTypes(),
@@ -2247,6 +2251,9 @@ async function renderMarketIndexes() {
   ]);
 
   clearTimeout(fallbackTimer);
+  // Mark skeletons as resolved so the fallback timer won't clobber real content
+  if (lb) delete lb.dataset.skeleton;
+  if (sf) delete sf.dataset.skeleton;
 
   // Stats strip
   if (domainTypes) {
@@ -2255,7 +2262,6 @@ async function renderMarketIndexes() {
     const topTld = vals.sort((a, b) => (b.btcVolume||0) - (a.btcVolume||0))[0];
 
     const el24h = qs('#mktVol24h');
-    const elList = qs('#mktListings');
     const elTop  = qs('#mktTopTld');
     if (el24h) el24h.textContent = totalVol > 0 ? formatSats(totalVol) : '—';
     if (elTop && topTld && topTld.btcVolume > 0) elTop.textContent = '.' + topTld.domainType;
@@ -2278,9 +2284,9 @@ async function renderMarketIndexes() {
     }
   }
 
-  // Render leaderboard and sales feed
-  if (domainTypes) renderTldLeaderboard(domainTypes, btcRate, tldFloors || {});
-  if (liveSales)   renderSalesFeed(liveSales, btcRate);
+  // Always render — functions handle null gracefully with their own error states
+  renderTldLeaderboard(domainTypes, btcRate, tldFloors || {});
+  renderSalesFeed(liveSales, btcRate);
 }
 
 
