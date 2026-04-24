@@ -746,7 +746,9 @@
 <script defer src="./nav-search.js"></script>
 <script>
 // ── Sell page logic ────────────────────────────────────────────────────────────
-// MARKET_API is defined in app.js
+// MARKET_API is declared as const in app.js (defer). Set on window now so
+// inline script can reference it before defer scripts execute.
+if (typeof MARKET_API === 'undefined') window.MARKET_API = 'https://btcnative-market.galanin.workers.dev';
 const UNISAT_BASE = 'https://open-api.unisat.io'; // kept for reference; direct calls use worker proxy
 
 // BTC/USD

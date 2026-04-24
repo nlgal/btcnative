@@ -674,7 +674,10 @@
 <script defer src="./nav-search.js"></script>
 <script>
 // ── Portfolio page ─────────────────────────────────────────────────────────────
-// MARKET_API and UNISAT_API_KEY are defined in app.js
+// MARKET_API is declared as const in app.js (defer). Since defer scripts
+// run after inline scripts, we set it on window so both share the same value
+// without a const redeclaration clash.
+if (typeof MARKET_API === 'undefined') window.MARKET_API = 'https://btcnative-market.galanin.workers.dev';
 const UNISAT_BASE    = 'https://open-api.unisat.io';
 const PAGE_SIZE      = 20;
 const BTCNAME_TLDS   = ['.btc', '.sats', '.x', '.ord', '.gm', '.xbt', '.sat', '.unisat', '.fb'];
