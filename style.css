@@ -2649,3 +2649,333 @@
   /* Faster tap response */
   * { touch-action: manipulation; }
 }
+
+/* ═══════════════════════════════════════════════════════
+   Bitcoin Culture Names Module  (bcn-)
+   ═══════════════════════════════════════════════════════ */
+
+/* Section shell */
+.bcn-section {
+  padding: 96px 0 80px;
+  overflow: hidden;
+}
+
+/* Two-column layout: copy left, deck right */
+.bcn-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 64px;
+}
+
+/* ── Copy column ── */
+.bcn-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.bcn-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-brand-orange);
+}
+
+.bcn-eyebrow svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.bcn-headline {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3.5vw, 44px);
+  font-weight: 700;
+  line-height: 1.15;
+  color: #fff;
+  margin: 0;
+}
+
+.bcn-sub {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--color-text-muted);
+  max-width: 42ch;
+  margin: 0;
+}
+
+.bcn-proof {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-faint);
+  margin: 0;
+}
+
+.bcn-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-brand-orange);
+  color: #000;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 12px 22px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.15s;
+  width: fit-content;
+}
+
+.bcn-cta:hover {
+  background: var(--color-brand-gold);
+}
+
+/* ── Deck column ── */
+.bcn-deck {
+  position: relative;
+  height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Back cards — pure CSS transforms */
+.bcn-card--back2 {
+  position: absolute;
+  width: 320px;
+  transform: rotate(-8deg) translateY(28px) translateX(-8px) scale(0.94);
+  transform-origin: center bottom;
+  z-index: 1;
+}
+
+.bcn-card--back1 {
+  position: absolute;
+  width: 320px;
+  transform: rotate(-4deg) translateY(14px) translateX(-4px) scale(0.97);
+  transform-origin: center bottom;
+  z-index: 2;
+}
+
+.bcn-card--front {
+  position: relative;
+  width: 320px;
+  z-index: 3;
+}
+
+/* Individual card */
+.bcn-card {
+  background: #1A1A1A;
+  border: 1px solid #2A2A2A;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
+
+.bcn-card__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* Avatar window */
+.bcn-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #111;
+}
+
+.bcn-avatar svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+
+.bcn-card__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.bcn-card__name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bcn-card__sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-faint);
+  margin-top: 2px;
+}
+
+/* Verified badge */
+.bcn-verified {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255,138,0,0.12);
+  flex-shrink: 0;
+}
+
+.bcn-verified svg {
+  width: 14px;
+  height: 14px;
+  color: var(--color-brand-orange);
+}
+
+/* Tags row */
+.bcn-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.bcn-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.bcn-tag--early   { background: rgba(255,138,0,0.15); color: var(--color-brand-orange); }
+.bcn-tag--ordinal { background: rgba(99,179,237,0.12); color: #63B3ED; }
+.bcn-tag--rare    { background: rgba(167,139,250,0.15); color: #A78BFA; }
+.bcn-tag--meme    { background: rgba(52,211,153,0.12); color: #34D399; }
+.bcn-tag--identity{ background: rgba(255,177,0,0.12); color: var(--color-brand-gold); }
+
+/* Card footer: inscription # + price */
+.bcn-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid #222;
+}
+
+.bcn-card__insc {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-faint);
+}
+
+.bcn-card__price {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-brand-gold);
+}
+
+/* ── Ticker ── */
+.bcn-ticker {
+  margin-top: 64px;
+  position: relative;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+}
+
+.bcn-ticker__track {
+  display: flex;
+  gap: 0;
+  width: max-content;
+  animation: bcn-scroll 28s linear infinite;
+}
+
+@keyframes bcn-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bcn-ticker__track { animation: none; }
+}
+
+.bcn-ticker__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s;
+  border-right: 1px solid #1E1E1E;
+}
+
+.bcn-ticker__item:hover {
+  color: var(--color-brand-orange);
+}
+
+.bcn-ticker__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #333;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .bcn-inner {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .bcn-deck {
+    height: 260px;
+  }
+
+  .bcn-card--back2,
+  .bcn-card--back1,
+  .bcn-card--front {
+    width: 290px;
+  }
+}
+
+@media (max-width: 600px) {
+  .bcn-section {
+    padding: 56px 0 40px;
+  }
+
+  .bcn-headline {
+    font-size: 26px;
+  }
+
+  .bcn-deck {
+    height: 240px;
+  }
+
+  .bcn-card--back2,
+  .bcn-card--back1,
+  .bcn-card--front {
+    width: 270px;
+  }
+}
