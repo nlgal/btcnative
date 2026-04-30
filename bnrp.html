@@ -14,7 +14,7 @@
   <meta property="og:image" content="https://btcnative.name/social-banner.png" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:site" content="@btcnativename" />
+  <meta name="twitter:site" content="@btc_native" />
   <meta name="twitter:title" content="BNRP: Bitcoin Name Resolution Protocol" />
   <meta name="twitter:description" content="An open resolution layer for BTC-native names. Verify ownership, avatars, address records, and provenance." />
   <meta name="twitter:image" content="https://btcnative.name/social-banner.png" />
@@ -34,7 +34,7 @@
 <!-- ── NAV ── -->
 <nav class="nav" role="navigation" aria-label="Main navigation">
   <div class="nav__inner container">
-    <a href="./index.html" class="nav__logo" aria-label="BTC Native home">
+    <a href="./explore.html" class="nav__logo" aria-label="BTC Native home">
       <picture><source srcset="./logo-36.webp" type="image/webp"><img class="nav__logo-mark" src="./logo-36.png" alt="" aria-hidden="true" width="36" height="36" style="display:block;width:36px;height:36px;" fetchpriority="high"></picture>
       <div class="nav__logo-text">
         <span class="nav__logo-btc">BTC</span>
@@ -60,7 +60,8 @@
       <button class="nav__theme-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
       </button>
-      <button class="nav__wallet-btn" id="navWalletBtn" aria-label="Connect wallet">Connect</button>
+      <a href="./points.html" class="nav__pts-badge" id="navPtsBadge" style="display:none;" title="My Points"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span id="navPtsNum">0</span></a>
+        <button class="nav__wallet-btn" id="navWalletBtn" aria-label="Connect wallet">Connect</button>
     </div>
   </div>
 </nav>
@@ -485,6 +486,169 @@
         <p class="bnrp-section__note" style="margin-top:16px;">Bitcoin is always the root. All other address fields are optional owner-set records.</p>
       </section>
 
+      <!-- ── SECTION: Messaging ── -->
+      <section class="bnrp-section" id="messaging" aria-labelledby="s-messaging-heading">
+        <div class="bnrp-section__num" aria-hidden="true">06</div>
+        <h2 class="bnrp-section__title" id="s-messaging-heading">Messaging</h2>
+        <div class="bnrp-section__body">
+          <p>A Bitcoin name can now serve as a messaging address. Set a <code class="bnrp-code">messaging</code> field in your BNRP routing inscription and any app that resolves BNRP can reach you directly — no email, no phone number, no centralized directory.</p>
+
+          <p style="margin-top:12px;">The first supported protocol is <strong>XMTP</strong> — end-to-end encrypted, quantum-resistant, decentralized, and in production with 55M+ reachable inboxes. Your name routes to your XMTP inbox ID. Anyone who knows your name can open an encrypted conversation.</p>
+
+          <div class="bnrp-code-block" style="margin-top:24px;" aria-label="Messaging field example">
+            <div class="bnrp-code-block__label">Inscription — add messaging to your name</div>
+            <pre class="bnrp-pre"><code>{
+  "p": "bnrp",
+  "op": "routing",
+  "name": "alice.btc",
+  "btc_taproot": "bc1p...",
+  "messaging": {
+    "xmtp": "a1b2c3d4e5f6..."
+  }
+}</code></pre>
+          </div>
+
+          <div style="margin-top:28px; display:grid; gap:16px; grid-template-columns:1fr 1fr;">
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">How it works</div>
+              <p class="bnrp-spec-card__text">A resolver reads the <code>messaging.xmtp</code> field from the canonical BNRP inscription. The sender opens an XMTP conversation to that inbox ID. Messages are end-to-end encrypted. Neither BTCNative nor the resolver can read them.</p>
+            </div>
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">Why XMTP</div>
+              <p class="bnrp-spec-card__text">MLS encryption (audited by the same firm that reviews Signal and WhatsApp). Quantum-resistant. No company in the middle. Decentralized node operators. Open source from top to bottom. ~$5 per 100k messages.</p>
+            </div>
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">Privacy</div>
+              <p class="bnrp-spec-card__text">Adding a messaging field is opt-in. It makes your inbox ID public — but not your messages. XMTP has built-in consent: you control who can reach you. Block senders across the entire network in one action.</p>
+            </div>
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">Extensible</div>
+              <p class="bnrp-spec-card__text">The <code>messaging</code> object supports multiple protocols. <code>xmtp</code> is the first. Reserved keys exist for Nostr (npub), Matrix, and SimpleX. Unknown keys are ignored — no breaking changes when new protocols are added.</p>
+            </div>
+          </div>
+
+          <div class="bnrp-api-endpoints" style="margin-top:28px;">
+            <div class="bnrp-endpoint">
+              <span class="bnrp-method">GET</span>
+              <code class="bnrp-code bnrp-code--url">/v1/messaging/{name}</code>
+              <span class="bnrp-endpoint__desc">Resolve messaging identifiers for a name</span>
+            </div>
+          </div>
+
+          <div class="bnrp-code-block" style="margin-top:16px;" aria-label="Messaging API response">
+            <div class="bnrp-code-block__label">API response</div>
+            <pre class="bnrp-pre"><code>GET https://api.bnrp.name/v1/messaging/alice.btc
+
+{
+  "name": "alice.btc",
+  "messaging": {
+    "xmtp": "a1b2c3d4e5f6..."
+  },
+  "resolved_at_block": 845000
+}</code></pre>
+          </div>
+
+          <div style="margin-top:28px; display:flex; gap:12px; flex-wrap:wrap;">
+            <a href="./message.html" class="bnrp-btn bnrp-btn--primary bnrp-btn--sm">
+              Message a Name
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+            </a>
+            <a href="./message.html#setup" class="bnrp-btn bnrp-btn--ghost bnrp-btn--sm">
+              Set up messaging on your name
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+            </a>
+          </div>
+
+          <p class="bnrp-section__note" style="margin-top:20px;">Spec: <a href="https://github.com/nlgal/btcnative/blob/main/bnrp-spec/BNRPs/BNRP-IP-08.md" target="_blank" rel="noopener" class="bnrp-link">BNRP-IP-08</a> — Messaging Records. Status: Draft.</p>
+        </div>
+      </section>
+
+      <!-- ── SECTION: Agent Skills ── -->
+      <section class="bnrp-section" id="agent-skills" aria-labelledby="s-agent-heading">
+        <div class="bnrp-section__num" aria-hidden="true">07</div>
+        <h2 class="bnrp-section__title" id="s-agent-heading">Agent Skills</h2>
+        <div class="bnrp-section__body">
+          <p>Every BNRP name has a machine-readable skill file — a single URL any AI agent can fetch to learn how to pay you, message you, and interact with you correctly.</p>
+
+          <p style="margin-top:12px;">Name owners can also write <strong>agent instructions</strong> directly into their BNRP record. These are stored on-chain and surfaced automatically in the skill file. Instructions persist as long as the inscription exists — no account, no API key, no service to trust.</p>
+
+          <div class="bnrp-code-block" style="margin-top:24px;" aria-label="Skill endpoint example">
+            <div class="bnrp-code-block__label">Fetch a name's agent skill</div>
+            <pre class="bnrp-pre"><code>GET https://api.bnrp.name/v1/skill/trump.btc</code></pre>
+          </div>
+
+          <div class="bnrp-code-block" style="margin-top:12px;" aria-label="Skill response example">
+            <div class="bnrp-code-block__label">Response (Markdown — readable by any agent)</div>
+            <pre class="bnrp-pre"><code># Agent skill: trump.btc
+
+**Display name:** Trump
+**Bio:** Protocol architect. Built BNRP — open standard for Bitcoin-native identity.
+**Inscription:** `0243d0e1...`
+**Owner:** `bc1pkdqs4...`
+
+## Pay trump.btc
+1. Use address: `bc1pkdqs4...`
+2. Verified on-chain taproot address
+3. Always verify before signing
+
+## Message trump.btc
+- Inbox ID: `0e614b04...`
+- Open: https://xmtp.chat/dm/0e614b04...
+
+## Instructions from Trump
+[custom agent_instructions set by the owner]</code></pre>
+          </div>
+
+          <div style="margin-top:28px; display:grid; gap:16px; grid-template-columns:1fr 1fr;">
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">How to set agent instructions</div>
+              <p class="bnrp-spec-card__text">Add an <code>agent_instructions</code> field to your BNRP routing inscription. Up to 500 characters. Inscribe it once and it persists on-chain. Update it anytime by re-inscribing — latest valid record wins.</p>
+            </div>
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">What to put in it</div>
+              <p class="bnrp-spec-card__text">Payment preferences, minimum amounts, contact rules, time zone, preferred currency, or anything an agent should know before initiating a transaction or conversation. You define the terms.</p>
+            </div>
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">How agents use it</div>
+              <p class="bnrp-spec-card__text">An agent resolves a name, fetches the skill file, reads the verified BTC address and XMTP inbox ID, checks your instructions, then acts. No scraping. No inference. Verified, on-chain data every time.</p>
+            </div>
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">Why it matters</div>
+              <p class="bnrp-spec-card__text">AI agents are already moving money and sending messages. BNRP gives them a trustless way to find verified addresses and owner-defined rules — with Bitcoin as the root of truth. No middleman in the resolution path.</p>
+            </div>
+          </div>
+
+          <div class="bnrp-code-block" style="margin-top:28px;" aria-label="agent_instructions inscription example">
+            <div class="bnrp-code-block__label">Inscription — add agent instructions to your name</div>
+            <pre class="bnrp-pre"><code>{
+  "p": "bnrp",
+  "op": "routing",
+  "name": "alice.btc",
+  "btc_taproot": "bc1p...",
+  "messaging": {
+    "xmtp": "a1b2c3..."
+  },
+  "agent_instructions": "BTC payments only. Minimum 10,000 sats. Contact via XMTP before initiating any transaction."
+}</code></pre>
+          </div>
+
+          <div class="bnrp-api-endpoints" style="margin-top:28px;">
+            <div class="bnrp-endpoint">
+              <span class="bnrp-method">GET</span>
+              <code class="bnrp-code bnrp-code--url">/v1/skill/{name}</code>
+              <span class="bnrp-endpoint__desc">Personalized agent skill file for any registered name</span>
+            </div>
+            <div class="bnrp-endpoint">
+              <span class="bnrp-method">GET</span>
+              <code class="bnrp-code bnrp-code--url">/skill.md</code>
+              <span class="bnrp-endpoint__desc">Base BNRP skill — payment and messaging instructions for any agent</span>
+            </div>
+          </div>
+
+          <p class="bnrp-section__note" style="margin-top:20px;">Set your agent instructions now using the <a href="https://www.bnrp.name" target="_blank" rel="noopener" class="bnrp-link">BNRP profile editor</a> or the SDK: <a href="https://github.com/nlgal/bnrp-sdk" target="_blank" rel="noopener" class="bnrp-link">nlgal/bnrp-sdk</a>.</p>
+        </div>
+      </section>
+
       <!-- ── SECTION: Subnames &amp; namespace roadmap ── -->
       <section class="page-section" id="subnames">
   <div class="container">
@@ -778,13 +942,15 @@
           <a href="./docs.html" class="footer__link">Docs</a>
           <a href="./about.html" class="footer__link">About</a>
           <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
+          <a href="./security.html" class="footer__link">Security</a>
+          <a href="./message.html" class="footer__link">Messaging</a>
           <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
         </div>
       </div>
       <div>
         <div class="footer__col-title">Support</div>
         <div class="footer__links">
-          <a href="https://x.com/btcnativename" target="_blank" rel="noopener" class="footer__link">@btcnativename</a>
+          <a href="https://x.com/btc_native" target="_blank" rel="noopener" class="footer__link">@btc_native</a>
           <a href="mailto:hello@btcnative.name" class="footer__link">hello@btcnative.name</a>
         </div>
       </div>
@@ -792,10 +958,10 @@
     <div class="footer__bottom">
       <span class="footer__copy">&copy; 2026 BTC Native. Trustless by design.</span>
       <div class="footer__trust">
-        <span class="footer__trust-item">
+        <a href="./security.html" class="footer__trust-item" style="text-decoration:none;color:inherit;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           Verifiable on Bitcoin
-        </span>
+        </a>
         <span class="footer__trust-item">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
           Open Protocol
@@ -805,7 +971,7 @@
   </div>
 </footer>
 
-<script defer src="./app.js"></script>
+<script defer src="./app.bbd24cc8.js"></script>
 <script>
 (function() {
   const saved = localStorage.getItem('btcn-theme');
