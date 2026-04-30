@@ -645,7 +645,40 @@
             </div>
           </div>
 
-          <p class="bnrp-section__note" style="margin-top:20px;">Set your agent instructions now using the <a href="https://www.bnrp.name" target="_blank" rel="noopener" class="bnrp-link">BNRP profile editor</a> or the SDK: <a href="https://github.com/nlgal/bnrp-sdk" target="_blank" rel="noopener" class="bnrp-link">nlgal/bnrp-sdk</a>.</p>
+          <div class="bnrp-divider" style="margin:32px 0;"></div>
+
+          <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:8px;">Payment Policy</h3>
+          <p>Name owners can publish machine-readable payment rules in their BNRP record. Compliant agents read these rules before sending any funds.</p>
+
+          <div style="margin-top:20px; display:grid; gap:16px; grid-template-columns:1fr 1fr;">
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">Require approval</div>
+              <p class="bnrp-spec-card__text">Set <code>require_approval: true</code> and agents must send an XMTP message to your inbox and wait for your reply before initiating any payment. The approval thread is the audit trail. No escrow, no smart contract.</p>
+            </div>
+            <div class="bnrp-spec-card" style="margin:0;">
+              <div class="bnrp-spec-card__title">Spending limits</div>
+              <p class="bnrp-spec-card__text">Set <code>min_sats</code> to filter dust payments, and <code>max_sats_per_day</code> to cap daily agent spend. These are on-chain signals — any compliant agent reads and respects them before sending.</p>
+            </div>
+          </div>
+
+          <div class="bnrp-code-block" style="margin-top:24px;" aria-label="payment_policy inscription example">
+            <div class="bnrp-code-block__label">Inscription — full payment policy</div>
+            <pre class="bnrp-pre"><code>{
+  "p": "bnrp",
+  "op": "routing",
+  "name": "alice.btc",
+  "btc_taproot": "bc1p...",
+  "messaging": { "xmtp": "a1b2c3..." },
+  "payment_policy": {
+    "require_approval": true,
+    "approval_channel": "xmtp",
+    "min_sats": 10000,
+    "max_sats_per_day": 1000000
+  }
+}</code></pre>
+          </div>
+
+          <p class="bnrp-section__note" style="margin-top:20px;">Spec: BNRP-IP-09 — Agent Payment Policy. Status: Draft. &nbsp;|&nbsp; Set yours now using the <a href="https://www.bnrp.name" target="_blank" rel="noopener" class="bnrp-link">BNRP profile editor</a> or the SDK: <a href="https://github.com/nlgal/bnrp-sdk" target="_blank" rel="noopener" class="bnrp-link">nlgal/bnrp-sdk</a>.</p>
         </div>
       </section>
 
