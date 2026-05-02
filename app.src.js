@@ -1570,8 +1570,14 @@ async function initBuyBtn(name, inscId) {
         sort: { unitPrice: 1 },
       });
       if (verifyData && verifyData.list) {
-        const nameLower = name.toLowerCase();
-        liveListing = verifyData.list.find(l => (l.domain || '').toLowerCase() === nameLower) || null;
+        // Compare with the leading "@" stripped on both sides — UniSat's domain field is
+        // inconsistent for names that begin with "@" (e.g. @grok.btc).
+        const nameLower    = name.toLowerCase();
+        const nameLowerNoAt = nameLower.replace(/^@/, '');
+        liveListing = verifyData.list.find(l => {
+          const d = (l.domain || '').toLowerCase();
+          return d === nameLower || d.replace(/^@/, '') === nameLowerNoAt;
+        }) || null;
       }
     } catch(e) {
       console.warn('[btcn] UniSat verify failed, falling back to URL price', e);
@@ -2575,9 +2581,10 @@ async function runSearch(q, input, resultsEl) {
   resultsEl.style.display = 'block';
   resultsEl.innerHTML = `<div style="padding:var(--space-3) var(--space-4); color:var(--color-text-faint); font-size:var(--text-sm);">Searching...</div>`;
 
-  // Strip any TLD the user typed so we always work with the base
+  // Strip any TLD the user typed so we always work with the base.
+  // Allow leading "@" (UniSat names like @grok.btc, @nasa.sats use it as a literal prefix).
   const hasTld   = SUPPORTED_TLDS.some(t => q.endsWith(t));
-  const base     = hasTld ? getBase(q) : q.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const base     = hasTld ? getBase(q) : q.toLowerCase().replace(/[^a-z0-9@]/g, '');
   const typedTld = hasTld ? getTld(q) : null;
 
   if (!base) { resultsEl.style.display = 'none'; return; }
@@ -2910,6 +2917,10 @@ async function fetchAndRenderSaleHistory(name) {
   const base = getBase(name);
   const tldRaw = getTld(name).replace('.', '');
   const fullNameLower = name.toLowerCase();
+  // UniSat sometimes returns the domain field with a leading "@" stripped or added —
+  // compare both raw and de-@-prefixed forms so names like @grok.btc match either way.
+  const fullNameNoAt  = fullNameLower.replace(/^@/, '');
+  const baseNoAt      = base.toLowerCase().replace(/^@/, '');
 
   // UniSat /v3/market/domain/auction/actions is a global feed — "keyword" is NOT
   // a supported filter field. Fetch a large batch and client-side filter by domain.
@@ -2923,10 +2934,11 @@ async function fetchAndRenderSaleHistory(name) {
         limit: 200,
       });
       if (data && data.list) {
-        // domain field sometimes has "@" prefix (e.g. "@Store.btc") — strip it
+        // UniSat is inconsistent: the "@" prefix is sometimes present, sometimes not.
+        // Compare the de-@-prefixed forms on both sides so @grok.btc matches grok.btc and vice versa.
         events = data.list.filter(ev => {
           const d = (ev.domain || '').toLowerCase().replace(/^@/, '');
-          return d === fullNameLower || d === base + '.' + tldRaw;
+          return d === fullNameNoAt || d === baseNoAt + '.' + tldRaw;
         });
       }
     } catch (e) { /* silent */ }
@@ -2941,7 +2953,7 @@ async function fetchAndRenderSaleHistory(name) {
       if (listData && listData.list) {
         const listEvents = listData.list.filter(ev => {
           const d = (ev.domain || '').toLowerCase().replace(/^@/, '');
-          return d === fullNameLower || d === base + '.' + tldRaw;
+          return d === fullNameNoAt || d === baseNoAt + '.' + tldRaw;
         }).map(ev => ({ ...ev, _eventType: 'Listed' }));
         events = [...events, ...listEvents].sort((a, b) => b.timestamp - a.timestamp);
       }
@@ -3301,7 +3313,8 @@ function parseBulkInput(raw) {
       return s.replace(/\.[^.]*$/, '') || s; // strip any trailing .xxx
     })
     .filter((s, i, arr) => arr.indexOf(s) === i) // deduplicate
-    .filter(s => /^[a-z0-9-]+$/.test(s))
+    // Allow a-z0-9, hyphen, and a leading "@" (e.g. @grok, @nasa — valid UniSat names).
+    .filter(s => /^@?[a-z0-9][a-z0-9-]*$/.test(s))
     .slice(0, 50); // cap at 50 names
 }
 
