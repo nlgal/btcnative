@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Namespace — BNRP-IP-11 | BTCNative</title>
+  <meta name="description" content="Register AI agents under your Bitcoin name. BNRP-IP-11 defines agent subnames: verifiable identity, on-chain capabilities, and native sats payments." />
+  <link rel="canonical" href="https://btcnative.name/agents" />
+
+  <!-- OG / Twitter -->
+  <meta property="og:title" content="Agent Namespace — BNRP-IP-11 | BTCNative" />
+  <meta property="og:description" content="Register AI agents under your Bitcoin name. Verifiable identity. On-chain capabilities. Native payments." />
+  <meta property="og:url" content="https://btcnative.name/agents" />
+  <meta property="og:image" content="https://btcnative.name/social-banner.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@btc_native" />
+  <meta name="twitter:title" content="Agent Namespace — BNRP-IP-11" />
+  <meta name="twitter:description" content="Register AI agents under your Bitcoin name. Verifiable identity. On-chain capabilities. Native payments." />
+  <meta name="twitter:image" content="https://btcnative.name/social-banner.png" />
+
+  <!-- Icons / PWA -->
+  <link rel="icon" type="image/png" href="./logo-48.png" />
+  <link rel="manifest" href="./manifest.json" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+  <link rel="stylesheet" href="./base.css" />
+  <link rel="stylesheet" href="./style.v2.css" />
+
+  <style>
+    /* ── Agent page scoped styles ── */
+
+    .agent-hero {
+      padding: 80px 0 64px;
+      border-bottom: 1px solid var(--color-divider);
+      position: relative;
+      overflow: hidden;
+    }
+    .agent-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(255,138,0,0.07), transparent 65%);
+      pointer-events: none;
+    }
+    .agent-hero__badges {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .agent-hero__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      border: 1px solid;
+    }
+    .agent-hero__badge--orange {
+      color: var(--color-primary);
+      background: var(--color-primary-dim);
+      border-color: color-mix(in oklch, var(--color-primary) 30%, transparent);
+    }
+    .agent-hero__badge--gold {
+      color: #FFB100;
+      background: rgba(255, 177, 0, 0.10);
+      border-color: rgba(255, 177, 0, 0.28);
+    }
+    .agent-hero__title {
+      font-family: var(--font-display);
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      font-weight: 800;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      color: var(--color-text-primary);
+      margin: 0 0 20px;
+    }
+    .agent-hero__sub {
+      font-family: var(--font-body);
+      font-size: 1.05rem;
+      line-height: 1.65;
+      color: var(--color-text-secondary);
+      max-width: 560px;
+      margin: 0 0 32px;
+    }
+    .agent-hero__actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Main layout ── */
+    .agent-main {
+      padding: 0 0 80px;
+    }
+    .agent-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .agent-section {
+      padding: 56px 0;
+      border-bottom: 1px solid var(--color-divider);
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 0 32px;
+      align-items: start;
+    }
+    .agent-section:last-child {
+      border-bottom: none;
+    }
+    .agent-section__num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--color-primary);
+      padding-top: 6px;
+    }
+    .agent-section__title {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--color-text-primary);
+      margin: 0 0 20px;
+    }
+    .agent-section__body {
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: var(--color-text-secondary);
+    }
+    .agent-section__body p {
+      margin: 0 0 14px;
+    }
+    .agent-section__body p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* ── Inline code ── */
+    .agent-code {
+      font-family: var(--font-mono);
+      font-size: 0.82em;
+      color: var(--color-primary);
+      background: var(--color-primary-dim);
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid color-mix(in oklch, var(--color-primary) 20%, transparent);
+    }
+
+    /* ── Naming convention table ── */
+    .agent-table-wrap {
+      overflow-x: auto;
+      margin-top: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--color-divider);
+    }
+    .agent-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+    }
+    .agent-table thead tr {
+      border-bottom: 1px solid var(--color-divider);
+    }
+    .agent-table th {
+      text-align: left;
+      padding: 10px 16px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-tertiary);
+    }
+    .agent-table td {
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--color-divider);
+      color: var(--color-text-secondary);
+      vertical-align: top;
+    }
+    .agent-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .agent-table tbody tr:hover td {
+      background: var(--color-surface-hover, rgba(255,255,255,0.03));
+    }
+    .agent-table td:first-child {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--color-primary);
+      white-space: nowrap;
+    }
+    .agent-table td:nth-child(2) {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--color-text-primary);
+      white-space: nowrap;
+    }
+
+    /* ── Code block ── */
+    .agent-code-block {
+      background: #0a0a0a;
+      border: 1px solid var(--color-divider);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    [data-theme='light'] .agent-code-block {
+      background: #f3f3f3;
+    }
+    .agent-code-block__label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--color-divider);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-text-tertiary);
+    }
+    [data-theme='light'] .agent-code-block__label {
+      background: #ebebeb;
+    }
+    .agent-code-block__label-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .agent-code-block__dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      opacity: 0.7;
+    }
+    .agent-code-block code {
+      display: block;
+      padding: 20px 20px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.7;
+      color: #d4d4d4;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    [data-theme='light'] .agent-code-block code {
+      color: #1a1a1a;
+    }
+    .token-key    { color: #9cdcfe; }
+    .token-str    { color: #ce9178; }
+    .token-num    { color: #b5cea8; }
+    .token-bool   { color: #569cd6; }
+    .token-punct  { color: #808080; }
+    .token-arr    { color: #d4d4d4; }
+    .token-orange { color: #FF8A00; }
+    .token-gold   { color: #FFB100; }
+
+    /* ── Resolution section ── */
+    .agent-endpoint {
+      margin: 12px 0 16px;
+      background: #0a0a0a;
+      border: 1px solid var(--color-divider);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    [data-theme='light'] .agent-endpoint {
+      background: #f3f3f3;
+    }
+    .agent-endpoint__method {
+      display: inline-block;
+      padding: 3px 8px;
+      background: var(--color-primary-dim);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-primary);
+      letter-spacing: 0.04em;
+      margin-right: 6px;
+    }
+    .agent-endpoint__line {
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.83rem;
+      color: var(--color-text-primary);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Response fields list ── */
+    .agent-fields {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .agent-field {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 12px;
+      align-items: baseline;
+      padding: 10px 14px;
+      border-radius: 7px;
+      border: 1px solid var(--color-divider);
+      background: var(--color-surface, rgba(255,255,255,0.02));
+    }
+    .agent-field__key {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--color-primary);
+    }
+    .agent-field__desc {
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+    .agent-field--highlight {
+      border-color: color-mix(in oklch, var(--color-primary) 30%, transparent);
+      background: var(--color-primary-dim);
+    }
+    .agent-field--highlight .agent-field__key {
+      color: var(--color-primary);
+    }
+
+    /* ── CTA panel ── */
+    .agent-cta {
+      margin-top: 12px;
+      padding: 32px 28px;
+      border-radius: 12px;
+      border: 1px solid color-mix(in oklch, var(--color-primary) 30%, transparent);
+      background: var(--color-primary-dim);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .agent-cta__title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin: 0;
+    }
+    .agent-cta__body {
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      line-height: 1.65;
+      color: var(--color-text-secondary);
+      margin: 0;
+    }
+    .agent-cta__actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    /* ── A2A interaction list ── */
+    .agent-steps {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .agent-step {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--color-divider);
+    }
+    .agent-step:last-child {
+      border-bottom: none;
+    }
+    .agent-step__arrow {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--color-primary);
+      font-weight: 600;
+      padding-top: 1px;
+    }
+    .agent-step__content {
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--color-text-secondary);
+    }
+    .agent-step__content strong {
+      color: var(--color-text-primary);
+      font-weight: 600;
+    }
+
+    /* ── Protocol status banner ── */
+    .agent-status {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--color-divider);
+      background: var(--color-surface, rgba(255,255,255,0.02));
+    }
+    .agent-status__left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .agent-status__label {
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      color: var(--color-text-secondary);
+    }
+    .agent-status__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      border: 1px solid rgba(255,177,0,0.3);
+      color: #FFB100;
+      background: rgba(255,177,0,0.08);
+    }
+    .agent-status__badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #FFB100;
+    }
+
+    /* ── Buttons (reuse bnrp-btn pattern) ── */
+    .agent-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: 7px;
+      font-family: var(--font-display);
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .agent-btn--primary {
+      background: var(--color-primary);
+      color: #0d0d0d;
+      border-color: var(--color-primary);
+    }
+    .agent-btn--primary:hover {
+      background: var(--color-primary-hover);
+      border-color: var(--color-primary-hover);
+    }
+    .agent-btn--ghost {
+      background: transparent;
+      color: var(--color-text-secondary);
+      border-color: var(--color-divider);
+    }
+    .agent-btn--ghost:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+    .agent-btn--sm {
+      padding: 7px 14px;
+      font-size: 0.82rem;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 680px) {
+      .agent-section {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 40px 0;
+      }
+      .agent-section__num {
+        padding-top: 0;
+      }
+      .agent-field {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+      .agent-hero__title {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav__inner container">
+    <a href="./explore.html" class="nav__logo" aria-label="BTC Native home">
+      <picture>
+        <source srcset="./logo-36.webp" type="image/webp">
+        <img class="nav__logo-mark" src="./logo-36.png" alt="" aria-hidden="true" width="36" height="36" style="display:block;width:36px;height:36px;" fetchpriority="high">
+      </picture>
+      <div class="nav__logo-text">
+        <span class="nav__logo-btc">BTC</span>
+        <span class="nav__logo-native">NATIVE</span>
+      </div>
+    </a>
+    <ul class="nav__links" role="list">
+      <li><a href="./index.html" class="nav__link">Names</a></li>
+      <li><a href="./explore.html?tab=market" class="nav__link">Market</a></li>
+      <li><a href="./sell.html" class="nav__link">Sell</a></li>
+      <li><a href="./subnames.html" class="nav__link">Subnames</a></li>
+      <li><a href="./bnrp.html" class="nav__link">BNRP</a></li>
+      <li><a href="./portfolio.html" class="nav__link">My Names</a></li>
+    </ul>
+    <div class="nav__actions">
+      <button class="nav__theme-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <a href="./points.html" class="nav__pts-badge" id="navPtsBadge" style="display:none;" title="My Points">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span id="navPtsNum">0</span>
+      </a>
+      <button class="nav__wallet-btn" id="navWalletBtn" aria-label="Connect wallet">Connect</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="agent-hero">
+  <div class="container container--narrow">
+    <div class="agent-hero__badges">
+      <span class="agent-hero__badge agent-hero__badge--orange">BNRP-IP-11</span>
+      <span class="agent-hero__badge agent-hero__badge--gold">NEW</span>
+    </div>
+    <h1 class="agent-hero__title">Agent Namespace</h1>
+    <p class="agent-hero__sub">Register AI agents under your Bitcoin name. Verifiable identity. On-chain capabilities. Native payments.</p>
+    <div class="agent-hero__actions">
+      <a href="./subname-manager.html" class="agent-btn agent-btn--primary">
+        Register an Agent
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+      </a>
+      <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener noreferrer" class="agent-btn agent-btn--ghost">
+        API Reference
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── MAIN CONTENT ── -->
+<main class="agent-main">
+  <div class="container">
+    <div class="agent-grid">
+
+      <!-- 01 What is an agent namespace -->
+      <section class="agent-section" id="what-is-agent-namespace" aria-labelledby="s1-heading">
+        <div class="agent-section__num" aria-hidden="true">01</div>
+        <div>
+          <h2 class="agent-section__title" id="s1-heading">What is an agent namespace?</h2>
+          <div class="agent-section__body">
+            <p>A name is no longer just a handle. It is a namespace. Your agents live inside it. <code class="agent-code">agent.company.btc</code> is not a label you assign in a settings panel. It is a first-class BNRP subname, inscribed on Bitcoin, with its own owner address and payment routing.</p>
+            <p>Agents registered this way can receive sats directly to their address. They can identify themselves to other agents without API keys or OAuth flows. Any system that speaks BNRP can resolve the agent, read its capabilities, and pay it. The identity is the name. The name lives on-chain.</p>
+            <p>This matters now. Machine-to-machine payments are no longer theoretical: 169 million transactions were processed in the first year of the x402 protocol alone. The infrastructure for autonomous economic agents is already here. BNRP-IP-11 gives those agents a home under the names you already own.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 02 Naming convention -->
+      <section class="agent-section" id="naming-convention" aria-labelledby="s2-heading">
+        <div class="agent-section__num" aria-hidden="true">02</div>
+        <div>
+          <h2 class="agent-section__title" id="s2-heading">Naming convention</h2>
+          <div class="agent-section__body">
+            <p>Agent subnames follow a simple pattern: <code class="agent-code">role.name.btc</code>. The role label is up to you. Common conventions:</p>
+          </div>
+          <div class="agent-table-wrap">
+            <table class="agent-table" aria-label="Agent naming patterns">
+              <thead>
+                <tr>
+                  <th scope="col">Pattern</th>
+                  <th scope="col">Example</th>
+                  <th scope="col">Use case</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>agent.name.btc</td>
+                  <td>agent.satoshi.btc</td>
+                  <td>Default personal agent</td>
+                </tr>
+                <tr>
+                  <td>trading.name.btc</td>
+                  <td>trading.satoshi.btc</td>
+                  <td>Trading / DCA bot</td>
+                </tr>
+                <tr>
+                  <td>pay.name.btc</td>
+                  <td>pay.company.btc</td>
+                  <td>Payment receiver agent</td>
+                </tr>
+                <tr>
+                  <td>assistant.name.btc</td>
+                  <td>assistant.company.btc</td>
+                  <td>AI assistant</td>
+                </tr>
+                <tr>
+                  <td>custom.name.btc</td>
+                  <td>vault.company.btc</td>
+                  <td>Custom namespace</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 03 Inscription schema -->
+      <section class="agent-section" id="inscription-schema" aria-labelledby="s3-heading">
+        <div class="agent-section__num" aria-hidden="true">03</div>
+        <div>
+          <h2 class="agent-section__title" id="s3-heading">Inscription schema</h2>
+          <div class="agent-section__body">
+            <p>An agent is registered by inscribing a JSON record using the BNRP <code class="agent-code">subname_register</code> operation. The <code class="agent-code">records</code> object carries the agent-specific fields.</p>
+          </div>
+          <div class="agent-code-block" aria-label="Agent inscription JSON schema">
+            <div class="agent-code-block__label">
+              <div class="agent-code-block__label-left">
+                <div class="agent-code-block__dot"></div>
+                inscription &mdash; agent subname registration
+              </div>
+              <span>BNRP-IP-11</span>
+            </div>
+            <code aria-label="JSON inscription schema"><span class="token-punct">{</span>
+  <span class="token-key">"p"</span><span class="token-punct">:</span>            <span class="token-str">"bnrp"</span><span class="token-punct">,</span>
+  <span class="token-key">"op"</span><span class="token-punct">:</span>           <span class="token-str">"subname_register"</span><span class="token-punct">,</span>
+  <span class="token-key">"name"</span><span class="token-punct">:</span>         <span class="token-str">"agent.company.btc"</span><span class="token-punct">,</span>
+  <span class="token-key">"nonce"</span><span class="token-punct">:</span>        <span class="token-num">1</span><span class="token-punct">,</span>
+  <span class="token-key">"v"</span><span class="token-punct">:</span>            <span class="token-num">1</span><span class="token-punct">,</span>
+  <span class="token-key">"sub"</span><span class="token-punct">:</span>          <span class="token-str">"agent.company.btc"</span><span class="token-punct">,</span>
+  <span class="token-key">"to"</span><span class="token-punct">:</span>           <span class="token-str">"bc1p&lt;agent_wallet&gt;"</span><span class="token-punct">,</span>
+  <span class="token-key">"records"</span><span class="token-punct">:</span> <span class="token-punct">{</span>
+    <span class="token-orange">"agent_type"</span><span class="token-punct">:</span>         <span class="token-str">"trading|assistant|payment|custom"</span><span class="token-punct">,</span>
+    <span class="token-orange">"agent_pubkey"</span><span class="token-punct">:</span>       <span class="token-str">"&lt;secp256k1 pubkey hex&gt;"</span><span class="token-punct">,</span>
+    <span class="token-orange">"agent_capabilities"</span><span class="token-punct">:</span> <span class="token-punct">[</span><span class="token-str">"payment"</span><span class="token-punct">,</span> <span class="token-str">"resolve"</span><span class="token-punct">,</span> <span class="token-str">"message"</span><span class="token-punct">]</span><span class="token-punct">,</span>
+    <span class="token-orange">"lnurlp"</span><span class="token-punct">:</span>             <span class="token-str">"user@domain.com"</span><span class="token-punct">,</span>
+    <span class="token-orange">"agent_instructions"</span><span class="token-punct">:</span> <span class="token-str">"You are a trading agent for company.btc. ..."</span><span class="token-punct">,</span>
+    <span class="token-orange">"payment_policy"</span><span class="token-punct">:</span> <span class="token-punct">{</span>
+      <span class="token-key">"require_approval"</span><span class="token-punct">:</span> <span class="token-bool">false</span><span class="token-punct">,</span>
+      <span class="token-key">"min_sats"</span><span class="token-punct">:</span>        <span class="token-num">1000</span>
+    <span class="token-punct">}</span><span class="token-punct">,</span>
+    <span class="token-orange">"owner_name"</span><span class="token-punct">:</span>         <span class="token-str">"company.btc"</span>
+  <span class="token-punct">}</span>
+<span class="token-punct">}</span></code>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 Resolution -->
+      <section class="agent-section" id="resolution" aria-labelledby="s4-heading">
+        <div class="agent-section__num" aria-hidden="true">04</div>
+        <div>
+          <h2 class="agent-section__title" id="s4-heading">Resolution</h2>
+          <div class="agent-section__body">
+            <p>Any BNRP-compatible client can resolve an agent name to its full record via the standard resolve endpoint.</p>
+          </div>
+          <div class="agent-endpoint">
+            <div class="agent-endpoint__line">
+              <span class="agent-endpoint__method">GET</span>
+              <span>https://api.bnrp.name/v1/resolve/<strong>agent.company.btc</strong></span>
+            </div>
+          </div>
+          <p style="font-size:0.87rem;color:var(--color-text-tertiary);margin:8px 0 16px;font-family:var(--font-body);">Response includes the full record. Key fields:</p>
+          <ul class="agent-fields" role="list" aria-label="Resolution response fields">
+            <li class="agent-field agent-field--highlight">
+              <span class="agent-field__key">agent_instructions</span>
+              <span class="agent-field__desc">Plain-language or structured prompt describing what the agent does and how to interact with it.</span>
+            </li>
+            <li class="agent-field agent-field--highlight">
+              <span class="agent-field__key">agent_capabilities</span>
+              <span class="agent-field__desc">Array of declared capabilities: <code class="agent-code">payment</code>, <code class="agent-code">resolve</code>, <code class="agent-code">message</code>, or custom strings.</span>
+            </li>
+            <li class="agent-field agent-field--highlight">
+              <span class="agent-field__key">payment_policy</span>
+              <span class="agent-field__desc">Object containing <code class="agent-code">require_approval</code> (boolean) and <code class="agent-code">min_sats</code> (integer) thresholds for autonomous payment decisions.</span>
+            </li>
+            <li class="agent-field">
+              <span class="agent-field__key">agent_address</span>
+              <span class="agent-field__desc">The Bitcoin Taproot address (<code class="agent-code">bc1p...</code>) that the agent owns and can receive sats to.</span>
+            </li>
+            <li class="agent-field">
+              <span class="agent-field__key">agent_pubkey</span>
+              <span class="agent-field__desc">secp256k1 public key hex for cryptographic identity verification.</span>
+            </li>
+            <li class="agent-field">
+              <span class="agent-field__key">lnurlp</span>
+              <span class="agent-field__desc">Lightning address for instant sats payments via LNURL-Pay.</span>
+            </li>
+            <li class="agent-field">
+              <span class="agent-field__key">owner_name</span>
+              <span class="agent-field__desc">The root .btc name that controls this agent subname.</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 05 Register your agent -->
+      <section class="agent-section" id="register" aria-labelledby="s5-heading">
+        <div class="agent-section__num" aria-hidden="true">05</div>
+        <div>
+          <h2 class="agent-section__title" id="s5-heading">Register your agent</h2>
+          <div class="agent-section__body">
+            <p>If you own a .btc name, you can register agent subnames directly from the Subname Manager. Choose a role prefix, set the agent type and capabilities, and the inscription is handled for you. You can also inscribe the op directly if you prefer full manual control.</p>
+          </div>
+          <div class="agent-cta" role="region" aria-label="Register agent call to action">
+            <p class="agent-cta__title">Own a .btc name? Register an agent under it.</p>
+            <p class="agent-cta__body">Open the Subname Manager, select your root name, and add an agent subname. Set the type, capabilities, and payment policy. The record is inscribed to Bitcoin and resolves immediately via the BNRP API.</p>
+            <div class="agent-cta__actions">
+              <a href="./subname-manager.html" class="agent-btn agent-btn--primary">
+                Open Subname Manager
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+              </a>
+              <a href="./subnames.html" class="agent-btn agent-btn--ghost agent-btn--sm">
+                What are subnames?
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 Agent-to-agent interaction -->
+      <section class="agent-section" id="agent-to-agent" aria-labelledby="s6-heading">
+        <div class="agent-section__num" aria-hidden="true">06</div>
+        <div>
+          <h2 class="agent-section__title" id="s6-heading">Agent-to-agent interaction</h2>
+          <div class="agent-section__body">
+            <p>Agents on BNRP do not need out-of-band coordination. Resolution is public and permissionless. Any agent can look up any other agent by name.</p>
+          </div>
+          <ul class="agent-steps" role="list" aria-label="Agent-to-agent interaction steps">
+            <li class="agent-step">
+              <span class="agent-step__arrow" aria-hidden="true">01</span>
+              <div class="agent-step__content">
+                <strong>Resolve any name.</strong> Call <code class="agent-code">GET /v1/resolve/{name}</code> to get the full record for any agent or identity on BNRP. No authentication required.
+              </div>
+            </li>
+            <li class="agent-step">
+              <span class="agent-step__arrow" aria-hidden="true">02</span>
+              <div class="agent-step__content">
+                <strong>Read the skill file.</strong> Call <code class="agent-code">GET /v1/skill/{name}</code> to retrieve a machine-readable skill manifest for AI consumption. Describes what the agent can do in a structured format other agents and LLMs can act on directly.
+              </div>
+            </li>
+            <li class="agent-step">
+              <span class="agent-step__arrow" aria-hidden="true">03</span>
+              <div class="agent-step__content">
+                <strong>Pay the agent.</strong> Use <code class="agent-code">addresses.btc_taproot</code> from the resolved record for on-chain sats, or <code class="agent-code">lnurlp</code> for Lightning. No OAuth. No API key exchange. Payment is routed by name.
+              </div>
+            </li>
+            <li class="agent-step">
+              <span class="agent-step__arrow" aria-hidden="true">04</span>
+              <div class="agent-step__content">
+                <strong>Verify identity.</strong> The agent signs responses with its <code class="agent-code">agent_pubkey</code>. Any verifier can confirm the signature matches the on-chain record without a trusted third party.
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 07 Protocol status -->
+      <section class="agent-section" id="protocol-status" aria-labelledby="s7-heading">
+        <div class="agent-section__num" aria-hidden="true">07</div>
+        <div>
+          <h2 class="agent-section__title" id="s7-heading">Protocol status</h2>
+          <div class="agent-section__body">
+            <p>BNRP-IP-11 is currently a draft improvement proposal. The spec is open for review and contribution on GitHub. Implementation feedback from early adopters is welcome before the proposal moves to final status.</p>
+          </div>
+          <div class="agent-status" role="status" aria-label="Protocol status">
+            <div class="agent-status__left">
+              <span class="agent-status__badge">
+                <span class="agent-status__badge-dot" aria-hidden="true"></span>
+                Draft
+              </span>
+              <span class="agent-status__label">BNRP-IP-11 &mdash; Agent Namespace Extension</span>
+            </div>
+            <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener noreferrer" class="agent-btn agent-btn--ghost agent-btn--sm" aria-label="View BNRP on GitHub">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+              github.com/nlgal/btcnative
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<!-- ── FOOTER ── -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer__inner">
+      <div>
+        <a href="./index.html" class="footer__logo">
+          <picture>
+            <source srcset="./logo-36.webp" type="image/webp">
+            <img class="footer__logo-mark" src="./logo-36.png" alt="" aria-hidden="true" width="32" height="32" style="display:block;width:32px;height:32px;" loading="lazy">
+          </picture>
+          <div class="footer__logo-text">
+            <div class="footer__logo-btc">BTC</div>
+            <div class="footer__logo-native">NATIVE</div>
+          </div>
+        </a>
+        <p class="footer__tagline">Powered by BNRP open resolution<br>for BTC-native names.</p>
+      </div>
+      <div>
+        <div class="footer__col-title">Explore</div>
+        <div class="footer__links">
+          <a href="./explore.html" class="footer__link">Categories</a>
+          <a href="./explore.html?tab=listings" class="footer__link">Listings</a>
+          <a href="./explore.html?tab=market" class="footer__link">Market Data</a>
+          <a href="./bulk.html" class="footer__link">Bulk Search</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Subnames</div>
+        <div class="footer__links">
+          <a href="./subnames.html" class="footer__link">What Are Subnames?</a>
+          <a href="./subname-manager.html" class="footer__link">Subname Manager</a>
+          <a href="./namespace.html" class="footer__link">Event Tool</a>
+          <a href="./agents.html" class="footer__link">Agent Namespace</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Account</div>
+        <div class="footer__links">
+          <a href="./sell.html" class="footer__link">List a Name</a>
+          <a href="./portfolio.html" class="footer__link">My Names</a>
+          <a href="./points.html" class="footer__link">My Points</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Protocol</div>
+        <div class="footer__links">
+          <a href="./bnrp.html" class="footer__link">Powered by BNRP</a>
+          <a href="./agents.html" class="footer__link">Agent Namespace</a>
+          <a href="./docs.html" class="footer__link">Docs</a>
+          <a href="./about.html" class="footer__link">About</a>
+          <a href="https://github.com/nlgal/btcnative" target="_blank" rel="noopener" class="footer__link">GitHub</a>
+          <a href="./security.html" class="footer__link">Security</a>
+          <a href="https://api.bnrp.name/v1/" target="_blank" rel="noopener" class="footer__link">API</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer__col-title">Support</div>
+        <div class="footer__links">
+          <a href="https://x.com/btc_native" target="_blank" rel="noopener" class="footer__link">@btc_native</a>
+          <a href="mailto:hello@btcnative.name" class="footer__link">hello@btcnative.name</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span class="footer__copy">&copy; 2026 BTC Native. Trustless by design.</span>
+      <div class="footer__trust">
+        <a href="./security.html" class="footer__trust-item" style="text-decoration:none;color:inherit;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Verifiable on Bitcoin
+        </a>
+        <span class="footer__trust-item">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Open Protocol
+        </span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script defer src="./app.v2.js"></script>
+<script>
+(function() {
+  const saved = localStorage.getItem('btcn-theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  else if (window.matchMedia('(prefers-color-scheme: light)').matches) document.documentElement.setAttribute('data-theme', 'light');
+})();
+const themeBtn = document.getElementById('themeToggle');
+if (themeBtn) themeBtn.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('btcn-theme', next);
+});
+</script>
+
+</body>
+</html>
